@@ -15,6 +15,7 @@ MAEL = 'MAEUL'
 ALEXIS = 'ALEXIS'
 
 def handle(msg):
+    print("Message received: " + str(msg))
     chat_id = msg['chat']['id']
     command = msg['text']
 
@@ -34,14 +35,14 @@ def handle(msg):
         else:
             roles = [LEA, MAEL , TIMON, ALEXIS]
 
-        msg = """
+        answer = """
             ROLES DU MENAGES ATTRIBUÉS ALEATOIREMENT PAR LE DRAHMBOT    : 
             - CUISINE    : {}
             - SOLS         : {}
             - SDBs         : {}
             - DÉCHET   : {}
         """.format(roles[(index + 0) % 4], roles[(index + 1) % 4], roles[(index + 2) % 4], roles[(index + 3) % 4])
-        bot.sendMessage(chat_id, msg)
+        bot.sendMessage(chat_id, answer)
     elif command == '/time':
         bot.sendMessage(chat_id, str(datetime.datetime.now()))
 
