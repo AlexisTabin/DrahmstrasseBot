@@ -47,6 +47,13 @@ def handle(msg):
             - DÉCHET   : {}
         """.format(roles[(index + 0) % 4], roles[(index + 1) % 4], roles[(index + 2) % 4], roles[(index + 3) % 4])
         bot.sendMessage(chat_id, answer)
+    elif command == '/papier' or command == '/carton':
+        # if current week is even then it's Carton else it's Papier
+        if datetime.datetime.now().isocalendar()[1] % 2 == 0:
+            answer = "C'est la semaine du Carton !"
+        else:
+            answer = "C'est la semaine du Papier !"
+        bot.sendMessage(chat_id, answer)
     elif command == '/time':
         bot.sendMessage(chat_id, str(datetime.datetime.now()))
 
