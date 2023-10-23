@@ -21,6 +21,10 @@ def handle(msg):
 
     print('Got command: %s' % command)
 
+    # if command contains an @ remvoe it and what comes after
+    if '@' in command:
+        command = command.split('@')[0]
+        print('Updated command: %s' % command)
 
     if command == '/roles':
         inital_week_nb = datetime.date(2023, 10, 9).isocalendar()[1]
