@@ -1,3 +1,4 @@
+bot_token.yml
 *.pyc
 .idea/
 telepot.egg-info/
@@ -8,4 +9,3 @@ todo.txt
 .remote-sync.json
 .pypirc
 bugs/
-bot_token.yml
