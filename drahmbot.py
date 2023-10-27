@@ -4,7 +4,7 @@ import datetime
 import telepot
 import yaml
 from telepot.loop import MessageLoop
-import pandas as pd
+import csv
 import requests
 from bs4 import BeautifulSoup
 from random import randrange
@@ -73,25 +73,50 @@ def getRap():
    
     return quote.text + "\n- " + artist + "\n" + link['href']
 
-def get_avent_calendar_msg():
-    answer = "C'est l'Avent !"
-    # read avent_calendar.csv
-    calendar = pd.read_csv('avent_calendar.csv')
-    # get current day
-    day = datetime.datetime.now().day
+# def get_avent_calendar_msg():
+#     answer = "C'est l'Avent !"
+#     # read avent_calendar.csv
+#     calendar = pd.read_csv('avent_calendar.csv')
+#     # get current day
+#     day = datetime.datetime.now().day
 
-    day = 1
-    # day must be between 1 and 24
-    if day < 1 or day > 24:
-        return "Ce n'est plus l'Avent ! :("
+#     day = 1
+#     # day must be between 1 and 24
+#     if day < 1 or day > 24:
+#         return "Ce n'est plus l'Avent ! :("
     
 
-    # get current day's gifter and receiver from the csv file
-    gifter = calendar['gifter'][day - 1]
-    receiver = calendar['receiver'][day - 1]
+#     # get current day's gifter and receiver from the csv file
+#     gifter = calendar['gifter'][day - 1]
+#     receiver = calendar['receiver'][day - 1]
+
+#     if day == 1:
+#         day = "1er"
+#     answer = "En cette belle journée du {} Décembre, c'est au tour de {} d'offrir un cadeau à {} !".format(day, gifter, receiver)
+#     return answer
+
+def get_avent_calendar_msg():
+    answer = "C'est l'Avent !"
+    
+    # Read avent_calendar.csv using the csv library
+    with open('avent_calendar.csv', newline='') as csvfile:
+        reader = csv.DictReader(csvfile)
+        calendar = list(reader)
+
+    # Get the current day
+    day = datetime.datetime.now().day
+
+    # Ensure day is between 1 and 24
+    if day < 1 or day > 24:
+        return "Ce n'est plus l'Avent ! :("
+
+    # Get the current day's gifter and receiver from the csv data
+    gifter = calendar[day - 1]['gifter']
+    receiver = calendar[day - 1]['receiver']
 
     if day == 1:
         day = "1er"
+    
     answer = "En cette belle journée du {} Décembre, c'est au tour de {} d'offrir un cadeau à {} !".format(day, gifter, receiver)
     return answer
 
