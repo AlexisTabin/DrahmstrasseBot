@@ -14,6 +14,7 @@ LEA = 'LEA'
 TIMON = 'TIMON'
 MAEL = 'MAEUL'
 ALEXIS = 'ALEXIS'
+DRAHMSTRASSE_GROUP_ID = -1001633433047
 
 def getQuote():
         url = 'https://quotes.toscrape.com/'
@@ -73,28 +74,6 @@ def getRap():
    
     return quote.text + "\n- " + artist + "\n" + link['href']
 
-# def get_avent_calendar_msg():
-#     answer = "C'est l'Avent !"
-#     # read avent_calendar.csv
-#     calendar = pd.read_csv('avent_calendar.csv')
-#     # get current day
-#     day = datetime.datetime.now().day
-
-#     day = 1
-#     # day must be between 1 and 24
-#     if day < 1 or day > 24:
-#         return "Ce n'est plus l'Avent ! :("
-    
-
-#     # get current day's gifter and receiver from the csv file
-#     gifter = calendar['gifter'][day - 1]
-#     receiver = calendar['receiver'][day - 1]
-
-#     if day == 1:
-#         day = "1er"
-#     answer = "En cette belle journée du {} Décembre, c'est au tour de {} d'offrir un cadeau à {} !".format(day, gifter, receiver)
-#     return answer
-
 def get_avent_calendar_msg():
     answer = "C'est l'Avent !"
     
@@ -120,19 +99,7 @@ def get_avent_calendar_msg():
     answer = "En cette belle journée du {} Décembre, c'est au tour de {} d'offrir un cadeau à {} !".format(day, gifter, receiver)
     return answer
 
-def handle(msg):
-    print("Message received: " + str(msg))
-    chat_id = msg['chat']['id']
-    command = msg['text']
-
-    print('Got command: %s' % command)
-
-    # if command contains an @ remvoe it and what comes after
-    if '@' in command:
-        command = command.split('@')[0]
-        print('Updated command: %s' % command)
-
-    if command == '/roles':
+def getRoles():
         inital_week_nb = datetime.date(2023, 10, 9).isocalendar()[1]
 
         print("initial week nb: " + str(inital_week_nb))
@@ -152,6 +119,30 @@ def handle(msg):
             - SDBs         : {}
             - DÉCHET   : {}
         """.format(roles[(index + 0) % 4], roles[(index + 1) % 4], roles[(index + 2) % 4], roles[(index + 3) % 4])
+        return answer
+
+def handle(msg):
+    print("Message received: " + str(msg))
+    chat_id = msg['chat']['id']
+    # handle the case where the message doesn't have the key 'text'
+    if 'text' not in msg:
+        if 'caption' in msg:
+            command = msg['caption']
+        else :
+            command = ""
+            return bot.sendMessage(chat_id, "Je ne comprends pas ce message :(")
+    else:
+        command = msg['text']
+
+    print('Got command: %s' % command)
+
+    # if command contains an @ remvoe it and what comes after
+    if '@' in command:
+        command = command.split('@')[0]
+        print('Updated command: %s' % command)
+
+    if command == '/roles':
+        answer = getRoles()
         bot.sendMessage(chat_id, answer)
 
     elif command == '/papier' or command == '/carton':
@@ -212,6 +203,13 @@ def handle(msg):
     elif command == 'youpie' or command == 'Youpie':
         bot.sendMessage(chat_id, 'Youpiiiiiiiiiiiiiiie!')
 
+    elif command == '/lessive':
+        addresse = "LAVORENT\nBernstrasse 60\n8952 Schlieren"
+        conditions = "Les cartes et badges rechargeables font l\'objet d\'une caution.\nCelle-ci est remboursée à la demande de l\'utilisateur.\nElle lui sera rendue par virement bancaire à réception de ladite carte ou badge au bureau de vente LAVORENT SA dans une enveloppe matelassée."
+        commande = "Pour commander une carte ou un badge, veuillez consulter le site internet https://www.lavorent.ch/fr/product/hyperion-100/"
+        message = conditions + "\n\n" + addresse + "\n\n" + commande
+        bot.sendMessage(chat_id, message)
+
 # read token from yml file
 with open("bot_token.yml", 'r') as ymlfile:
     cfg = yaml.load(ymlfile, yaml.FullLoader)
@@ -224,4 +222,16 @@ MessageLoop(bot, handle).run_as_thread()
 print('I am listening ...')
 
 while 1:
+    # if time of the day is 11:45 am send a message to the group telling the time of the day and to have a nice day
+    if datetime.datetime.now().hour == 11 and datetime.datetime.now().minute == 45:
+        bot.sendMessage(DRAHMSTRASSE_GROUP_ID, "Il est 11h45, il est temps de faire la pause !\nBon appétit et bonne journée !")
+        time.sleep(60)
+        
+    # Each 2 weeks, change roles
+    is_monday_morning = datetime.datetime.now().isocalendar()[1] % 2 == 0 and datetime.datetime.now().isocalendar()[2] == 1 and datetime.datetime.now().hour == 8 and datetime.datetime.now().minute == 0
+    if is_monday_morning:
+        answer = getRoles()
+        answer = "Coucou Timon, Maël, Léa et Alexis !\n\n C'est lundi, il est 8h, c'est l'heure de changer les rôles !\n" + answer + "\n\nBonne semaine à tous !"
+        bot.sendMessage(DRAHMSTRASSE_GROUP_ID, answer)
+        time.sleep(60)
     time.sleep(10)
