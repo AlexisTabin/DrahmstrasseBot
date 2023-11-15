@@ -1,0 +1,12 @@
+
+roles - Get the roles for this week
+papier - Pour savoir si c'est la semaine du papier ou du carton
+carton - Pour savoir si c'est la semaine du carton ou du papier
+time - Get a message related to the Advent calendar.
+avent - Check how many days are left until the start of Advent, or get the daily message for Advent.
+rendu - Check the number of days left for Timon and Alexis's project submissions.
+quote - Get a random quote.
+yoga - Receive a link to a random yoga video.
+physio - Get a link to a random physiotherapy video.
+rap - Get a random rap punchline or lyric.
+lessive - Get information about ordering a laundry card or badge.

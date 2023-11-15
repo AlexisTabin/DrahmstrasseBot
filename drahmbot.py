@@ -8,6 +8,7 @@ import csv
 import requests
 from bs4 import BeautifulSoup
 from random import randrange
+from youtubesearchpython import VideosSearch
 
 
 LEA = 'LEA'
@@ -15,6 +16,7 @@ TIMON = 'TIMON'
 MAEL = 'MAEUL'
 ALEXIS = 'ALEXIS'
 DRAHMSTRASSE_GROUP_ID = -1001633433047
+ALEXIS_ID = 891406979
 
 def getQuote():
         url = 'https://quotes.toscrape.com/'
@@ -49,6 +51,7 @@ def getRap():
     artist = artists[randrange(len(artists))]
     print("artist: " + str(artist))
 
+
     if artist == "Ninho":
         artist_url = "https://www.lymu.net/punchlines-ninho"
 
@@ -58,21 +61,31 @@ def getRap():
     artist_r = requests.get(artist_url, headers=HEADERS)
     artist_soup = BeautifulSoup(artist_r.text, 'html.parser')
     quotes = artist_soup.find_all("span", attrs={'class':'color_14 wixui-rich-text__text'})
-
-    if artist == "Ninho":
-        quote = quotes[randrange(len(quotes))]
-        return quote.text + "\n- " + artist + "\n" + "https://www.youtube.com/watch?v=3BI1K6oXTqQ"
-    if artist == "Niska":
-        quote = quotes[randrange(len(quotes))]
-        return quote.text + "\n- " + artist + "\n" + "https://www.youtube.com/watch?v=GaYNpipK8hg"
+    # if artist == "Ninho":
+    #     quote = quotes[randrange(len(quotes))]
+    #     return quote.text + "\n- " + artist + "\n" + "https://www.youtube.com/watch?v=3BI1K6oXTqQ"
+    # if artist == "Niska":
+    #     quote = quotes[randrange(len(quotes))]
+    #     return quote.text + "\n- " + artist + "\n" + "https://www.youtube.com/watch?v=GaYNpipK8hg"
     
-    links = artist_soup.find_all("a", attrs={'class':'wixui-rich-text__text'})
-    links = [l for l in links if "youtube" in l['href']]
-    index = 0 if (len(links) != len(quotes)) else randrange(len(quotes))
-    quote = quotes[index]
-    link = links[index]
+    if artist in ["Damso", "Ninho", "Niska"]:
+        albums = artist_soup.find_all("span", attrs={'class':'color_15 wixui-rich-text__text'})
+        albums = [str(a.text).split(' ')[-1] for a in albums[2:] if '-' in a.text]
+        links = [VideosSearch(artist + ' ' + album, limit = 1) for album in albums]
+        links = [l.result()['result'][0]['link'] for l in links]
+        index = randrange(min(len(links), len(quotes))) if (len(links) != len(quotes)) else randrange(len(quotes))
+        quote = quotes[index]
+        link = links[index]
    
-    return quote.text + "\n- " + artist + "\n" + link['href']
+        return quote.text + "\n- " + artist + "\n" + link
+    else :
+        links = artist_soup.find_all("a", attrs={'class':'wixui-rich-text__text'})
+        links = [l for l in links if "youtube" in l['href']]
+        index = randrange(min(len(links), len(quotes))) if (len(links) != len(quotes)) else randrange(len(quotes))
+        quote = quotes[index]
+        link = links[index]
+    
+        return quote.text + "\n- " + artist + "\n" + link['href']
 
 def get_avent_calendar_msg():
     answer = "C'est l'Avent !"
@@ -123,115 +136,133 @@ def getRoles():
 
 def handle(msg):
     print("Message received: " + str(msg))
-    chat_id = msg['chat']['id']
-    # handle the case where the message doesn't have the key 'text'
-    if 'text' not in msg:
-        if 'caption' in msg:
-            command = msg['caption']
-        else :
-            command = ""
-            return bot.sendMessage(chat_id, "Je ne comprends pas ce message :(")
-    else:
-        command = msg['text']
-
-    print('Got command: %s' % command)
-
-    # if command contains an @ remvoe it and what comes after
-    if '@' in command:
-        command = command.split('@')[0]
-        print('Updated command: %s' % command)
-
-    if command == '/roles':
-        answer = getRoles()
-        bot.sendMessage(chat_id, answer)
-
-    elif command == '/papier' or command == '/carton':
-        # if current week is even then it's Carton else it's Papier
-        if datetime.datetime.now().isocalendar()[1] % 2 == 0:
-            answer = "C'est la semaine du Papier !"
+    try : 
+        chat_id = msg['chat']['id']
+        # handle the case where the message doesn't have the key 'text'
+        if 'text' not in msg:
+            if 'caption' in msg:
+                command = msg['caption']
+            else :
+                command = ""
+                return bot.sendMessage(chat_id, "Je ne comprends pas ce message :(")
         else:
-            answer = "C'est la semaine du Carton !"
-        bot.sendMessage(chat_id, answer)
+            command = msg['text']
 
-    elif command == '/time':
-        msg = get_avent_calendar_msg()
-        bot.sendMessage(chat_id, msg)
+        print('Got command: %s' % command)
 
-    elif command == '/avent':
-        # if we are still not in december, print the number of days left
-        if datetime.datetime.now().month != 12:
-            answer = "Il reste {} jours avant le début de l'Avent !".format((datetime.datetime(2023, 12, 1) - datetime.datetime.now()).days)
-        else:
-            answer = get_avent_calendar_msg()
-        bot.sendMessage(chat_id, answer)
+        # if command contains an @ remvoe it and what comes after
+        if '@' in command:
+            command = command.split('@')[0]
+            print('Updated command: %s' % command)
 
-    elif command == '/rendu':
-        # print number of days left before the 15th of december
-        answer = "Timon, il te reste {} jours avant ton rendu !".format((datetime.datetime(2023, 12, 15) - datetime.datetime.now()).days)
-        bot.sendMessage(chat_id, answer)
+        if command == '/roles':
+            answer = getRoles()
+            bot.sendMessage(chat_id, answer)
 
-    elif command == 'POET' or command == 'POÊT':
-        bot.sendMessage(chat_id, 'POÊÊÊÊÊÊÊÊÊÊÊÊT')
+        elif command == '/papier' or command == '/carton':
+            # if current week is even then it's Carton else it's Papier
+            if datetime.datetime.now().isocalendar()[1] % 2 == 0:
+                answer = "C'est la semaine du Papier !"
+            else:
+                answer = "C'est la semaine du Carton !"
+            bot.sendMessage(chat_id, answer)
 
-    elif command == '/quote':
-        bot.sendMessage(chat_id, getQuote())
+        elif command == '/time':
+            msg = get_avent_calendar_msg()
+            bot.sendMessage(chat_id, msg)
 
-    elif command == '/yoga':
-        yogas = [
-            'https://youtu.be/v7AYKMP6rOE','https://youtu.be/UHGLQUUuTeM',
-            'https://youtu.be/AYdQUS7jfPA','https://youtu.be/DvJa9tiMivw',
-            'https://youtu.be/5X5p2hXlosk','https://youtu.be/uxp5xb7Sdo8',
-            'https://youtu.be/TSIbzfcnv_8','https://youtu.be/ihba9Lw0tv4',
-            'https://youtu.be/LqXZ628YNj4','https://youtu.be/VUnaqOANaY8',
-            'https://youtu.be/dxoY1i6alSk',
-            'https://youtu.be/6XM-Jzq-pOA','https://youtu.be/velPc7_mFsk'
-        ]
-        bot.sendMessage(chat_id, yogas[randrange(1, len(yogas))])
+        elif command == '/avent':
+            # if we are still not in december, print the number of days left
+            if datetime.datetime.now().month != 12:
+                answer = "Il reste {} jours avant le début de l'Avent !".format((datetime.datetime(2023, 12, 1) - datetime.datetime.now()).days)
+            else:
+                answer = get_avent_calendar_msg()
+            bot.sendMessage(chat_id, answer)
 
-    elif command == '/physio':
-        physio = [
-            'https://www.youtube.com/watch?v=2eA2Koq6pTI&pp=ygUOYmFjayBwYWluIHlvZ2E%3D',
-            'https://www.youtube.com/watch?v=XeXz8fIZDCE&pp=ygUOYmFjayBwYWluIHlvZ2E%3D',
-            'https://www.youtube.com/watch?v=HzXkMnvqojE&pp=ygUOYmFjayBwYWluIHlvZ2E%3D'
-        ]
-        bot.sendMessage(chat_id, physio[randrange(1, len(physio))])
-    
-    elif command == '/rap':
-        answer = getRap()
-        bot.sendMessage(chat_id, answer)
+        elif command == '/rendu':
+            # print number of days left before the 15th of december
+            answer = "Timon, il te reste {} jours avant ton rendu !".format((datetime.datetime(2023, 12, 15) - datetime.datetime.now()).days)
+            answer = answer + "\n\n" + "Alexis, il te reste {} jours avant ton rendu !".format((datetime.datetime(2024, 4, 15) - datetime.datetime.now()).days)
+            bot.sendMessage(chat_id, answer)
 
-    elif command == 'youpie' or command == 'Youpie':
-        bot.sendMessage(chat_id, 'Youpiiiiiiiiiiiiiiie!')
+        elif command == 'POET' or command == 'POÊT':
+            bot.sendMessage(chat_id, 'POÊÊÊÊÊÊÊÊÊÊÊÊT')
 
-    elif command == '/lessive':
-        addresse = "LAVORENT\nBernstrasse 60\n8952 Schlieren"
-        conditions = "Les cartes et badges rechargeables font l\'objet d\'une caution.\nCelle-ci est remboursée à la demande de l\'utilisateur.\nElle lui sera rendue par virement bancaire à réception de ladite carte ou badge au bureau de vente LAVORENT SA dans une enveloppe matelassée."
-        commande = "Pour commander une carte ou un badge, veuillez consulter le site internet https://www.lavorent.ch/fr/product/hyperion-100/"
-        message = conditions + "\n\n" + addresse + "\n\n" + commande
-        bot.sendMessage(chat_id, message)
+        elif command == '/quote':
+            bot.sendMessage(chat_id, getQuote())
 
-# read token from yml file
-with open("bot_token.yml", 'r') as ymlfile:
-    cfg = yaml.load(ymlfile, yaml.FullLoader)
-    # get token from yml file 
-    token = cfg['telegram_bot_token']
+        elif command == '/yoga':
+            yogas = [
+                'https://youtu.be/v7AYKMP6rOE','https://youtu.be/UHGLQUUuTeM',
+                'https://youtu.be/AYdQUS7jfPA','https://youtu.be/DvJa9tiMivw',
+                'https://youtu.be/5X5p2hXlosk','https://youtu.be/uxp5xb7Sdo8',
+                'https://youtu.be/TSIbzfcnv_8','https://youtu.be/ihba9Lw0tv4',
+                'https://youtu.be/LqXZ628YNj4','https://youtu.be/VUnaqOANaY8',
+                'https://youtu.be/dxoY1i6alSk',
+                'https://youtu.be/6XM-Jzq-pOA','https://youtu.be/velPc7_mFsk'
+            ]
+            bot.sendMessage(chat_id, yogas[randrange(1, len(yogas))])
 
-bot = telepot.Bot(token)
-
-MessageLoop(bot, handle).run_as_thread()
-print('I am listening ...')
-
-while 1:
-    # if time of the day is 11:45 am send a message to the group telling the time of the day and to have a nice day
-    if datetime.datetime.now().hour == 11 and datetime.datetime.now().minute == 45:
-        bot.sendMessage(DRAHMSTRASSE_GROUP_ID, "Il est 11h45, il est temps de faire la pause !\nBon appétit et bonne journée !")
-        time.sleep(60)
+        elif command == '/physio':
+            physio = [
+                'https://www.youtube.com/watch?v=2eA2Koq6pTI&pp=ygUOYmFjayBwYWluIHlvZ2E%3D',
+                'https://www.youtube.com/watch?v=XeXz8fIZDCE&pp=ygUOYmFjayBwYWluIHlvZ2E%3D',
+                'https://www.youtube.com/watch?v=HzXkMnvqojE&pp=ygUOYmFjayBwYWluIHlvZ2E%3D'
+            ]
+            bot.sendMessage(chat_id, physio[randrange(1, len(physio))])
         
-    # Each 2 weeks, change roles
-    is_monday_morning = datetime.datetime.now().isocalendar()[1] % 2 == 0 and datetime.datetime.now().isocalendar()[2] == 1 and datetime.datetime.now().hour == 8 and datetime.datetime.now().minute == 0
-    if is_monday_morning:
-        answer = getRoles()
-        answer = "Coucou Timon, Maël, Léa et Alexis !\n\n C'est lundi, il est 8h, c'est l'heure de changer les rôles !\n" + answer + "\n\nBonne semaine à tous !"
-        bot.sendMessage(DRAHMSTRASSE_GROUP_ID, answer)
-        time.sleep(60)
-    time.sleep(10)
+        elif command == '/rap':
+            answer = getRap()
+            bot.sendMessage(chat_id, answer)
+
+        elif command == 'youpie' or command == 'Youpie':
+            bot.sendMessage(chat_id, 'Youpiiiiiiiiiiiiiiie!')
+
+        elif command == '/lessive':
+            addresse = "LAVORENT\nBernstrasse 60\n8952 Schlieren"
+            conditions = "Les cartes et badges rechargeables font l\'objet d\'une caution.\nCelle-ci est remboursée à la demande de l\'utilisateur.\nElle lui sera rendue par virement bancaire à réception de ladite carte ou badge au bureau de vente LAVORENT SA dans une enveloppe matelassée."
+            commande = "Pour commander une carte ou un badge, veuillez consulter le site internet https://www.lavorent.ch/fr/product/hyperion-100/"
+            message = conditions + "\n\n" + addresse + "\n\n" + commande
+            bot.sendMessage(chat_id, message)
+    except Exception as e:
+        print("Exception occured: " + str(e))
+        answer = "Je ne comprends pas ce message :("
+        answer = answer + "\n\n" + "Exception: " + str(e)
+        bot.sendMessage(chat_id, answer)
+
+try : 
+    # read token from yml file
+    with open("bot_token.yml", 'r') as ymlfile:
+        cfg = yaml.load(ymlfile, yaml.FullLoader)
+        # get token from yml file 
+        token = cfg['telegram_bot_token']
+
+    bot = telepot.Bot(token)
+
+    MessageLoop(bot, handle).run_as_thread()
+    print('I am listening ...')
+
+    while 1:
+        # if time of the day is 11:45 am send a message to the group telling the time of the day and to have a nice day
+        if datetime.datetime.now().hour == 11 and datetime.datetime.now().minute == 45:
+            print("It's 11:45 am, time to send a message to the group !")
+            bot.sendMessage(DRAHMSTRASSE_GROUP_ID, "Il est 11h45, il est temps de faire la pause !\nBon appétit et bonne journée !")
+            time.sleep(60)
+            
+        # Each 2 weeks, change roles
+        is_changing_week = datetime.datetime.now().isocalendar()[1] % 2 == 1
+        is_monday_morning = is_changing_week and datetime.datetime.now().isocalendar()[2] == 1 and datetime.datetime.now().hour == 12 and datetime.datetime.now().minute == 5
+        # print("Is changing week: " + str(is_changing_week))
+        # print("Is monday morning: " + str(is_monday_morning))
+        if is_monday_morning:
+            print("It's monday morning, time to change roles !")
+            answer = getRoles()
+            answer = "Coucou Timon, Maël, Léa et Alexis !\n\n C'est lundi, il est midi, c'est l'heure de changer les rôles !\n" + answer + "\n\nBonne semaine à tous !"
+            bot.sendMessage(DRAHMSTRASSE_GROUP_ID, answer)
+            time.sleep(60)
+        time.sleep(10)
+except Exception as e:
+    print("Exception occured: " + str(e))
+    answer = "Je ne comprends pas ce message :("
+    answer = answer + "\n\n" + "Exception: " + str(e)
+    bot.sendMessage(ALEXIS_ID, answer)
