@@ -11,10 +11,10 @@ from random import randrange
 from youtubesearchpython import VideosSearch
 
 
-LEA = 'LEA'
-TIMON = 'TIMON'
-MAEL = 'MAEUL'
-ALEXIS = 'ALEXIS'
+LEA = 'Lea'
+TIMON = 'timon'
+MAEL = 'Maël'
+ALEXIS = 'Alexis'
 DRAHMSTRASSE_GROUP_ID = -1001633433047
 ALEXIS_ID = 891406979
 
@@ -89,6 +89,7 @@ def getRap():
 
 def get_avent_calendar_msg():
     answer = "C'est l'Avent !"
+
     
     # Read avent_calendar.csv using the csv library
     with open('avent_calendar.csv', newline='') as csvfile:
@@ -109,7 +110,35 @@ def get_avent_calendar_msg():
     if day == 1:
         day = "1er"
     
-    answer = "En cette belle journée du {} Décembre, c'est au tour de {} d'offrir un cadeau à {} !".format(day, gifter, receiver)
+    answer = answer + "\n\n" + "En cette belle journée du {} Décembre, c'est au tour de {} d'offrir un cadeau à {} !".format(day, gifter, receiver)
+    return answer
+
+def getCadeaux(msg):
+    msg_from = msg['from']['first_name']
+    
+    # Read avent_calendar.csv using the csv library
+    with open('avent_calendar.csv', newline='') as csvfile:
+        reader = csv.DictReader(csvfile)
+        calendar = list(reader)
+     # Count the number of gifts given by each person
+    gifts_given = {}
+
+    for day in calendar:
+        gifter = day['gifter']
+        receiver = day['receiver']
+        
+        key = f"{gifter} offre {gifts_given.get((gifter, receiver), 0)} cadeau(x) à {receiver}"
+        gifts_given[(gifter, receiver)] = gifts_given.get((gifter, receiver), 0) + 1
+
+    # Display the results
+    for (gifter, receiver), count in gifts_given.items():
+        offer = f"{gifter} offre {count} cadeau(x) à {receiver}"
+        print("Gifter   : " + gifter)
+        print("Msg from : " + msg_from)
+        if gifter == msg_from:
+            answer = answer + "\n\n" + offer
+        print(f"{gifter} offre {count} cadeaux à {receiver}")
+
     return answer
 
 def getRoles():
@@ -168,7 +197,7 @@ def handle(msg):
             bot.sendMessage(chat_id, answer)
 
         elif command == '/time':
-            msg = get_avent_calendar_msg()
+            msg = getCadeaux(msg)
             bot.sendMessage(chat_id, msg)
 
         elif command == '/avent':
@@ -181,7 +210,9 @@ def handle(msg):
 
         elif command == '/rendu':
             # print number of days left before the 15th of december
-            answer = "Timon, il te reste {} jours avant ton rendu !".format((datetime.datetime(2023, 12, 15) - datetime.datetime.now()).days)
+            nbr_jours_restant_timon = (datetime.datetime(2023, 12, 15) - datetime.datetime.now()).days
+            # answer = "Timon, il te reste {} jours avant ton rendu !".format((datetime.datetime(2023, 12, 15) - datetime.datetime.now()).days)
+            answer = "Timon, ne t'inquiète pas, tu as encore le temps !" if nbr_jours_restant_timon > 7 else "OULA Timon, il est temps de rendre ton projet !"
             answer = answer + "\n\n" + "Alexis, il te reste {} jours avant ton rendu !".format((datetime.datetime(2024, 4, 15) - datetime.datetime.now()).days)
             bot.sendMessage(chat_id, answer)
 

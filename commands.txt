@@ -10,3 +10,4 @@ yoga - Receive a link to a random yoga video.
 physio - Get a link to a random physiotherapy video.
 rap - Get a random rap punchline or lyric.
 lessive - Get information about ordering a laundry card or badge.
+cadeaux - Pour savoir combien de cadeaux tu dois offir à qui.
