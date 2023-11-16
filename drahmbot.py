@@ -115,6 +115,7 @@ def get_avent_calendar_msg():
 
 def getCadeaux(msg):
     msg_from = msg['from']['first_name']
+    answer = "{}, voici les cadeaux que tu dois offir :\n".format(msg_from)
     
     # Read avent_calendar.csv using the csv library
     with open('avent_calendar.csv', newline='') as csvfile:

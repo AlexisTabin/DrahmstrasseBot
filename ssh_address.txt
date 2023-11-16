@@ -3,5 +3,5 @@ conda env export | grep -v "^prefix: " > environment.yml
 conda env create -f environment.yml
 ps aux | grep -i python
 nohup python3 drahmbot.py &
-source activate py35
+source activate py36
 
