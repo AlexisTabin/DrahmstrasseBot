@@ -1,5 +1,7 @@
 ssh pi@192.168.1.13
 conda env export | grep -v "^prefix: " > environment.yml
+conda env create -f environment.yml
 ps aux | grep -i python
 nohup python3 drahmbot.py &
+source activate py35
 
