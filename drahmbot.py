@@ -132,12 +132,9 @@ def getCadeaux(msg):
 
     # Display the results
     for (gifter, receiver), count in gifts_given.items():
-        offer = f"{gifter} offre {count} cadeau(x) à {receiver}"
-        print("Gifter   : " + gifter)
-        print("Msg from : " + msg_from)
+        offer = f"{count} cadeaux à {receiver}"
         if gifter == msg_from:
-            answer = answer + "\n\n" + offer
-        print(f"{gifter} offre {count} cadeaux à {receiver}")
+            answer = answer + "\n" + offer
 
     return answer
 
@@ -255,6 +252,11 @@ def handle(msg):
             commande = "Pour commander une carte ou un badge, veuillez consulter le site internet https://www.lavorent.ch/fr/product/hyperion-100/"
             message = conditions + "\n\n" + addresse + "\n\n" + commande
             bot.sendMessage(chat_id, message)
+
+        elif command == '/cadeaux':
+            msg = getCadeaux(msg)
+            bot.sendMessage(chat_id, msg)
+
     except Exception as e:
         print("Exception occured: " + str(e))
         answer = "Je ne comprends pas ce message :("
