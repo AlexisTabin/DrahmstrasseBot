@@ -127,7 +127,6 @@ def getCadeaux(msg):
         gifter = day['gifter']
         receiver = day['receiver']
         
-        key = f"{gifter} offre {gifts_given.get((gifter, receiver), 0)} cadeau(x) à {receiver}"
         gifts_given[(gifter, receiver)] = gifts_given.get((gifter, receiver), 0) + 1
 
     # Display the results
