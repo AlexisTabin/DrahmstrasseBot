@@ -88,8 +88,6 @@ def getRap():
         return quote.text + "\n- " + artist + "\n" + link['href']
 
 def get_avent_calendar_msg():
-    answer = "C'est l'Avent !"
-
     
     # Read avent_calendar.csv using the csv library
     with open('avent_calendar.csv', newline='') as csvfile:
@@ -110,7 +108,7 @@ def get_avent_calendar_msg():
     if day == 1:
         day = "1er"
     
-    answer = answer + "\n\n" + "En cette belle journée du {} Décembre, c'est au tour de {} d'offrir un cadeau à {} !".format(day, gifter, receiver)
+    answer = "En cette belle journée du {} Décembre, c'est au tour de {} d'offrir un cadeau à {} !".format(day, gifter, receiver)
     return answer
 
 def getCadeaux(msg):
@@ -160,6 +158,14 @@ def getRoles():
         """.format(roles[(index + 0) % 4], roles[(index + 1) % 4], roles[(index + 2) % 4], roles[(index + 3) % 4])
         return answer
 
+def getCartonOrPapier():
+    # if current week is even then it's Carton else it's Papier
+    if datetime.datetime.now().isocalendar()[1] % 2 == 0:
+        answer = "papier"
+    else:
+        answer = "carton"
+    return answer
+
 def handle(msg):
     print("Message received: " + str(msg))
     try : 
@@ -186,11 +192,8 @@ def handle(msg):
             bot.sendMessage(chat_id, answer)
 
         elif command == '/papier' or command == '/carton':
-            # if current week is even then it's Carton else it's Papier
-            if datetime.datetime.now().isocalendar()[1] % 2 == 0:
-                answer = "C'est la semaine du Papier !"
-            else:
-                answer = "C'est la semaine du Carton !"
+            papierOrCarton = getCartonOrPapier()
+            answer = "C'est le {} qui est à sortir cette semaine !".format(papierOrCarton)
             bot.sendMessage(chat_id, answer)
 
         elif command == '/time':
@@ -202,7 +205,8 @@ def handle(msg):
             if datetime.datetime.now().month != 12:
                 answer = "Il reste {} jours avant le début de l'Avent !".format((datetime.datetime(2023, 12, 1) - datetime.datetime.now()).days)
             else:
-                answer = get_avent_calendar_msg()
+                answer = "C'est l'Avent !\n\n"
+                answer = answer + get_avent_calendar_msg()
             bot.sendMessage(chat_id, answer)
 
         elif command == '/rendu':
@@ -293,7 +297,27 @@ try :
             answer = "Coucou Timon, Maël, Léa et Alexis !\n\n C'est lundi, il est midi, c'est l'heure de changer les rôles !\n" + answer + "\n\nBonne semaine à tous !"
             bot.sendMessage(DRAHMSTRASSE_GROUP_ID, answer)
             time.sleep(60)
+
+        # Each monday evening, send a message to say to not forget to take out the paper or the carton
+        is_monday_evening = datetime.datetime.now().isocalendar()[2] == 1 and datetime.datetime.now().hour == 18 and datetime.datetime.now().minute == 0
+        if is_monday_evening:
+            papierOrCarton = getCartonOrPapier()
+            answer = "Coucou tout le monde !\n\nC'est lundi soir, n'oubliez pas de sortir le {} pour qu'il soit rammassé demain matin !".format(papierOrCarton)
+            bot.sendMessage(DRAHMSTRASSE_GROUP_ID, answer)
+            time.sleep(60)
+
+        # For each day of the Avent, send a message to the group to say who is the gifter and who is the receiver
+        is_advent = datetime.datetime.now().month == 12
+        is_advent_day = datetime.datetime.now().day <= 24
+        is_advent_day_morning = is_advent and is_advent_day and datetime.datetime.now().hour == 7 and datetime.datetime.now().minute == 30
+        if is_advent_day_morning:
+            print("It's advent day morning, time to send a message to the group !")
+            answer = get_avent_calendar_msg()
+            bot.sendMessage(DRAHMSTRASSE_GROUP_ID, answer)
+            time.sleep(60)
+            
         time.sleep(10)
+
 except Exception as e:
     print("Exception occured: " + str(e))
     answer = "Je ne comprends pas ce message :("
