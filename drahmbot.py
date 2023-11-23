@@ -248,6 +248,11 @@ try :
             print("It's 11:45 am, time to send a message to the group !")
             bot.sendMessage(DRAHMSTRASSE_GROUP_ID, "Il est 11h45, il est temps de faire la pause !\nBon appétit et bonne journée !")
             time.sleep(60)
+
+        if datetime.datetime.now().hour == 23 and datetime.datetime.now().minute == 00:
+            print("It's 23:00 pm, time to send a message to Alexis !")
+            bot.sendMessage(ALEXIS_ID, "Il est 23h00, il est temps d'éteindre tes écrans et d'aller te coucher Alexis !")
+            time.sleep(60)
             
         # Each 2 weeks, change roles
         is_changing_week = datetime.datetime.now().isocalendar()[1] % 2 == 1
