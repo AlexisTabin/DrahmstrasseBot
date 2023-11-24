@@ -131,7 +131,7 @@ def getCadeaux(msg):
     # Display the results
     for (gifter, receiver), count in gifts_given.items():
         offer = f"{count} cadeaux à {receiver}"
-        if gifter == msg_from:
+        if msg_from in gifter:
             answer = answer + "\n" + offer
 
     return answer
@@ -164,6 +164,27 @@ def getCartonOrPapier():
         answer = "papier"
     else:
         answer = "carton"
+    return answer
+
+def getCadeauxPlannning(msg):
+    msg_from = msg['from']['first_name']
+    answer = "{}, voici quand et à qui tu dois offrir les cadeaux :\n".format(msg_from)
+    
+    # Read avent_calendar.csv using the csv library
+    with open('avent_calendar.csv', newline='') as csvfile:
+        reader = csv.DictReader(csvfile)
+        calendar = list(reader)
+
+     # Count the number of gifts given by each person
+    gifts_given = {}
+
+    for day in calendar:
+        if day['gifter'] in msg_from:
+            receiver = day['receiver']
+            date = day['day']
+            answer += "\nLe " + (date if date != 1 else '1er') + " décembre pour " + receiver + "."
+
+    answer += "\n\nBonne chance !"
     return answer
 
 def handle(msg):
@@ -260,6 +281,20 @@ def handle(msg):
         elif command == '/cadeaux':
             msg = getCadeaux(msg)
             bot.sendMessage(chat_id, msg)
+
+        elif command == '/help':
+            answer = "Voici la liste des commandes que je comprends :\n"
+            # read from commands.txt
+            with open('commands.txt', 'r') as f:
+                answer = answer + f.read()
+            
+            bot.sendMessage(chat_id, answer)
+        
+        # we want to know which day the gifter has to give a gift to the receiver
+        elif command == '/cadeaux_planning':
+            msg = getCadeauxPlannning(msg)
+            bot.sendMessage(chat_id, msg)
+            
 
     except Exception as e:
         print("Exception occured: " + str(e))

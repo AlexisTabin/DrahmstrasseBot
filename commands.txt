@@ -11,3 +11,5 @@ physio - Get a link to a random physiotherapy video.
 rap - Get a random rap punchline or lyric.
 lessive - Get information about ordering a laundry card or badge.
 cadeaux - Pour savoir combien de cadeaux tu dois offir à qui.
+cadeaux_planning - Pour savoir qui offre à qui et quand.
+help - Get a list of all commands.
