@@ -179,10 +179,14 @@ def getCadeauxPlannning(msg):
     gifts_given = {}
 
     for day in calendar:
-        if day['gifter'] in msg_from:
+        if int(day['day']) == 22:
+            print("Day : " + str(day))
+            print("Gifter : " + str(day['gifter']))
+            print("Receiver : " + str(day['receiver']))
+        if msg_from in  day['gifter']:
             receiver = day['receiver']
             date = day['day']
-            answer += "\nLe " + (date if date != 1 else '1er') + " décembre pour " + receiver + "."
+            answer += "\nLe " + (date if int(date) != 1 else '1er') + " décembre pour " + receiver + "."
 
     answer += "\n\nBonne chance !"
     return answer
