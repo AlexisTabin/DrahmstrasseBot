@@ -12,6 +12,7 @@ ssh pi@192.168.1.13
 
 ```console
 cd ~/Documents/DrahmstrasseBot/ # Naviguer jusqu'au dossier du bot
+git pull                        # Pour avoir les dernières mises à jour du bot
 source activate py36            # Activer l'environnement conda
 nohup python3 drahmbot.py &     # Lancer le bot en le détachant du terminal
 ps aux | grep -i python         # Vérifier que le bot run
