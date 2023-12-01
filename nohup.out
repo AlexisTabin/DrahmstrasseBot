@@ -10,3 +10,1449 @@ Traceback (most recent call last):
   File "drahmbot.py", line 11, in <module>
     from youtubesearchpython import VideosSearch
 ImportError: No module named 'youtubesearchpython'
+I am listening ...
+Message received: {'message_id': 4535, 'from': {'id': 891406979, 'is_bot': False, 'first_name': 'Alexis', 'last_name': 'Tabin', 'username': 'fackouuu', 'language_code': 'fr'}, 'chat': {'id': -1001633433047, 'title': 'Rue de la Bcrème', 'type': 'supergroup'}, 'date': 1701020017, 'text': 'Pssst'}
+Got command: Pssst
+Message received: {'message_id': 4536, 'from': {'id': 891406979, 'is_bot': False, 'first_name': 'Alexis', 'last_name': 'Tabin', 'username': 'fackouuu', 'language_code': 'fr'}, 'chat': {'id': -1001633433047, 'title': 'Rue de la Bcrème', 'type': 'supergroup'}, 'date': 1701020025, 'text': 'Qqn peut faire une photo de mon miroir ?'}
+Got command: Qqn peut faire une photo de mon miroir ?
+Message received: {'message_id': 4537, 'from': {'id': 891406979, 'is_bot': False, 'first_name': 'Alexis', 'last_name': 'Tabin', 'username': 'fackouuu', 'language_code': 'fr'}, 'chat': {'id': -1001633433047, 'title': 'Rue de la Bcrème', 'type': 'supergroup'}, 'date': 1701020033, 'text': 'Comme ça jpeux montrer à maman 🙈'}
+Got command: Comme ça jpeux montrer à maman 🙈
+Message received: {'message_id': 4538, 'from': {'id': 5503636012, 'is_bot': False, 'first_name': 'Léa', 'username': 'leleguib', 'language_code': 'fr'}, 'chat': {'id': -1001633433047, 'title': 'Rue de la Bcrème', 'type': 'supergroup'}, 'date': 1701020059, 'text': 'Ouiiii'}
+Got command: Ouiiii
+Message received: {'message_id': 4539, 'from': {'id': 5503636012, 'is_bot': False, 'first_name': 'Léa', 'username': 'leleguib', 'language_code': 'fr'}, 'chat': {'id': -1001633433047, 'title': 'Rue de la Bcrème', 'type': 'supergroup'}, 'date': 1701020140, 'photo': [{'file_id': 'AgACAgQAAx0CYVw11wACEbtlY4Hsl-vusbi-b5YOmxooQZRDEwACccAxG6lHIFNq-E--LUzrPwEAAwIAA3MAAzME', 'file_unique_id': 'AQADccAxG6lHIFN4', 'file_size': 1523, 'width': 67, 'height': 90}, {'file_id': 'AgACAgQAAx0CYVw11wACEbtlY4Hsl-vusbi-b5YOmxooQZRDEwACccAxG6lHIFNq-E--LUzrPwEAAwIAA20AAzME', 'file_unique_id': 'AQADccAxG6lHIFNy', 'file_size': 18676, 'width': 240, 'height': 320}, {'file_id': 'AgACAgQAAx0CYVw11wACEbtlY4Hsl-vusbi-b5YOmxooQZRDEwACccAxG6lHIFNq-E--LUzrPwEAAwIAA3gAAzME', 'file_unique_id': 'AQADccAxG6lHIFN9', 'file_size': 79238, 'width': 600, 'height': 800}, {'file_id': 'AgACAgQAAx0CYVw11wACEbtlY4Hsl-vusbi-b5YOmxooQZRDEwACccAxG6lHIFNq-E--LUzrPwEAAwIAA3kAAzME', 'file_unique_id': 'AQADccAxG6lHIFN-', 'file_size': 106323, 'width': 960, 'height': 1280}]}
+Message received: {'message_id': 4540, 'from': {'id': 891406979, 'is_bot': False, 'first_name': 'Alexis', 'last_name': 'Tabin', 'username': 'fackouuu', 'language_code': 'fr'}, 'chat': {'id': -1001633433047, 'title': 'Rue de la Bcrème', 'type': 'supergroup'}, 'date': 1701020176, 'text': 'Merciiii'}
+Got command: Merciiii
+Message received: {'message_id': 4541, 'from': {'id': 5503636012, 'is_bot': False, 'first_name': 'Léa', 'username': 'leleguib', 'language_code': 'fr'}, 'chat': {'id': -1001633433047, 'title': 'Rue de la Bcrème', 'type': 'supergroup'}, 'date': 1701074707, 'text': 'Est ce que l’un d’entre vous pourrait me prêter une clé usb pr ajrd svpppp'}
+Got command: Est ce que l’un d’entre vous pourrait me prêter une clé usb pr ajrd svpppp
+Message received: {'message_id': 4542, 'from': {'id': 981443207, 'is_bot': False, 'first_name': 'Maël'}, 'chat': {'id': -1001633433047, 'title': 'Rue de la Bcrème', 'type': 'supergroup'}, 'date': 1701087850, 'text': '/avent@DrahmstrasseBot', 'entities': [{'offset': 0, 'length': 22, 'type': 'bot_command'}]}
+Got command: /avent@DrahmstrasseBot
+Updated command: /avent
+Message received: {'message_id': 4543, 'from': {'id': 981443207, 'is_bot': False, 'first_name': 'Maël'}, 'chat': {'id': -1001633433047, 'title': 'Rue de la Bcrème', 'type': 'supergroup'}, 'date': 1701087854, 'text': 'AH'}
+Got command: AH
+Message received: {'message_id': 4546, 'from': {'id': 5503636012, 'is_bot': False, 'first_name': 'Léa', 'username': 'leleguib', 'language_code': 'fr'}, 'chat': {'id': -1001633433047, 'title': 'Rue de la Bcrème', 'type': 'supergroup'}, 'date': 1701088260, 'message_thread_id': 4545, 'reply_to_message': {'message_id': 4545, 'from': {'id': 6931534504, 'is_bot': True, 'first_name': 'DrahmstrasseBot', 'username': 'DrahmstrasseBot'}, 'chat': {'id': -1001633433047, 'title': 'Rue de la Bcrème', 'type': 'supergroup'}, 'date': 1701088249, 'text': "Il reste 3 jours avant le début de l'Avent !"}, 'text': '😱😱😱😱😱'}
+Got command: 😱😱😱😱😱
+Message received: {'message_id': 4547, 'from': {'id': 891406979, 'is_bot': False, 'first_name': 'Alexis', 'last_name': 'Tabin', 'username': 'fackouuu', 'language_code': 'fr'}, 'chat': {'id': -1001633433047, 'title': 'Rue de la Bcrème', 'type': 'supergroup'}, 'date': 1701088281, 'text': '/cadeaux_planning@DrahmstrasseBot', 'entities': [{'offset': 0, 'length': 33, 'type': 'bot_command'}]}
+Got command: /cadeaux_planning@DrahmstrasseBot
+Updated command: /cadeaux_planning
+Day : {'day': '22', 'receiver': 'Timon', 'gifter': 'Alexis et Léa et Maël'}
+Gifter : Alexis et Léa et Maël
+Receiver : Timon
+Message received: {'message_id': 4549, 'from': {'id': 891406979, 'is_bot': False, 'first_name': 'Alexis', 'last_name': 'Tabin', 'username': 'fackouuu', 'language_code': 'fr'}, 'chat': {'id': -1001633433047, 'title': 'Rue de la Bcrème', 'type': 'supergroup'}, 'date': 1701088315, 'message_thread_id': 4286, 'reply_to_message': {'message_id': 4286, 'from': {'id': 1645783874, 'is_bot': False, 'first_name': 'timon', 'language_code': 'fr'}, 'chat': {'id': -1001633433047, 'title': 'Rue de la Bcrème', 'type': 'supergroup'}, 'date': 1699896579, 'edit_date': 1699905367, 'text': "j'ai besoin de boire"}, 'sticker': {'width': 426, 'height': 512, 'emoji': '😉', 'set_name': 'witistickers', 'is_animated': False, 'is_video': False, 'type': 'regular', 'thumbnail': {'file_id': 'AAMCBAADHQJhXDXXAAIRxWVkjDuCbJ9LlHnVQadCh2VckEgrAAI1EQACo-dxUkGEd2M_d0OCAQAHbQADMwQ', 'file_unique_id': 'AQADNREAAqPncVJy', 'file_size': 6800, 'width': 266, 'height': 320}, 'thumb': {'file_id': 'AAMCBAADHQJhXDXXAAIRxWVkjDuCbJ9LlHnVQadCh2VckEgrAAI1EQACo-dxUkGEd2M_d0OCAQAHbQADMwQ', 'file_unique_id': 'AQADNREAAqPncVJy', 'file_size': 6800, 'width': 266, 'height': 320}, 'file_id': 'CAACAgQAAx0CYVw11wACEcVlZIw7gmyfS5R51UGnQodlXJBIKwACNREAAqPncVJBhHdjP3dDgjME', 'file_unique_id': 'AgADNREAAqPncVI', 'file_size': 13992}}
+Message received: {'message_id': 4551, 'from': {'id': 5503636012, 'is_bot': False, 'first_name': 'Léa', 'username': 'leleguib', 'language_code': 'fr'}, 'chat': {'id': -1001633433047, 'title': 'Rue de la Bcrème', 'type': 'supergroup'}, 'date': 1701088320, 'text': '/cadeaux@DrahmstrasseBot', 'entities': [{'offset': 0, 'length': 24, 'type': 'bot_command'}]}
+Got command: /cadeaux@DrahmstrasseBot
+Updated command: /cadeaux
+Message received: {'message_id': 4553, 'from': {'id': 5503636012, 'is_bot': False, 'first_name': 'Léa', 'username': 'leleguib', 'language_code': 'fr'}, 'chat': {'id': -1001633433047, 'title': 'Rue de la Bcrème', 'type': 'supergroup'}, 'date': 1701088331, 'text': '/cadeaux_planning@DrahmstrasseBot', 'entities': [{'offset': 0, 'length': 33, 'type': 'bot_command'}]}
+Got command: /cadeaux_planning@DrahmstrasseBot
+Updated command: /cadeaux_planning
+Day : {'day': '22', 'receiver': 'Timon', 'gifter': 'Alexis et Léa et Maël'}
+Gifter : Alexis et Léa et Maël
+Receiver : Timon
+Message received: {'message_id': 4555, 'from': {'id': 981443207, 'is_bot': False, 'first_name': 'Maël'}, 'chat': {'id': -1001633433047, 'title': 'Rue de la Bcrème', 'type': 'supergroup'}, 'date': 1701088546, 'text': '/cadeaux_planning@DrahmstrasseBot', 'entities': [{'offset': 0, 'length': 33, 'type': 'bot_command'}]}
+Got command: /cadeaux_planning@DrahmstrasseBot
+Updated command: /cadeaux_planning
+Day : {'day': '22', 'receiver': 'Timon', 'gifter': 'Alexis et Léa et Maël'}
+Gifter : Alexis et Léa et Maël
+Receiver : Timon
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 537, in _make_request
+    response = conn.getresponse()
+               ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 461, in getresponse
+    httplib_response = super().getresponse()
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/http/client.py", line 1378, in getresponse
+    response.begin()
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/http/client.py", line 318, in begin
+    version, status, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/http/client.py", line 279, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/ssl.py", line 1311, in recv_into
+    return self.read(nbytes, buffer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/ssl.py", line 1167, in read
+    return self._sslobj.read(len, buffer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TimeoutError: The read operation timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/loop.py", line 58, in run_forever
+    result = self._bot.getUpdates(offset=offset,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 1000, in getUpdates
+    return self._api_request('getUpdates', _rectify(p))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 491, in _api_request
+    return api.request((self._token, method, params, files), **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/api.py", line 154, in request
+    r = fn(*args, **kwargs)  # `fn` must be thread-safe
+        ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/_request_methods.py", line 217, in request_encode_body
+    return self.urlopen(method, url, **extra_kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/poolmanager.py", line 443, in urlopen
+    response = conn.urlopen(method, u.request_uri, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 845, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/retry.py", line 470, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 791, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 539, in _make_request
+    self._raise_timeout(err=e, url=url, timeout_value=read_timeout)
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 371, in _raise_timeout
+    raise ReadTimeoutError(
+urllib3.exceptions.ReadTimeoutError: HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=50)
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 537, in _make_request
+    response = conn.getresponse()
+               ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 461, in getresponse
+    httplib_response = super().getresponse()
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/http/client.py", line 1378, in getresponse
+    response.begin()
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/http/client.py", line 318, in begin
+    version, status, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/http/client.py", line 279, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/ssl.py", line 1311, in recv_into
+    return self.read(nbytes, buffer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/ssl.py", line 1167, in read
+    return self._sslobj.read(len, buffer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TimeoutError: The read operation timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/loop.py", line 58, in run_forever
+    result = self._bot.getUpdates(offset=offset,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 1000, in getUpdates
+    return self._api_request('getUpdates', _rectify(p))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 491, in _api_request
+    return api.request((self._token, method, params, files), **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/api.py", line 154, in request
+    r = fn(*args, **kwargs)  # `fn` must be thread-safe
+        ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/_request_methods.py", line 217, in request_encode_body
+    return self.urlopen(method, url, **extra_kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/poolmanager.py", line 443, in urlopen
+    response = conn.urlopen(method, u.request_uri, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 845, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/retry.py", line 470, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 791, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 539, in _make_request
+    self._raise_timeout(err=e, url=url, timeout_value=read_timeout)
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 371, in _raise_timeout
+    raise ReadTimeoutError(
+urllib3.exceptions.ReadTimeoutError: HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=50)
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 203, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/socket.py", line 962, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -3] Temporary failure in name resolution
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 791, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 492, in _make_request
+    raise new_e
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 468, in _make_request
+    self._validate_conn(conn)
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 1097, in _validate_conn
+    conn.connect()
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 611, in connect
+    self.sock = sock = self._new_conn()
+                       ^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 210, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x7f1c0dbcc450>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/loop.py", line 58, in run_forever
+    result = self._bot.getUpdates(offset=offset,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 1000, in getUpdates
+    return self._api_request('getUpdates', _rectify(p))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 491, in _api_request
+    return api.request((self._token, method, params, files), **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/api.py", line 154, in request
+    r = fn(*args, **kwargs)  # `fn` must be thread-safe
+        ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/_request_methods.py", line 217, in request_encode_body
+    return self.urlopen(method, url, **extra_kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/poolmanager.py", line 443, in urlopen
+    response = conn.urlopen(method, u.request_uri, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 845, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/retry.py", line 515, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot6931534504:AAFEA4STvUVwj5qGVz-CUQkha9jWw0k7iGM/getUpdates (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7f1c0dbcc450>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)"))
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 203, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/socket.py", line 962, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -3] Temporary failure in name resolution
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 791, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 492, in _make_request
+    raise new_e
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 468, in _make_request
+    self._validate_conn(conn)
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 1097, in _validate_conn
+    conn.connect()
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 611, in connect
+    self.sock = sock = self._new_conn()
+                       ^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 210, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x7f1c0dbce310>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/loop.py", line 58, in run_forever
+    result = self._bot.getUpdates(offset=offset,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 1000, in getUpdates
+    return self._api_request('getUpdates', _rectify(p))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 491, in _api_request
+    return api.request((self._token, method, params, files), **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/api.py", line 154, in request
+    r = fn(*args, **kwargs)  # `fn` must be thread-safe
+        ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/_request_methods.py", line 217, in request_encode_body
+    return self.urlopen(method, url, **extra_kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/poolmanager.py", line 443, in urlopen
+    response = conn.urlopen(method, u.request_uri, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 845, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/retry.py", line 515, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot6931534504:AAFEA4STvUVwj5qGVz-CUQkha9jWw0k7iGM/getUpdates (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7f1c0dbce310>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)"))
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 203, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/socket.py", line 962, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -3] Temporary failure in name resolution
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 791, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 492, in _make_request
+    raise new_e
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 468, in _make_request
+    self._validate_conn(conn)
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 1097, in _validate_conn
+    conn.connect()
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 611, in connect
+    self.sock = sock = self._new_conn()
+                       ^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 210, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x7f1c0dbdc1d0>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/loop.py", line 58, in run_forever
+    result = self._bot.getUpdates(offset=offset,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 1000, in getUpdates
+    return self._api_request('getUpdates', _rectify(p))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 491, in _api_request
+    return api.request((self._token, method, params, files), **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/api.py", line 154, in request
+    r = fn(*args, **kwargs)  # `fn` must be thread-safe
+        ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/_request_methods.py", line 217, in request_encode_body
+    return self.urlopen(method, url, **extra_kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/poolmanager.py", line 443, in urlopen
+    response = conn.urlopen(method, u.request_uri, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 845, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/retry.py", line 515, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot6931534504:AAFEA4STvUVwj5qGVz-CUQkha9jWw0k7iGM/getUpdates (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7f1c0dbdc1d0>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)"))
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 203, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/socket.py", line 962, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -3] Temporary failure in name resolution
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 791, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 492, in _make_request
+    raise new_e
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 468, in _make_request
+    self._validate_conn(conn)
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 1097, in _validate_conn
+    conn.connect()
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 611, in connect
+    self.sock = sock = self._new_conn()
+                       ^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 210, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x7f1c0dbddf10>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/loop.py", line 58, in run_forever
+    result = self._bot.getUpdates(offset=offset,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 1000, in getUpdates
+    return self._api_request('getUpdates', _rectify(p))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 491, in _api_request
+    return api.request((self._token, method, params, files), **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/api.py", line 154, in request
+    r = fn(*args, **kwargs)  # `fn` must be thread-safe
+        ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/_request_methods.py", line 217, in request_encode_body
+    return self.urlopen(method, url, **extra_kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/poolmanager.py", line 443, in urlopen
+    response = conn.urlopen(method, u.request_uri, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 845, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/retry.py", line 515, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot6931534504:AAFEA4STvUVwj5qGVz-CUQkha9jWw0k7iGM/getUpdates (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7f1c0dbddf10>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)"))
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 203, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/socket.py", line 962, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -3] Temporary failure in name resolution
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 791, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 492, in _make_request
+    raise new_e
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 468, in _make_request
+    self._validate_conn(conn)
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 1097, in _validate_conn
+    conn.connect()
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 611, in connect
+    self.sock = sock = self._new_conn()
+                       ^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 210, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x7f1c0dbcc910>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/loop.py", line 58, in run_forever
+    result = self._bot.getUpdates(offset=offset,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 1000, in getUpdates
+    return self._api_request('getUpdates', _rectify(p))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 491, in _api_request
+    return api.request((self._token, method, params, files), **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/api.py", line 154, in request
+    r = fn(*args, **kwargs)  # `fn` must be thread-safe
+        ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/_request_methods.py", line 217, in request_encode_body
+    return self.urlopen(method, url, **extra_kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/poolmanager.py", line 443, in urlopen
+    response = conn.urlopen(method, u.request_uri, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 845, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/retry.py", line 515, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot6931534504:AAFEA4STvUVwj5qGVz-CUQkha9jWw0k7iGM/getUpdates (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7f1c0dbcc910>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)"))
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 203, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/socket.py", line 962, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -3] Temporary failure in name resolution
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 791, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 492, in _make_request
+    raise new_e
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 468, in _make_request
+    self._validate_conn(conn)
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 1097, in _validate_conn
+    conn.connect()
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 611, in connect
+    self.sock = sock = self._new_conn()
+                       ^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 210, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x7f1c0dbcc090>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/loop.py", line 58, in run_forever
+    result = self._bot.getUpdates(offset=offset,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 1000, in getUpdates
+    return self._api_request('getUpdates', _rectify(p))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 491, in _api_request
+    return api.request((self._token, method, params, files), **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/api.py", line 154, in request
+    r = fn(*args, **kwargs)  # `fn` must be thread-safe
+        ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/_request_methods.py", line 217, in request_encode_body
+    return self.urlopen(method, url, **extra_kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/poolmanager.py", line 443, in urlopen
+    response = conn.urlopen(method, u.request_uri, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 845, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/retry.py", line 515, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot6931534504:AAFEA4STvUVwj5qGVz-CUQkha9jWw0k7iGM/getUpdates (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7f1c0dbcc090>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)"))
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 203, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/socket.py", line 962, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -3] Temporary failure in name resolution
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 791, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 492, in _make_request
+    raise new_e
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 468, in _make_request
+    self._validate_conn(conn)
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 1097, in _validate_conn
+    conn.connect()
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 611, in connect
+    self.sock = sock = self._new_conn()
+                       ^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 210, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x7f1c0f4fb8d0>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/loop.py", line 58, in run_forever
+    result = self._bot.getUpdates(offset=offset,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 1000, in getUpdates
+    return self._api_request('getUpdates', _rectify(p))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 491, in _api_request
+    return api.request((self._token, method, params, files), **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/api.py", line 154, in request
+    r = fn(*args, **kwargs)  # `fn` must be thread-safe
+        ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/_request_methods.py", line 217, in request_encode_body
+    return self.urlopen(method, url, **extra_kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/poolmanager.py", line 443, in urlopen
+    response = conn.urlopen(method, u.request_uri, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 845, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/retry.py", line 515, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot6931534504:AAFEA4STvUVwj5qGVz-CUQkha9jWw0k7iGM/getUpdates (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7f1c0f4fb8d0>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)"))
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 203, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/socket.py", line 962, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -3] Temporary failure in name resolution
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 791, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 492, in _make_request
+    raise new_e
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 468, in _make_request
+    self._validate_conn(conn)
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 1097, in _validate_conn
+    conn.connect()
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 611, in connect
+    self.sock = sock = self._new_conn()
+                       ^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 210, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x7f1c0dbdf610>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/loop.py", line 58, in run_forever
+    result = self._bot.getUpdates(offset=offset,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 1000, in getUpdates
+    return self._api_request('getUpdates', _rectify(p))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 491, in _api_request
+    return api.request((self._token, method, params, files), **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/api.py", line 154, in request
+    r = fn(*args, **kwargs)  # `fn` must be thread-safe
+        ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/_request_methods.py", line 217, in request_encode_body
+    return self.urlopen(method, url, **extra_kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/poolmanager.py", line 443, in urlopen
+    response = conn.urlopen(method, u.request_uri, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 845, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/retry.py", line 515, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot6931534504:AAFEA4STvUVwj5qGVz-CUQkha9jWw0k7iGM/getUpdates (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7f1c0dbdf610>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)"))
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 203, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/socket.py", line 962, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -3] Temporary failure in name resolution
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 791, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 492, in _make_request
+    raise new_e
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 468, in _make_request
+    self._validate_conn(conn)
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 1097, in _validate_conn
+    conn.connect()
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 611, in connect
+    self.sock = sock = self._new_conn()
+                       ^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 210, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x7f1c0dbe5590>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/loop.py", line 58, in run_forever
+    result = self._bot.getUpdates(offset=offset,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 1000, in getUpdates
+    return self._api_request('getUpdates', _rectify(p))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 491, in _api_request
+    return api.request((self._token, method, params, files), **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/api.py", line 154, in request
+    r = fn(*args, **kwargs)  # `fn` must be thread-safe
+        ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/_request_methods.py", line 217, in request_encode_body
+    return self.urlopen(method, url, **extra_kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/poolmanager.py", line 443, in urlopen
+    response = conn.urlopen(method, u.request_uri, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 845, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/retry.py", line 515, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot6931534504:AAFEA4STvUVwj5qGVz-CUQkha9jWw0k7iGM/getUpdates (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7f1c0dbe5590>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)"))
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 203, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/socket.py", line 962, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -3] Temporary failure in name resolution
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 791, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 492, in _make_request
+    raise new_e
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 468, in _make_request
+    self._validate_conn(conn)
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 1097, in _validate_conn
+    conn.connect()
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 611, in connect
+    self.sock = sock = self._new_conn()
+                       ^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 210, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x7f1c0dbde2d0>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/loop.py", line 58, in run_forever
+    result = self._bot.getUpdates(offset=offset,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 1000, in getUpdates
+    return self._api_request('getUpdates', _rectify(p))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 491, in _api_request
+    return api.request((self._token, method, params, files), **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/api.py", line 154, in request
+    r = fn(*args, **kwargs)  # `fn` must be thread-safe
+        ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/_request_methods.py", line 217, in request_encode_body
+    return self.urlopen(method, url, **extra_kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/poolmanager.py", line 443, in urlopen
+    response = conn.urlopen(method, u.request_uri, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 845, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/retry.py", line 515, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot6931534504:AAFEA4STvUVwj5qGVz-CUQkha9jWw0k7iGM/getUpdates (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7f1c0dbde2d0>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)"))
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 203, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/socket.py", line 962, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -3] Temporary failure in name resolution
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 791, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 492, in _make_request
+    raise new_e
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 468, in _make_request
+    self._validate_conn(conn)
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 1097, in _validate_conn
+    conn.connect()
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 611, in connect
+    self.sock = sock = self._new_conn()
+                       ^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 210, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x7f1c0dbaffd0>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/loop.py", line 58, in run_forever
+    result = self._bot.getUpdates(offset=offset,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 1000, in getUpdates
+    return self._api_request('getUpdates', _rectify(p))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 491, in _api_request
+    return api.request((self._token, method, params, files), **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/api.py", line 154, in request
+    r = fn(*args, **kwargs)  # `fn` must be thread-safe
+        ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/_request_methods.py", line 217, in request_encode_body
+    return self.urlopen(method, url, **extra_kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/poolmanager.py", line 443, in urlopen
+    response = conn.urlopen(method, u.request_uri, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 845, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/retry.py", line 515, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot6931534504:AAFEA4STvUVwj5qGVz-CUQkha9jWw0k7iGM/getUpdates (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7f1c0dbaffd0>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)"))
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 203, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/socket.py", line 962, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -3] Temporary failure in name resolution
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 791, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 492, in _make_request
+    raise new_e
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 468, in _make_request
+    self._validate_conn(conn)
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 1097, in _validate_conn
+    conn.connect()
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 611, in connect
+    self.sock = sock = self._new_conn()
+                       ^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 210, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x7f1c0dbcf990>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/loop.py", line 58, in run_forever
+    result = self._bot.getUpdates(offset=offset,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 1000, in getUpdates
+    return self._api_request('getUpdates', _rectify(p))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 491, in _api_request
+    return api.request((self._token, method, params, files), **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/api.py", line 154, in request
+    r = fn(*args, **kwargs)  # `fn` must be thread-safe
+        ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/_request_methods.py", line 217, in request_encode_body
+    return self.urlopen(method, url, **extra_kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/poolmanager.py", line 443, in urlopen
+    response = conn.urlopen(method, u.request_uri, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 845, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/retry.py", line 515, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot6931534504:AAFEA4STvUVwj5qGVz-CUQkha9jWw0k7iGM/getUpdates (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7f1c0dbcf990>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)"))
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 203, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/socket.py", line 962, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -3] Temporary failure in name resolution
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 791, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 492, in _make_request
+    raise new_e
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 468, in _make_request
+    self._validate_conn(conn)
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 1097, in _validate_conn
+    conn.connect()
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 611, in connect
+    self.sock = sock = self._new_conn()
+                       ^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 210, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x7f1c0dbe5f10>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/loop.py", line 58, in run_forever
+    result = self._bot.getUpdates(offset=offset,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 1000, in getUpdates
+    return self._api_request('getUpdates', _rectify(p))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 491, in _api_request
+    return api.request((self._token, method, params, files), **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/api.py", line 154, in request
+    r = fn(*args, **kwargs)  # `fn` must be thread-safe
+        ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/_request_methods.py", line 217, in request_encode_body
+    return self.urlopen(method, url, **extra_kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/poolmanager.py", line 443, in urlopen
+    response = conn.urlopen(method, u.request_uri, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 845, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/retry.py", line 515, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot6931534504:AAFEA4STvUVwj5qGVz-CUQkha9jWw0k7iGM/getUpdates (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7f1c0dbe5f10>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)"))
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 203, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/socket.py", line 962, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -3] Temporary failure in name resolution
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 791, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 492, in _make_request
+    raise new_e
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 468, in _make_request
+    self._validate_conn(conn)
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 1097, in _validate_conn
+    conn.connect()
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 611, in connect
+    self.sock = sock = self._new_conn()
+                       ^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 210, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x7f1c0dbe7e50>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/loop.py", line 58, in run_forever
+    result = self._bot.getUpdates(offset=offset,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 1000, in getUpdates
+    return self._api_request('getUpdates', _rectify(p))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 491, in _api_request
+    return api.request((self._token, method, params, files), **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/api.py", line 154, in request
+    r = fn(*args, **kwargs)  # `fn` must be thread-safe
+        ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/_request_methods.py", line 217, in request_encode_body
+    return self.urlopen(method, url, **extra_kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/poolmanager.py", line 443, in urlopen
+    response = conn.urlopen(method, u.request_uri, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 845, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/retry.py", line 515, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot6931534504:AAFEA4STvUVwj5qGVz-CUQkha9jWw0k7iGM/getUpdates (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7f1c0dbe7e50>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)"))
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 203, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/socket.py", line 962, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -3] Temporary failure in name resolution
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 791, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 492, in _make_request
+    raise new_e
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 468, in _make_request
+    self._validate_conn(conn)
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 1097, in _validate_conn
+    conn.connect()
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 611, in connect
+    self.sock = sock = self._new_conn()
+                       ^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 210, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x7f1c0dbcf310>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/loop.py", line 58, in run_forever
+    result = self._bot.getUpdates(offset=offset,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 1000, in getUpdates
+    return self._api_request('getUpdates', _rectify(p))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 491, in _api_request
+    return api.request((self._token, method, params, files), **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/api.py", line 154, in request
+    r = fn(*args, **kwargs)  # `fn` must be thread-safe
+        ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/_request_methods.py", line 217, in request_encode_body
+    return self.urlopen(method, url, **extra_kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/poolmanager.py", line 443, in urlopen
+    response = conn.urlopen(method, u.request_uri, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 845, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/retry.py", line 515, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot6931534504:AAFEA4STvUVwj5qGVz-CUQkha9jWw0k7iGM/getUpdates (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7f1c0dbcf310>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)"))
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 203, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/socket.py", line 962, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -3] Temporary failure in name resolution
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 791, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 492, in _make_request
+    raise new_e
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 468, in _make_request
+    self._validate_conn(conn)
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 1097, in _validate_conn
+    conn.connect()
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 611, in connect
+    self.sock = sock = self._new_conn()
+                       ^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 210, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: <urllib3.connection.HTTPSConnection object at 0x7f1c0dbcfe50>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/loop.py", line 58, in run_forever
+    result = self._bot.getUpdates(offset=offset,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 1000, in getUpdates
+    return self._api_request('getUpdates', _rectify(p))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 491, in _api_request
+    return api.request((self._token, method, params, files), **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/api.py", line 154, in request
+    r = fn(*args, **kwargs)  # `fn` must be thread-safe
+        ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/_request_methods.py", line 217, in request_encode_body
+    return self.urlopen(method, url, **extra_kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/poolmanager.py", line 443, in urlopen
+    response = conn.urlopen(method, u.request_uri, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 875, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 845, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/retry.py", line 515, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot6931534504:AAFEA4STvUVwj5qGVz-CUQkha9jWw0k7iGM/getUpdates (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7f1c0dbcfe50>: Failed to resolve 'api.telegram.org' ([Errno -3] Temporary failure in name resolution)"))
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 537, in _make_request
+    response = conn.getresponse()
+               ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 461, in getresponse
+    httplib_response = super().getresponse()
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/http/client.py", line 1378, in getresponse
+    response.begin()
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/http/client.py", line 318, in begin
+    version, status, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/http/client.py", line 279, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/ssl.py", line 1311, in recv_into
+    return self.read(nbytes, buffer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/ssl.py", line 1167, in read
+    return self._sslobj.read(len, buffer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TimeoutError: The read operation timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/loop.py", line 58, in run_forever
+    result = self._bot.getUpdates(offset=offset,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 1000, in getUpdates
+    return self._api_request('getUpdates', _rectify(p))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 491, in _api_request
+    return api.request((self._token, method, params, files), **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/api.py", line 154, in request
+    r = fn(*args, **kwargs)  # `fn` must be thread-safe
+        ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/_request_methods.py", line 217, in request_encode_body
+    return self.urlopen(method, url, **extra_kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/poolmanager.py", line 443, in urlopen
+    response = conn.urlopen(method, u.request_uri, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 845, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/retry.py", line 470, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 791, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 539, in _make_request
+    self._raise_timeout(err=e, url=url, timeout_value=read_timeout)
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 371, in _raise_timeout
+    raise ReadTimeoutError(
+urllib3.exceptions.ReadTimeoutError: HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=50)
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 537, in _make_request
+    response = conn.getresponse()
+               ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 461, in getresponse
+    httplib_response = super().getresponse()
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/http/client.py", line 1378, in getresponse
+    response.begin()
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/http/client.py", line 318, in begin
+    version, status, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/http/client.py", line 279, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/ssl.py", line 1311, in recv_into
+    return self.read(nbytes, buffer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/ssl.py", line 1167, in read
+    return self._sslobj.read(len, buffer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TimeoutError: The read operation timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/loop.py", line 58, in run_forever
+    result = self._bot.getUpdates(offset=offset,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 1000, in getUpdates
+    return self._api_request('getUpdates', _rectify(p))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 491, in _api_request
+    return api.request((self._token, method, params, files), **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/api.py", line 154, in request
+    r = fn(*args, **kwargs)  # `fn` must be thread-safe
+        ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/_request_methods.py", line 217, in request_encode_body
+    return self.urlopen(method, url, **extra_kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/poolmanager.py", line 443, in urlopen
+    response = conn.urlopen(method, u.request_uri, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 845, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/retry.py", line 470, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 791, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 539, in _make_request
+    self._raise_timeout(err=e, url=url, timeout_value=read_timeout)
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 371, in _raise_timeout
+    raise ReadTimeoutError(
+urllib3.exceptions.ReadTimeoutError: HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=50)
+Traceback (most recent call last):
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 537, in _make_request
+    response = conn.getresponse()
+               ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connection.py", line 461, in getresponse
+    httplib_response = super().getresponse()
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/http/client.py", line 1378, in getresponse
+    response.begin()
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/http/client.py", line 318, in begin
+    version, status, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/http/client.py", line 279, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/socket.py", line 706, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/ssl.py", line 1311, in recv_into
+    return self.read(nbytes, buffer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/ssl.py", line 1167, in read
+    return self._sslobj.read(len, buffer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TimeoutError: The read operation timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/loop.py", line 58, in run_forever
+    result = self._bot.getUpdates(offset=offset,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 1000, in getUpdates
+    return self._api_request('getUpdates', _rectify(p))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/__init__.py", line 491, in _api_request
+    return api.request((self._token, method, params, files), **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/Documents/DrahmstrasseBot/telepot/api.py", line 154, in request
+    r = fn(*args, **kwargs)  # `fn` must be thread-safe
+        ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/_request_methods.py", line 217, in request_encode_body
+    return self.urlopen(method, url, **extra_kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/poolmanager.py", line 443, in urlopen
+    response = conn.urlopen(method, u.request_uri, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 845, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/retry.py", line 470, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 791, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 539, in _make_request
+    self._raise_timeout(err=e, url=url, timeout_value=read_timeout)
+  File "/home/alexis/miniconda3/envs/drahmstrassebot/lib/python3.11/site-packages/urllib3/connectionpool.py", line 371, in _raise_timeout
+    raise ReadTimeoutError(
+urllib3.exceptions.ReadTimeoutError: HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=50)
