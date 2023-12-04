@@ -298,6 +298,18 @@ def handle(msg):
         elif command == '/cadeaux_planning':
             msg = getCadeauxPlannning(msg)
             bot.sendMessage(chat_id, msg)
+        
+        elif command == '/avent_planning':
+            answer = "Voici le planning de l'Avent :\n\n"
+            # read from commands.txt
+            with open('avent_calendar.csv', 'r') as csvfile:
+                reader = csv.DictReader(csvfile)
+                calendar = list(reader)
+
+            for day in calendar:
+                answer += "Le {} décembre : {} offre un cadeau à {}\n".format(day['day'], day['gifter'], day['receiver'])
+                
+            bot.sendMessage(chat_id, answer)
             
 
     except Exception as e:
@@ -306,19 +318,19 @@ def handle(msg):
         answer = answer + "\n\n" + "Exception: " + str(e)
         bot.sendMessage(chat_id, answer)
 
-try : 
-    # read token from yml file
-    with open("bot_token.yml", 'r') as ymlfile:
-        cfg = yaml.load(ymlfile, yaml.FullLoader)
-        # get token from yml file 
-        token = cfg['telegram_bot_token']
+# read token from yml file
+with open("bot_token.yml", 'r') as ymlfile:
+    cfg = yaml.load(ymlfile, yaml.FullLoader)
+    # get token from yml file 
+    token = cfg['telegram_bot_token']
 
-    bot = telepot.Bot(token)
+bot = telepot.Bot(token)
 
-    MessageLoop(bot, handle).run_as_thread()
-    print('I am listening ...')
+MessageLoop(bot, handle).run_as_thread()
+print('I am listening ...')
 
-    while 1:
+while 1:
+    try : 
         # if time of the day is 11:45 am send a message to the group telling the time of the day and to have a nice day
         if datetime.datetime.now().hour == 11 and datetime.datetime.now().minute == 45:
             print("It's 11:45 am, time to send a message to the group !")
@@ -362,8 +374,8 @@ try :
             
         time.sleep(10)
 
-except Exception as e:
-    print("Exception occured: " + str(e))
-    answer = "Je ne comprends pas ce message :("
-    answer = answer + "\n\n" + "Exception: " + str(e)
-    bot.sendMessage(ALEXIS_ID, answer)
+    except Exception as e:
+        print("Exception occured: " + str(e))
+        answer = "Je ne comprends pas ce message :("
+        answer = answer + "\n\n" + "Exception: " + str(e)
+        bot.sendMessage(ALEXIS_ID, answer)
