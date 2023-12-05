@@ -5,4 +5,5 @@ if [ -f "/home/pi/miniconda3/etc/profile.d/conda.sh" ]; then
 fi
 conda activate py36
 cd  ~/Documents/DrahmstrasseBot/
+git pull
 python3 drahmbot.py
