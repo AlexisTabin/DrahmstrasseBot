@@ -39,6 +39,8 @@ et ajouter la ligne suivante à la fin du fichier.
 ```console
 @reboot /usr/bin/sleep 60;  ~/Documents/DrahmstrasseBot/run-on-start-pi.sh > ~/Documents/DrahmstrasseBot/bot-pi.log 2>&1
 ```
+Avant cela, ne pas oublier de chmod+x le script qu'on veut lancer
+
 La commande `@reboot` permet de lancer la/les commande/s suivante/s au démarrage du Raspberry. Pour plus d'informations sur le fichier crontab, voir [ici](https://tecadmin.net/crontab-in-linux-with-20-examples-of-cron-schedule/).
 
 La commande `sleep 60` permet d'attendre 60 secondes avant de lancer le bot. Cela permet de laisser le temps au Raspberry de se connecter au réseau wifi avant de lancer le bot.
