@@ -375,9 +375,9 @@ while 1:
         time.sleep(10)
 
     except Exception as e:
-	time.sleep(60)
+        time.sleep(60)
         print("Exception occured: " + str(e))
         answer = "Je ne comprends pas ce message :("
         answer = answer + "\n\n" + "Exception: " + str(e)
-        bot.sendMessage(ALEXIS_ID, answer)
-	time.sleep(60)
+        bot.sendMessage(ALEXIS_ID, answer)	
+        time.sleep(60)
