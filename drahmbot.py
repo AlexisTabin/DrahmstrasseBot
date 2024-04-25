@@ -13,6 +13,7 @@ from avent import get_avent_calendar_msg, getCadeaux, getCadeauxPlannning
 from chenil import getQuote, getRap
 from menage import getCartonOrPapier, getRoles
 from telepot.loop import MessageLoop
+from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
 
 LEA = 'Lea'
 TIMON = 'timon'
@@ -28,12 +29,34 @@ with open("bot_token.yml", 'r') as ymlfile:
     DRAHMSTRASSE_GROUP_ID = cfg['bot_chat_id']
     ALEXIS_ID = cfg['alexis_id']
     LEA_ID = ['lea_id']
+#chat_id = DRAHMSTRASSE_GROUP_ID
+    
 
+max_poet = 0
+def on_callback_query(msg):
+    global max_poet
+    print("msg received : ", msg)
+    query_id, from_id, query_data = telepot.glance(msg, flavor='callback_query')
+    print('Callback Query :', query_id, from_id, query_data)
+    print('Max poet : ', max_poet)
+    if max_poet < 1:
+        bot.answerCallbackQuery(query_id, text='POÊÊÊÊÊÊÊÊÊÊÊÊT')
+        bot.sendMessage(chat_id, 'POÊÊÊÊÊÊÊÊÊÊÊÊT')
+        max_poet += 2
+    else :
+        bot.answerCallbackQuery(query_id, text='Maximum POET reached, please stop')
+        max_poet -= 0.1
+    
 
+    
 def handle(msg):
+    global chat_id
     print("Message received: " + str(msg))
     try:
+
+        
         chat_id = msg['chat']['id']
+
         # handle the case where the message doesn't have the key 'text'
         if 'text' not in msg:
             if 'caption' in msg:
@@ -86,7 +109,12 @@ def handle(msg):
             bot.sendMessage(chat_id, answer)
 
         elif command == 'POET' or command == 'POÊT':
-            bot.sendMessage(chat_id, 'POÊÊÊÊÊÊÊÊÊÊÊÊT')
+            content_type, chat_type, chat_id = telepot.glance(msg)
+            print("content type : ", content_type)
+            keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text='Press me', callback_data='press')],
+                ])
+            bot.sendMessage(chat_id, 'POET ?', reply_markup=keyboard)
 
         elif command == '/quote':
             bot.sendMessage(chat_id, getQuote())
@@ -164,7 +192,9 @@ def handle(msg):
 
 bot = telepot.Bot(token)
 
-MessageLoop(bot, handle).run_as_thread()
+MessageLoop(bot, {'chat': handle,
+                  'callback_query' : on_callback_query
+    }).run_as_thread()
 print('I am listening ...')
 
 while 1:
