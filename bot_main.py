@@ -53,7 +53,6 @@ current_id_toxicity_poll = None
 def toxicity_detected(message):
 	question = social.is_toxic()
 	current_poll = bot.send_poll(chat_id, question, ['Oui','Non'], is_anonymous=False)
-	print(current_poll)
 	current_id_toxicity_poll =  current_poll.id
 
 	print(current_id_toxicity_poll)
