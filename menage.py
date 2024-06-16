@@ -3,6 +3,10 @@ import datetime
 from random import randrange
 
 
+'''
+get functions
+'''
+
 def getRoles(colocataires: list):
     inital_week_nb = datetime.date(2023, 10, 9).isocalendar()[1]
 
@@ -32,3 +36,9 @@ def getCartonOrPapier():
 def getCarteDeLessive():
     answer = "Pour commander une carte ou un badge, veuillez consulter le site internet https://www.lavorent.ch/fr/product/hyperion-100/"
     return answer
+
+
+'''
+For schedulers
+'''
+
