@@ -2,7 +2,9 @@ import telebot
 
 import utils
 import menage
+import social
 
+import time
 
 
 LEA = 'Lea'
@@ -42,8 +44,36 @@ def send_lessive(message):
 
 
 '''
-Section ??
+Section social
 '''
+
+current_id_toxicity_poll = None
+
+@bot.message_handler(commands=['toxicity'])
+def toxicity_detected(message):
+	question = social.is_toxic()
+	current_poll = bot.send_poll(chat_id, question, ['Oui','Non'], is_anonymous=False)
+	print(current_poll)
+	current_id_toxicity_poll =  current_poll.id
+
+	print(current_id_toxicity_poll)
+	#@bot.poll_handler()
+
+
+@bot.poll_handler(func=lambda message: (message.id == current_id_toxicity_poll))
+def handle_toxicity_poll(poll):
+	print(poll.total_voter_count)
+	if poll.total_voter_count >=4: ## Check si tout le monde a voted
+			if poll.options[0].voter_count > poll.options[1].voter_count: ## Check si oui ou non win
+
+				bot.send_message(chat_id,'Vous avez tranché, la toxicité est trop élevée... Je vais donc agir en conséquence.')
+
+
+				all_ids =  utils.get_colocs_id()
+				for user_id in all_ids:
+					bot.restrict_chat_member(chat_id, user_id, until_date=time()+300) # Mute tout le monde 5 min
+
+
 
 '''
 Section chenil
@@ -69,6 +99,12 @@ https://apscheduler.readthedocs.io/en/3.x/userguide.html
 
 A discuter avec ALEXIIIIIIIIIIIIIIIIIIS
 '''
+
+#roles
+
+#papier
+
+#demander automatiquement si présent ce soir?
 
 '''
 Section feu le bot FEUUUUUUUUUUUUUU

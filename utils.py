@@ -22,6 +22,7 @@ def get_colocs_id():
         cfg = yaml.load(ymlfile, yaml.FullLoader)
         alexis_id = cfg['alexis_id']
         lea_id = ['lea_id']
+        mael_id = ['mael_id']
+        timon_id = ['timon_id']
 
-    return alexis_id,lea_id
-
+    return [alexis_id,lea_id,mael_id,timon_id]
