@@ -8,25 +8,30 @@ Pour se connecter au Raspberry en ssh, entrez cette commande dans un terminal.
 ssh pi@192.168.1.13
 ```
 
+## 2. Environment:
+
+Le bot se base sur le wrapper python appelé
+un simple 'pip install pyTelegramBotAPI' suffit!
+
+Le full repo est dispo ici:
+disponible ici: https://github.com/eternnoir/pyTelegramBotAPI?tab=readme-ov-file#prerequisites
+
+Petite astuce: le fichier examples.py est impeccable pour commencer rapidement avec le bot :)
 
 
-## 2. Run le bot
+## 3. Run le bot
 
 ```console
 cd ~/Documents/DrahmstrasseBot/ # Naviguer jusqu'au dossier du bot
 git pull                        # Pour avoir les dernières mises à jour du bot
-source activate py36            # Activer l'environnement conda
-nohup python3 drahmbot.py &     # Lancer le bot en le détachant du terminal
+source activate py36            # Activer l'environnement conda requis
+nohup python3 bot_main.py &     # Lancer le bot en le détachant du terminal
 ps aux | grep -i python         # Vérifier que le bot run
-kill <PID>                      # Pour arrêter le bot
 ```
+Pour arrêter le bot:
 
-## 3. (optionel) Exporter ou créer un environnement conda
-
-Pour exporter l'environnement conda ou créer un nouvel environnement à partir du fichier.
 ```console
-conda env export | grep -v "^prefix: " > environment.yml
-conda env create -f environment.yml
+kill <PID>                      # Pour arrêter le bot
 ```
 
 ## 4. (optionel) Lancer le bot automatiquement au démarrage du Raspberry
