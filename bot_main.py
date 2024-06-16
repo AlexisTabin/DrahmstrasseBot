@@ -23,7 +23,7 @@ chat_id = utils.get_group_id()
 
 
 '''
-Section tâche de ménages
+Section tâches de ménage
 '''
 @bot.message_handler(commands=['roles'])
 def send_roles(message):
@@ -40,6 +40,11 @@ def send_lessive(message):
 	answer = menage.getCarteDeLessive()
 	bot.send_message(chat_id,answer)
 
+
+'''
+Section ??
+'''
+
 '''
 Section chenil
 '''
@@ -53,7 +58,20 @@ def test_maeul(message):
 
 
 '''
-Section feu le bot FEUUUUUUUUUUUUUU
+Section schedulers
+
+How to handle schedulers? Genre on veut envoyer les nouveaux roles chaque 2 semaines, est-ce qu'on lance un nouveau thread qui fait un bot.send_message?
+Et qui check la date et l'heure chaque 10 min ou comme ça?
+Ou on fait avec le polling du bot directement?
+
+Idée: utiliser APScheduler:
+https://apscheduler.readthedocs.io/en/3.x/userguide.html
+
+A discuter avec ALEXIIIIIIIIIIIIIIIIIIS
 '''
 
+'''
+Section feu le bot FEUUUUUUUUUUUUUU
+'''
 bot.infinity_polling()
+
