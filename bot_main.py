@@ -21,6 +21,7 @@ chat_id = utils.get_group_id()
 
 #bot.send_message(chat_id,'Bonjour, je suis le Drahmbot.')
 
+
 '''
 Section tâche de ménages
 '''
@@ -30,8 +31,13 @@ def send_roles(message):
 	bot.send_message(chat_id,answer)
 
 @bot.message_handler(commands=['papier'])
-def send_paper_ou_carton(message):
+def send_papier_ou_carton(message):
 	answer = menage.getCartonOrPapier()
+	bot.send_message(chat_id,answer)
+
+@bot.message_handler(commands=['lessive'])
+def send_lessive(message):
+	answer = menage.getCarteDeLessive()
 	bot.send_message(chat_id,answer)
 
 '''
@@ -49,4 +55,5 @@ def test_maeul(message):
 '''
 Section feu le bot FEUUUUUUUUUUUUUU
 '''
+
 bot.infinity_polling()
