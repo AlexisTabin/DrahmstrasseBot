@@ -6,6 +6,8 @@ import social
 
 import time
 
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 LEA = 'Lea'
 TIMON = 'timon'
@@ -19,14 +21,24 @@ Initialization du bot
 '''
 
 bot = telebot.TeleBot(utils.get_token(), parse_mode=None) # You can set parse_mode by default. HTML or MARKDOWN
-chat_id = utils.get_group_id()
 
-#bot.send_message(chat_id,'Bonjour, je suis le Drahmbot.')
+#chat_id = utils.get_group_id()
+chat_id = utils.get_colocs_id()[2]
+bot.send_message(chat_id,'Bonjour, je suis le Drahmbot.')
 
+'''
+Initialization du scheduler
+'''
+
+scheduler = BackgroundScheduler()
+scheduler.start()
 
 '''
 Section tâches de ménage
 '''
+
+'Requests'
+
 @bot.message_handler(commands=['roles'])
 def send_roles(message):
 	answer = menage.getRoles(colocataires=colocataires)
@@ -84,14 +96,13 @@ Section social
 
 current_id_toxicity_poll = None
 
-@bot.message_handler(commands=['toxicity'])
-def toxicity_detected(message):
+@bot.message_handler(commands=['whoishere'])
+def whosthere(message):
 	question = social.is_present_dinner()
-	current_poll = bot.send_poll(chat_id, question, ['Oui','Oui INTO je cuisine','Non'], is_anonymous=False)
+	current_poll = bot.send_poll(chat_id, question, ['Oui','Oui INTO je ramène un.e +1','Oui INTO je cuisine','Oui, je cuisine ET je ramène un.e +1','C''est ciao'], is_anonymous=False)
 
 
 'Scheduled'
-#Ya 
 
 
 
@@ -106,7 +117,20 @@ Section chenil
 def test_maeul(message):
 	bot.reply_to(message, "WOLA MAEUL TU TESTES UN TRUC AVEC MOI LE BOT TELEGRAM LE FUN LETSGOOOOOOOO")
 
+def test():
+	answer = "Pardon je test un système de scheduler wola le spam"
+	bot.send_message(chat_id,answer)
 
+trigger_test = CronTrigger(
+        year="*", month="*", day="*", hour="*", minute="1", second="1-30"
+    )
+
+#Test scheduler
+#scheduler.add_job(
+#	test,
+	#trigger=trigger_test,
+	#name="test",
+#)
 
 '''
 Section feu le bot FEUUUUUUUUUUUUUU
