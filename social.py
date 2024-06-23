@@ -1,4 +1,3 @@
-
-def is_toxic():
-    question = "Un membre de votre SUCCULENTE coloc trouve que la toxicité du groupe est trop élevée. Êtes-vous d'accord avec cette profonde analyse?"
+def is_present_dinner():
+    question = 'Pouet l''ekip qui AL pour le SOUPER ce soir?'
     return question
