@@ -28,7 +28,7 @@ def setup_and_run_bot():
 	#chat_id = utils.get_colocs_id()[2] #2 pour Maeul, 0 pour Alexiiiis
 	
 	#Welcome message if you want:
-	#bot.send_message(chat_id,'Bonjour, je suis le Drahmbot.')
+	bot.send_message(chat_id,'Adieu l''ekip, je suis le Drahmbot et suis en ligne. Profitez-en :)')
 
 	'''
 	Initialization du scheduler
@@ -79,7 +79,7 @@ def setup_and_run_bot():
 	)
 
 
-	## On peut utiliser le même trigger pour le papier est carton
+	## On peut utiliser le même trigger pour le papier et carton
 	def update_carton():
 		answer = menage.getCartonOrPapier()
 		bot.send_message(chat_id,answer)
