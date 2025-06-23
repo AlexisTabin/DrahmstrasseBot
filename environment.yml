@@ -32,4 +32,3 @@ dependencies:
       - pyyaml==6.0.2
       - requests==2.32.4
       - urllib3==2.5.0
-prefix: C:\Users\clemence_m\.conda\envs\telegrambot
