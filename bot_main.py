@@ -10,11 +10,12 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 LEA = 'Lea'
+JEREMIE = 'Jeremie'
 TIMON = 'timon'
 MAEL = 'Maël'
 ALEXIS = 'Alexis'
 
-colocataires=[LEA, MAEL, TIMON, ALEXIS]
+colocataires=[JEREMIE, MAEL, TIMON, ALEXIS]
 
 def setup_and_run_bot():
 
@@ -58,6 +59,7 @@ def setup_and_run_bot():
 		answer = menage.getCarteDeLessive()
 		bot.send_message(chat_id,answer)
 
+
 	'Scheduled'
 
 	#Wola jsp comment check lundi chaque 2 semaines avec CronTrigger
@@ -92,8 +94,6 @@ def setup_and_run_bot():
 
 
 
-
-
 	'''
 	Section social
 	'''
@@ -116,10 +116,11 @@ def setup_and_run_bot():
 	#@bot.message_handler(func=lambda message: True) #example for an arbitrary command
 	#def echo_all(message):
 	# bot.reply_to(message, message.text)
-		
-	@bot.message_handler(regexp='Ouais le bot ouais?') #example for an arbitrary command
-	def test_maeul(message):
-		bot.reply_to(message, "WOLA MAEUL TU TESTES UN TRUC AVEC MOI LE BOT TELEGRAM LE FUN LETSGOOOOOOOO")
+
+	@bot.message_handler(regexp='jeremie?') #example for an arbitrary command
+	def jeremied(message):
+		bot.reply_to(message, "JEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEREMIE!")
+
 
 	def test():
 		answer = "Pardon je test un système de scheduler wola le spam"
