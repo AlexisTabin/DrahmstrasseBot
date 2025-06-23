@@ -1,0 +1,34 @@
+name: telegrambot
+channels:
+  - conda-forge
+dependencies:
+  - apscheduler=3.11.0=pyh29332c3_0
+  - bzip2=1.0.8=h2466b09_7
+  - ca-certificates=2025.6.15=h4c7d964_0
+  - libexpat=2.7.0=he0c23c2_0
+  - libffi=3.4.6=h537db12_1
+  - liblzma=5.8.1=h2466b09_2
+  - libmpdec=4.0.0=h2466b09_0
+  - libsqlite=3.50.1=hf5d6505_6
+  - libzlib=1.3.1=h2466b09_2
+  - openssl=3.5.0=ha4e3fda_1
+  - pip=25.1.1=pyh145f28c_0
+  - python=3.13.5=h7de537c_102_cp313
+  - python-tzdata=2025.2=pyhd8ed1ab_0
+  - python_abi=3.13=7_cp313
+  - tk=8.6.13=h2c6b04d_2
+  - tzdata=2025b=h78e105d_0
+  - tzlocal=5.3=py313hfa70ccb_0
+  - ucrt=10.0.22621.0=h57928b3_1
+  - vc=14.3=h41ae7f8_26
+  - vc14_runtime=14.44.35208=h818238b_26
+  - vs2015_runtime=14.44.35208=h38c0c73_26
+  - yaml=0.2.5=h8ffe710_2
+  - pip:
+      - certifi==2025.6.15
+      - charset-normalizer==3.4.2
+      - idna==3.10
+      - pytelegrambotapi==4.27.0
+      - pyyaml==6.0.2
+      - requests==2.32.4
+      - urllib3==2.5.0
