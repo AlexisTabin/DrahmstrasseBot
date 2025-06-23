@@ -10,15 +10,14 @@ ssh pi@192.168.1.13
 
 ## 2. Environment:
 
-Le bot se base sur le wrapper python appelé
-un simple 
+le fichier 'environment.yml' contient toutes les librairies nécessaires au fonctionnement du bot!
+
+un simple
 ```console
-pip install pyTelegramBotAPI
+conda install -f environment.yml
  ```
 suffit!
 
-Le full repo est dispo ici:
-disponible ici: https://github.com/eternnoir/pyTelegramBotAPI?tab=readme-ov-file#prerequisites
 
 Petite astuce: le fichier examples.py est impeccable pour commencer rapidement avec le bot :)
 
