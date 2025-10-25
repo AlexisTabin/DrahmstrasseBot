@@ -1,148 +1,81 @@
+import json
 import telebot
-
 import utils
 import menage
 import social
 
-import time
-
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
-
+# Constants
 LEA = 'Lea'
-JEREMIE = 'Jeremie'
+MARGAUX = 'Margaux'
 TIMON = 'timon'
 MAEL = 'Maël'
 ALEXIS = 'Alexis'
 
-colocataires=[JEREMIE, MAEL, TIMON, ALEXIS]
+colocataires = [MARGAUX, MAEL, LEA, ALEXIS]
 
-def setup_and_run_bot():
+# Initialize bot
+bot = telebot.TeleBot(utils.get_token(), parse_mode=None)  # HTML or MARKDOWN optional
+chat_id = utils.get_group_id()  # or utils.get_colocs_id()[2] if needed
 
-	'''
-	Initialization du bot
-	'''
+# Send a welcome message when the bot is deployed (optional)
+bot.send_message(chat_id, "Adieu l'ekip, je suis le Drahmbot et suis en ligne. Profitez-en :)")
 
-	bot = telebot.TeleBot(utils.get_token(), parse_mode=None) # You can set parse_mode by default. HTML or MARKDOWN
+# -----------------------------
+# Define message handlers
+# -----------------------------
 
-	chat_id = utils.get_group_id()
-	#chat_id = utils.get_colocs_id()[2] #2 pour Maeul, 0 pour Alexiiiis
-	
-	#Welcome message if you want:
-	bot.send_message(chat_id,'Adieu l''ekip, je suis le Drahmbot et suis en ligne. Profitez-en :)')
+@bot.message_handler(commands=['roles'])
+def send_roles(message):
+    answer = menage.getRoles(colocataires=colocataires)
+    bot.send_message(message.chat.id, answer)
 
-	'''
-	Initialization du scheduler
-	'''
+@bot.message_handler(commands=['papier'])
+def send_papier_ou_carton(message):
+    answer = menage.getCartonOrPapier()
+    bot.send_message(message.chat.id, answer)
 
-	scheduler = BackgroundScheduler()
-	scheduler.start()
+@bot.message_handler(commands=['lessive'])
+def send_lessive(message):
+    answer = menage.getCarteDeLessive()
+    bot.send_message(message.chat.id, answer)
 
-	'''
-	Section tâches de ménage
-	'''
+@bot.message_handler(commands=['whoishere'])
+def whosthere(message):
+    question = social.is_present_dinner()
+    bot.send_poll(message.chat.id, question, ['Oui', 'Oui INTO je ramène un.e +1', 
+                                              'Oui INTO je cuisine', 
+                                              'Oui, je cuisine ET je ramène un.e +1', 
+                                              'C\'est ciao'], is_anonymous=False)
 
-	'Requests'
+@bot.message_handler(regexp='jeremie?')
+def jeremied(message):
+    bot.reply_to(message, "JEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEREMIE!")
 
-	@bot.message_handler(commands=['roles'])
-	def send_roles(message):
-		answer = menage.getRoles(colocataires=colocataires)
-		bot.send_message(chat_id,answer)
+# -----------------------------
+# Lambda handler
+# -----------------------------
 
-	@bot.message_handler(commands=['papier'])
-	def send_papier_ou_carton(message):
-		answer = menage.getCartonOrPapier()
-		bot.send_message(chat_id,answer)
+def lambda_handler(event, context):
+    """
+    AWS Lambda entrypoint for Telegram webhook
+    """
+    if "body" in event:
+        try:
+            update = telebot.types.Update.de_json(event["body"])
+            bot.process_new_updates([update])
+        except Exception as e:
+            print(f"Error processing update: {e}")
 
-	@bot.message_handler(commands=['lessive'])
-	def send_lessive(message):
-		answer = menage.getCarteDeLessive()
-		bot.send_message(chat_id,answer)
+    return {
+        "statusCode": 200,
+        "body": json.dumps("ok")
+    }
 
-
-	'Scheduled'
-
-	#Wola jsp comment check lundi chaque 2 semaines avec CronTrigger
-	# ... donc un peu du CACA, on check chaque lundi into on check si la semaine est paire ou impaire dans la function menage.changeroles()
-
-	def update_roles(colocataires):
-		answer = menage.changeRoles(colocataires=colocataires)
-		bot.send_message(chat_id,answer)
-
-	trigger_roles = CronTrigger(
-			year="*", month="*", day="1", hour="10", minute="0", second="0"
-		)
-
-	scheduler.add_job(
-		update_roles,
-		trigger=trigger_roles,
-		args=[colocataires],
-		name="change_roles",
-	)
-
-
-	## On peut utiliser le même trigger pour le papier et carton
-	def update_carton():
-		answer = menage.getCartonOrPapier()
-		bot.send_message(chat_id,answer)
-
-	scheduler.add_job(
-		update_carton,
-		trigger=trigger_roles,
-		name="change_carton",
-	)
-
-
-
-	'''
-	Section social
-	'''
-
-	current_id_toxicity_poll = None
-
-	@bot.message_handler(commands=['whoishere'])
-	def whosthere(message):
-		question = social.is_present_dinner()
-		current_poll = bot.send_poll(chat_id, question, ['Oui','Oui INTO je ramène un.e +1','Oui INTO je cuisine','Oui, je cuisine ET je ramène un.e +1','C''est ciao'], is_anonymous=False)
-
-
-	'Scheduled'
-
-
-
-	'''
-	Section chenil
-	'''
-	#@bot.message_handler(func=lambda message: True) #example for an arbitrary command
-	#def echo_all(message):
-	# bot.reply_to(message, message.text)
-
-	@bot.message_handler(regexp='jeremie?') #example for an arbitrary command
-	def jeremied(message):
-		bot.reply_to(message, "JEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEREMIE!")
-
-
-	def test():
-		answer = "Pardon je test un système de scheduler wola le spam"
-		bot.send_message(chat_id,answer)
-
-	trigger_test = CronTrigger(
-			year="*", month="*", day="*", hour="*", minute="1", second="1-30"
-		)
-
-	#Test scheduler
-	#scheduler.add_job(
-	#	test,
-		#trigger=trigger_test,
-		#name="test",
-	#)
-
-	'''
-	Section feu le bot FEUUUUUUUUUUUUUU
-	'''
-	bot.infinity_polling()
-
-if __name__ == "__main__" :
-	setup_and_run_bot()
-
+# -----------------------------
+# Note on scheduled tasks
+# -----------------------------
+# APScheduler will NOT work reliably in Lambda.
+# Use AWS EventBridge to trigger scheduled Lambda invocations.
+# Example: an EventBridge rule triggering this Lambda every Monday at 10:00.
+# You can pass a special payload in the event to run scheduled jobs.
 
