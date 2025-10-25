@@ -37,6 +37,6 @@ jobs:
       - name: Deploy to Lambda
         run: |
           aws lambda update-function-code \
-            --function-name your-lambda-function-name \
+            --function-name drahmsstrasseTelegramBot \
             --zip-file fileb://function.zip
 
