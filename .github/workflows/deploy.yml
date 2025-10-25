@@ -3,7 +3,7 @@ name: Deploy Telegram Bot to Lambda
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches:
       - master
@@ -13,30 +13,50 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Checkout code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Python (if your bot is in Python)
+      # 2. Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.11'  # match your Lambda runtime
 
+      # 3. Install dependencies into package folder
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          zip -r function.zip .
+          pip install -r requirements.txt -t package/
 
+      # 4. Copy bot code into package folder
+      - name: Copy bot files
+        run: |
+          cp bot_main.py package/
+          cp utils.py package/
+          cp menage.py package/
+          cp social.py package/
+
+      # 5. Zip the package
+      - name: Package Lambda function
+        run: |
+          cd package
+          zip -r ../function.zip .
+          cd ..
+
+      # 6. Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-north-1
+          aws-region: eu-north-1   
 
-      - name: Deploy to Lambda
+      # 7. Deploy to Lambda
+      - name: Deploy Lambda
         run: |
           aws lambda update-function-code \
-            --function-name your-lambda-function-name \
+            --function-name drahmsstrasseTelegramBot \
             --zip-file fileb://function.zip
+
 
