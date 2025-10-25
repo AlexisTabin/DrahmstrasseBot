@@ -18,7 +18,7 @@ bot = telebot.TeleBot(utils.get_token(), parse_mode=None)  # HTML or MARKDOWN op
 chat_id = utils.get_group_id()  # or utils.get_colocs_id()[2] if needed
 
 # Send a welcome message when the bot is deployed (optional)
-bot.send_message(chat_id, "Adieu l'ekip, je suis le Drahmbot et suis en ligne. Profitez-en :)")
+# bot.send_message(chat_id, "Adieu l'ekip, je suis le Drahmbot et suis en ligne. Profitez-en :)")
 
 # -----------------------------
 # Define message handlers
