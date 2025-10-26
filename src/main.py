@@ -6,6 +6,8 @@ if root.handlers:
         root.removeHandler(handler)
 logging.basicConfig(format='%(asctime)s %(message)s',level=logging.DEBUG)
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 # Ensure there’s at least one handler
 if not logger.handlers:
     ch = logging.StreamHandler()
