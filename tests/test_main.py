@@ -13,7 +13,7 @@ async def test_lambda_handler_with_body_success():
 
         response = await main.lambda_handler(event, context)
 
-        mock_bot_instance.process_update.assert_called_once_with(event["body"])
+        mock_bot_instance.process_update.assert_called_once_with(json.loads(event["body"]))
         assert response["statusCode"] == 200
 
 @pytest.mark.asyncio
@@ -26,7 +26,7 @@ async def test_lambda_handler_with_body_exception():
 
         response = await main.lambda_handler(event, context)
 
-        mock_bot_instance.process_update.assert_called_once_with(event["body"])
+        mock_bot_instance.process_update.assert_called_once_with(json.loads(event["body"]))
         assert response["statusCode"] == 200
         assert json.loads(response["body"]) == "ok"
 

@@ -24,7 +24,6 @@ async def lambda_handler(event, context):
 
     if "body" in event:
         try:
-            # Ensure body is a dict, not a string
             body = event["body"]
             if isinstance(body, str):
                 body = json.loads(body)
@@ -40,6 +39,6 @@ async def lambda_handler(event, context):
     logger.info("Lambda execution finished, returning response")
     return {
         "statusCode": 200,
-        "body": json.dumps("ok")  # ✅ This is JSON-serializable
+        "body": json.dumps("ok")
     }
 
