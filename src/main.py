@@ -1,13 +1,5 @@
-import json
-import telebot
+
 import logging
-
-from src.drahmbot import Drahmbot
-
-# -----------------------------
-# AWS Lambda handler
-# -----------------------------
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -19,6 +11,13 @@ if not logger.handlers:
     ch.setFormatter(formatter)
     logger.addHandler(ch)
 
+import json
+import telebot
+from src.drahmbot import Drahmbot
+
+# -----------------------------
+# AWS Lambda handler
+# -----------------------------
 def lambda_handler(event, context):
     logger.info("Lambda invoked")
     logger.info("Received event: %s", event)
