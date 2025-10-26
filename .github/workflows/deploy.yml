@@ -50,10 +50,7 @@ jobs:
       # 4. Copy bot code into package folder
       - name: Copy bot files
         run: |
-          cp bot_main.py package/
-          cp utils.py package/
-          cp menage.py package/
-          cp social.py package/
+          cp src/*.py package/
 
       # 5. Zip the package
       - name: Package Lambda function
