@@ -11,7 +11,7 @@ async def test_lambda_handler_with_body_success():
         event = {"body": '{"message":"test"}'}
         context = {}
 
-        response = await main.lambda_handler(event, context)
+        response = await main.handler(event, context)
 
         mock_bot_instance.process_update.assert_called_once_with(json.loads(event["body"]))
         assert response["statusCode"] == 200
@@ -24,7 +24,7 @@ async def test_lambda_handler_with_body_exception():
         event = {"body": '{"message":"test"}'}
         context = {}
 
-        response = await main.lambda_handler(event, context)
+        response = await main.handler(event, context)
 
         mock_bot_instance.process_update.assert_called_once_with(json.loads(event["body"]))
         assert response["statusCode"] == 200
@@ -38,7 +38,7 @@ async def test_lambda_handler_without_body():
         event = {}  # no body
         context = {}
 
-        response = await main.lambda_handler(event, context)
+        response = await main.handler(event, context)
 
         mock_bot_instance.process_update.assert_not_called()
         assert response["statusCode"] == 200
