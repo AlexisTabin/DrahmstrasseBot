@@ -1,5 +1,6 @@
 import telebot
 bot = telebot.TeleBot("TOKEN")
+SOME_FANCY_EMOJI = "TIBO"
 
 # Handles all text messages that contains the commands '/start' or '/help'.
 @bot.message_handler(commands=['start', 'help'])
