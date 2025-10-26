@@ -21,18 +21,25 @@ async def lambda_handler(event, context):
     logger.info("Received event: %s", event)
     bot_instance = Drahmbot()
     logger.info("Drahmbot instance retrieved")
+
     if "body" in event:
         try:
+            # Ensure body is a dict, not a string
+            body = event["body"]
+            if isinstance(body, str):
+                body = json.loads(body)
+
             logger.info("Processing update from event body")
-            await bot_instance.process_update(event["body"])
+            await bot_instance.process_update(body)
             logger.info("Update processed successfully")
         except Exception as e:
             logger.exception("Error processing update")
     else:
         logger.warning("No 'body' in event; nothing to process")
+
     logger.info("Lambda execution finished, returning response")
     return {
         "statusCode": 200,
-        "body": json.dumps("ok")
+        "body": json.dumps("ok")  # ✅ This is JSON-serializable
     }
 
