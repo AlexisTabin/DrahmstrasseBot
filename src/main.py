@@ -1,11 +1,19 @@
 import json
 import telebot
+import logging
+
 from src.drahmbot import Drahmbot
 
 # -----------------------------
 # AWS Lambda handler
 # -----------------------------
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
 def lambda_handler(event, context):
+    logger.info("Hello from Lambda!")
+
     bot_instance = Drahmbot()  # always returns the singleton
     if "body" in event:
         try:
