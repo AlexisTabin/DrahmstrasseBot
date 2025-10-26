@@ -1,5 +1,7 @@
 import json
 import logging
+import telebot
+
 from telebot.async_telebot import AsyncTeleBot
 import src.utils as utils
 import src.menage as menage
@@ -92,10 +94,4 @@ class Drahmbot:
         update = telebot.types.Update.de_json(update_json)
         await self.bot.process_new_updates([update])
         logger.info("Update processed successfully")
-
-    async def start_polling(self):
-        """Starts the bot in polling mode (for local testing)."""
-        logger.info("Starting polling...")
-        await self.bot.infinity_polling()
-        logger.info("Polling stopped")
 

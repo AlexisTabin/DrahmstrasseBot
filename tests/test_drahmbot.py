@@ -1,115 +1,94 @@
 import pytest
-from unittest.mock import patch, MagicMock
-import src.drahmbot as drahmbot
+import asyncio
+from unittest.mock import AsyncMock, patch, MagicMock
+from src.drahmbot import Drahmbot, colocataires
 
-@pytest.fixture(autouse=True)
-def reset_singleton():
-    # Reset the singleton before each test
-    drahmbot.Drahmbot._instance = None
-    yield
-    drahmbot.Drahmbot._instance = None
+@pytest.mark.asyncio
+async def test_singleton_behavior():
+    bot1 = Drahmbot(token="12345:12345", chat_id=123)
+    bot2 = Drahmbot(token="12345:12345", chat_id=456)
+    assert bot1 is bot2
+    assert bot1.chat_id == 123  # The first initialization should stick
 
-def test_singleton_behavior():
-    with patch("src.drahmbot.utils.get_token", return_value="token"), \
-         patch("src.drahmbot.utils.get_group_id", return_value="chat_id"), \
-         patch("src.drahmbot.telebot.TeleBot") as MockTeleBot:
-
-        bot1 = drahmbot.Drahmbot()
-        bot2 = drahmbot.Drahmbot()
-        
-        # Same instance should be returned
-        assert bot1 is bot2
-        # __init__ should not reinitialize
-        assert bot1.token == "token"
-        assert bot1.chat_id == "chat_id"
-        MockTeleBot.assert_called_once_with("token", parse_mode=None)
+@pytest.mark.asyncio
+@patch("src.drahmbot.telebot.types.Update.de_json")
+async def test_process_update(mock_de_json):
+    bot = Drahmbot(token="12345:12345", chat_id=123)
+    bot.bot.process_new_updates = AsyncMock()
+    update_json = {"update_id": 1}
+    mock_de_json.return_value = "mocked_update"
+    await bot.process_update(update_json)
+    bot.bot.process_new_updates.assert_called_with(["mocked_update"])
 
 
-def test_handlers_call_correct_functions():
-    with patch("src.drahmbot.menage.getRoles", return_value="roles_answer") as mock_roles, \
-         patch("src.drahmbot.menage.getCartonOrPapier", return_value="papier_answer") as mock_papier, \
-         patch("src.drahmbot.menage.getCarteDeLessive", return_value="lessive_answer") as mock_lessive, \
-         patch("src.drahmbot.social.is_present_dinner", return_value="dinner_question") as mock_social, \
-         patch("src.drahmbot.utils.get_token", return_value="token"), \
-         patch("src.drahmbot.utils.get_group_id", return_value="chat_id"), \
-         patch("src.drahmbot.telebot.TeleBot") as MockTeleBot:
+@pytest.mark.asyncio
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+@patch("src.drahmbot.menage.getRoles", return_value="Roles info")
+@patch("src.drahmbot.menage.getCartonOrPapier", return_value="Papier info")
+@patch("src.drahmbot.menage.getCarteDeLessive", return_value="Lessive info")
+@patch("src.drahmbot.social.is_present_dinner", return_value="Who is here?")
+async def test_bot_handlers(
+    mock_who, mock_lessive, mock_papier, mock_roles, mock_group, mock_token
+):
+    bot = Drahmbot()  # Will use patched utils functions
 
-        mock_bot_instance = MockTeleBot.return_value
+    # Patch sending methods
+    bot.bot.send_message = AsyncMock()
+    bot.bot.send_poll = AsyncMock()
+    bot.bot.reply_to = AsyncMock()
 
-        # Handlers just register functions via decorators; we can capture them
-        registered_handlers = {}
-        def fake_message_handler(*args, **kwargs):
-            def decorator(func):
-                registered_handlers[tuple(kwargs.get("commands", [])) or kwargs.get("regexp")] = func
-                return func
-            return decorator
-        mock_bot_instance.message_handler.side_effect = fake_message_handler
+    # Call handlers directly by capturing them during registration
+    handlers = {}
 
-        bot = drahmbot.Drahmbot()
+    # Patch the decorator to capture the functions
+    original_message_handler = bot.bot.message_handler
 
-        # Test /roles handler
-        message = MagicMock()
-        message.chat.id = "chat_id"
-        registered_handlers[('roles',)](message)
-        mock_roles.assert_called_once()
-        mock_bot_instance.send_message.assert_called_with("chat_id", "roles_answer")
+    def capture_handler(*args, **kwargs):
+        def wrapper(func):
+            if "commands" in kwargs:
+                for cmd in kwargs["commands"]:
+                    handlers[cmd] = func
+            if "regexp" in kwargs:
+                handlers[kwargs["regexp"]] = func
+            return func
+        return wrapper
 
-        # Test /papier handler
-        registered_handlers[('papier',)](message)
-        mock_papier.assert_called_once()
-        mock_bot_instance.send_message.assert_called_with("chat_id", "papier_answer")
+    bot.bot.message_handler = capture_handler
+    bot.register_handlers()  # Re-register to capture
 
-        # Test /lessive handler
-        registered_handlers[('lessive',)](message)
-        mock_lessive.assert_called_once()
-        mock_bot_instance.send_message.assert_called_with("chat_id", "lessive_answer")
+    # Simulate messages
+    message = MagicMock()
+    message.chat.id = 999
 
-        # Test /whoishere handler
-        registered_handlers[('whoishere',)](message)
-        mock_social.assert_called_once()
-        mock_bot_instance.send_poll.assert_called_with(
-            "chat_id",
-            "dinner_question",
-            [
-                'Oui',
-                'Oui INTO je ramène un.e +1',
-                'Oui INTO je cuisine',
-                'Oui, je cuisine ET je ramène un.e +1',
-                "C'est ciao",
-            ],
-            is_anonymous=False,
-        )
+    # Call /roles
+    await handlers["roles"](message)
+    bot.bot.send_message.assert_called_with(999, "Roles info")
 
-        # Test regexp "jeremie" handler
-        jeremie_message = MagicMock()
-        jeremie_message.text = "jeremie"
-        registered_handlers['jeremie?'](jeremie_message)
-        mock_bot_instance.reply_to.assert_called_with(jeremie_message, "JEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEREMIE!")
+    # Call /papier
+    await handlers["papier"](message)
+    bot.bot.send_message.assert_called_with(999, "Papier info")
 
+    # Call /lessive
+    await handlers["lessive"](message)
+    bot.bot.send_message.assert_called_with(999, "Lessive info")
 
-def test_process_update_calls_process_new_updates():
-    with patch("src.drahmbot.utils.get_token", return_value="token"), \
-         patch("src.drahmbot.utils.get_group_id", return_value="chat_id"), \
-         patch("src.drahmbot.telebot.TeleBot") as MockTeleBot, \
-         patch("src.drahmbot.telebot.types.Update.de_json") as mock_de_json:
+    # Call /whoishere
+    await handlers["whoishere"](message)
+    bot.bot.send_poll.assert_called_with(
+        999,
+        "Who is here?",
+        [
+            "Oui",
+            "Oui INTO je ramène un.e +1",
+            "Oui INTO je cuisine",
+            "Oui, je cuisine ET je ramène un.e +1",
+            "C'est ciao",
+        ],
+        is_anonymous=False,
+    )
 
-        mock_bot_instance = MockTeleBot.return_value
-        mock_update = MagicMock()
-        mock_de_json.return_value = mock_update
-        bot = drahmbot.Drahmbot()
-
-        bot.process_update('{"update_id":123}')
-        mock_de_json.assert_called_once_with('{"update_id":123}')
-        mock_bot_instance.process_new_updates.assert_called_once_with([mock_update])
-
-
-def test_start_polling_calls_infinity_polling():
-    with patch("src.drahmbot.utils.get_token", return_value="token"), \
-         patch("src.drahmbot.utils.get_group_id", return_value="chat_id"), \
-         patch("src.drahmbot.telebot.TeleBot") as MockTeleBot:
-
-        mock_bot_instance = MockTeleBot.return_value
-        bot = drahmbot.Drahmbot()
-        bot.start_polling()
-        mock_bot_instance.infinity_polling.assert_called_once()
+    # Call regexp jeremie?
+    await handlers["jeremie?"](message)
+    bot.bot.reply_to.assert_called_with(message, "JEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEREMIE!")
 
