@@ -1,5 +1,6 @@
 import json
 import logging
+import asyncio
 from src.drahmbot import Drahmbot
 
 # Setup logging
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 # -----------------------------
 # AWS Lambda handler
 # -----------------------------
-async def lambda_handler(event, context):
+async def handler(event, context):
     logger.info("Lambda invoked")
     logger.info("Received event: %s", event)
     bot_instance = Drahmbot()
@@ -24,6 +25,7 @@ async def lambda_handler(event, context):
 
     if "body" in event:
         try:
+            # Ensure body is a dict, not a string
             body = event["body"]
             if isinstance(body, str):
                 body = json.loads(body)
@@ -39,6 +41,11 @@ async def lambda_handler(event, context):
     logger.info("Lambda execution finished, returning response")
     return {
         "statusCode": 200,
-        "body": json.dumps("ok")
+        "body": json.dumps("ok")  
     }
+
+# Explicitly use asyncio to run the async Lambda handler in case the environment doesn't do it automatically.
+def lambda_handler(event, context):
+    # This explicitly runs the asyncio event loop and awaits the coroutine
+    return asyncio.run(handler(event, context))
 
