@@ -1,14 +1,5 @@
 # DrahmstrasseBot - Le bot du Drame de la Rue de la Drahm 
 
-
-![Packages](https://img.shields.io/badge/package%20manager-uv-blue) ![Style](https://img.shields.io/badge/style-google-black) ![Linter](https://img.shields.io/badge/linter-ruff-black) ![Type check](https://img.shields.io/badge/type%20checker-pyright-black)
-
-## CI status
-
-![coverage](assets/coverage.svg)
-[![Lint](https://github.com/AlexisTabin/DrahmstrasseBot/actions/workflows/lint.yaml/badge.svg)](https://github.com/AlexisTabin/DrahmstrasseBot/actions/workflows/lint.yaml) [![Test](https://github.com/AlexisTabin/DrahmstrasseBot/actions/workflows/test.yaml/badge.svg)](https://github.com/AlexisTabin/DrahmstrasseBot/actions/workflows/test.yaml) 
-
-
 # Marche à suivre pour se connecter en ssh au Raspberry et run le bot
 
 ## 1. Connexion au Raspberry
