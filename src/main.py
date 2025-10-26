@@ -8,19 +8,36 @@ from src.drahmbot import Drahmbot
 # AWS Lambda handler
 # -----------------------------
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+# Ensure there’s at least one handler
+if not logger.handlers:
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+
 def lambda_handler(event, context):
-    logger.info("Hello from Lambda!")
+    logger.info("Lambda invoked")
+    logger.info("Received event: %s", event)
 
     bot_instance = Drahmbot()  # always returns the singleton
+    logger.info("Drahmbot instance retrieved")
+
     if "body" in event:
         try:
+            logger.info("Processing update from event body")
             bot_instance.process_update(event["body"])
+            logger.info("Update processed successfully")
         except Exception as e:
-            print(f"Error processing update: {e}")
+            logger.exception("Error processing update")  # logs stack trace
 
+    else:
+        logger.warning("No 'body' in event; nothing to process")
+
+    logger.info("Lambda execution finished, returning response")
     return {
         "statusCode": 200,
         "body": json.dumps("ok")
