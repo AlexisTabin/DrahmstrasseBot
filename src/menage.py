@@ -10,15 +10,16 @@ Get functions
 '''
 
 def getRoles(colocataires: list):
-    current_week_nb = datetime.datetime.now().isocalendar()[1]
+    current_week_nb = datetime.datetime.now().isocalendar()[1] + 1
     logger.info("Calculated role index shift: %d", current_week_nb)
 
     answer = """
         ROLES DU MENAGES ATTRIBUÉS ALEATOIREMENT PAR LE DRAHMBOT    : 
         - CUISINE    : {}
-        - SOLS       : {}
         - SDBs       : {}
-        - DÉCHET     : {}
+        - SOLs       : {}
+        - DÉCHETs     : {}
+        **NEW** Le rôle de la cuisine englobe le salon aussi :)
     """.format(
         colocataires[(current_week_nb + 0) % 4],
         colocataires[(current_week_nb + 1) % 4],
