@@ -19,7 +19,7 @@ def getRoles(colocataires: list):
         - SDBs       : {}
         - SOLs       : {}
         - DÉCHETs     : {}
-        **NEW** Le rôle de la cuisine englobe le salon aussi :)
+        *NEW* Le rôle de la cuisine englobe le salon aussi :)
     """.format(
         colocataires[(current_week_nb + 0) % 4],
         colocataires[(current_week_nb + 1) % 4],
