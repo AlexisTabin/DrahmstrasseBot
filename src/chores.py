@@ -98,6 +98,32 @@ def get_thursday_reminder(role_assignments: dict) -> str:
     return "\n".join(lines)
 
 
+def get_stats() -> str:
+    """Aggregate chore completions across all weeks and return a formatted leaderboard."""
+    table = _get_table()
+    response = table.scan()
+    items = response.get("Items", [])
+
+    counts: dict[str, int] = {}
+    for item in items:
+        completed = item.get("completed", {})
+        for role_data in completed.values():
+            person = role_data.get("by")
+            if person:
+                counts[person] = counts.get(person, 0) + 1
+
+    if not counts:
+        return "Pas encore de stats !"
+
+    medals = ["🥇", "🥈", "🥉"]
+    sorted_people = sorted(counts.items(), key=lambda x: x[1], reverse=True)
+    lines = ["Stats :"]
+    for i, (person, count) in enumerate(sorted_people):
+        prefix = f"  {medals[i]} " if i < len(medals) else "  "
+        lines.append(f"{prefix}{person} : {count} tâches")
+    return "\n".join(lines)
+
+
 def get_sunday_recap(role_assignments: dict) -> str:
     """Build a Sunday recap of the week's chore status.
 

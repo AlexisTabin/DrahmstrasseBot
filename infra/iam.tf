@@ -40,6 +40,7 @@ data "aws_iam_policy_document" "dynamodb_chores" {
       "dynamodb:GetItem",
       "dynamodb:PutItem",
       "dynamodb:UpdateItem",
+      "dynamodb:Scan",
     ]
     resources = [aws_dynamodb_table.chores.arn]
   }
