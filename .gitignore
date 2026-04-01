@@ -22,3 +22,6 @@ infra/terraform.tfvars
 infra/dummy.zip
 infra/bootstrap/terraform.tfstate*
 infra/bootstrap/.terraform/
+
+# Claude
+CLAUDE.md

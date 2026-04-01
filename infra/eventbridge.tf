@@ -1,5 +1,6 @@
 locals {
   prod_chat_id = "-1001633433047"
+  dev_chat_id  = "-4867763410"
 
   schedules = {
     whoishere = {
@@ -132,7 +133,7 @@ resource "aws_cloudwatch_event_target" "reminder" {
   input = jsonencode({
     body = jsonencode({
       message = {
-        chat = { id = tonumber(local.prod_chat_id) }
+        chat = { id = tonumber(local.dev_chat_id) }
         text = local.schedules.reminder.command
         entities = [{ type = "bot_command", offset = 0, length = length(local.schedules.reminder.command) }]
       }
@@ -153,7 +154,7 @@ resource "aws_cloudwatch_event_target" "recap" {
   input = jsonencode({
     body = jsonencode({
       message = {
-        chat = { id = tonumber(local.prod_chat_id) }
+        chat = { id = tonumber(local.dev_chat_id) }
         text = local.schedules.recap.command
         entities = [{ type = "bot_command", offset = 0, length = length(local.schedules.recap.command) }]
       }

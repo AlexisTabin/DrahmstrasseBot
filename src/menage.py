@@ -40,11 +40,10 @@ def getRoles(colocataires: list):
 
     answer = """
         ROLES DU MENAGES ATTRIBUÉS ALEATOIREMENT PAR LE DRAHMBOT    :
-        - CUISINE    : {}
-        - SDBs       : {}
-        - SOLs       : {}
-        - DÉCHETS (papier + carton) : {}
-        *NEW* Le rôle de la cuisine englobe le salon aussi :)
+        - \U0001F373 CUISINE    : {}
+        - \U0001F6BF SDBs       : {}
+        - \U0001F9F9 SOLs       : {}
+        - \U0001F5D1\uFE0F DÉCHETs     : {}
     """.format(
         assignments["CUISINE"],
         assignments["SDBs"],
@@ -60,7 +59,7 @@ def get_papier_reminder(colocataires: list) -> str:
     """Papier reminder naming the responsible DÉCHETS person."""
     assignments = get_role_assignments(colocataires)
     name = assignments["DÉCHETS"]
-    answer = f"Rappel papier ! {name}, c'est toi qui gère le papier ce soir. 📦"
+    answer = f"{name} doit sortir le papier lundi"
     logger.info("Papier reminder: %s", answer)
     return answer
 
@@ -69,7 +68,7 @@ def get_carton_reminder(colocataires: list) -> str:
     """Carton reminder naming the responsible DÉCHETS person."""
     assignments = get_role_assignments(colocataires)
     name = assignments["DÉCHETS"]
-    answer = f"Rappel carton ! {name}, c'est toi qui gère le carton ce soir. 📦"
+    answer = f"{name} doit sortir le carton mercredi"
     logger.info("Carton reminder: %s", answer)
     return answer
 

@@ -131,3 +131,73 @@ def test_get_sunday_recap_all_done(mock_status):
     result = chores.get_sunday_recap(SAMPLE_ASSIGNMENTS)
     assert "Récap" in result
     assert "pas fait" not in result
+
+
+@patch("src.chores._get_table")
+def test_get_stats_empty(mock_get_table):
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {"Items": []}
+    mock_get_table.return_value = mock_table
+
+    result = chores.get_stats()
+    assert result == "Pas encore de stats !"
+
+
+@patch("src.chores._get_table")
+def test_get_stats_multiple_weeks(mock_get_table):
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {
+        "Items": [
+            {
+                "week_key": "2026-W10",
+                "completed": {
+                    "CUISINE": {"by": "Timon", "at": "..."},
+                    "SDBs": {"by": "Maël", "at": "..."},
+                },
+            },
+            {
+                "week_key": "2026-W11",
+                "completed": {
+                    "CUISINE": {"by": "Timon", "at": "..."},
+                    "SOLs": {"by": "Léa", "at": "..."},
+                    "DÉCHETS": {"by": "Timon", "at": "..."},
+                },
+            },
+            {
+                "week_key": "2026-W12",
+                "completed": {
+                    "CUISINE": {"by": "Maël", "at": "..."},
+                },
+            },
+        ]
+    }
+    mock_get_table.return_value = mock_table
+
+    result = chores.get_stats()
+    assert "Stats :" in result
+    # Timon: 3 (W10 CUISINE, W11 CUISINE, W11 DÉCHETS)
+    assert "Timon : 3 tâches" in result
+    # Maël: 2 (W10 SDBs, W12 CUISINE)
+    assert "Maël : 2 tâches" in result
+    # Léa: 1 (W11 SOLs)
+    assert "Léa : 1 tâches" in result
+    # Timon should be first (gold medal)
+    assert "🥇" in result
+    lines = result.split("\n")
+    # First person line (index 1) should be Timon
+    assert "Timon" in lines[1]
+
+
+@patch("src.chores._get_table")
+def test_get_stats_no_completed_field(mock_get_table):
+    """Items with no completed map are handled gracefully."""
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {
+        "Items": [
+            {"week_key": "2026-W10"},
+        ]
+    }
+    mock_get_table.return_value = mock_table
+
+    result = chores.get_stats()
+    assert result == "Pas encore de stats !"

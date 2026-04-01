@@ -234,3 +234,37 @@ async def test_carton_handler(mock_group, mock_token, mock_carton):
 
     await handlers["carton"](message)
     bot.bot.send_message.assert_called_with(999, "Carton reminder")
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_stats", return_value="Stats :\n  🥇 Timon : 3 tâches")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_stats_handler_dev_chat(mock_group, mock_token, mock_stats):
+    bot = Drahmbot()
+    bot.dev_chat_id = "-4867763410"
+    bot.bot.send_message = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    message = MagicMock()
+    message.chat.id = -4867763410
+
+    await handlers["stats"](message)
+    bot.bot.send_message.assert_called_once_with(-4867763410, "Stats :\n  🥇 Timon : 3 tâches")
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_stats", return_value="Stats :\n  🥇 Timon : 3 tâches")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_stats_handler_other_chat_ignored(mock_group, mock_token, mock_stats):
+    bot = Drahmbot()
+    bot.dev_chat_id = "-4867763410"
+    bot.bot.send_message = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    message = MagicMock()
+    message.chat.id = -9999999999  # Not the dev chat
+
+    await handlers["stats"](message)
+    bot.bot.send_message.assert_not_called()

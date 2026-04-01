@@ -20,7 +20,11 @@ colocataires = [TIMON, MAEL, LEA, ALEXIS]
 
 # Map Telegram user IDs to colocataire names.
 # Populate by having each person send /myid in the group chat.
-TELEGRAM_USER_MAP = {}
+TELEGRAM_USER_MAP = {
+    5503636012: LEA,
+    891406979: ALEXIS,
+    981443207: MAEL,
+}
 
 class Drahmbot:
     _instance = None  # Singleton instance
@@ -38,6 +42,7 @@ class Drahmbot:
             return
         self.token = token or utils.get_token()
         self.chat_id = chat_id or utils.get_group_id()
+        self.dev_chat_id = utils.get_dev_chat_id()
         self.bot = AsyncTeleBot(self.token, parse_mode=None)
         logger.info("Initializing Drahmbot with chat_id: %s", self.chat_id)
         self.register_handlers()
@@ -149,6 +154,16 @@ class Drahmbot:
             assignments = menage.get_role_assignments(colocataires)
             answer = chores.get_sunday_recap(assignments)
             await self.bot.send_message(message.chat.id, answer)
+
+        @self.bot.message_handler(commands=['stats'])
+        async def send_stats(message):
+            logger.info("Command /stats received from %s", message.chat.id)
+            if not self.dev_chat_id or str(message.chat.id) != self.dev_chat_id:
+                logger.info("Ignoring /stats from non-dev chat %s", message.chat.id)
+                return
+            answer = chores.get_stats()
+            await self.bot.send_message(message.chat.id, answer)
+            logger.info("Sent stats answer")
 
         @self.bot.message_handler(regexp='jeremie?')
         async def jeremied(message):
