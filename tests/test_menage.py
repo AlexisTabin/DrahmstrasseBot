@@ -64,12 +64,12 @@ def test_getRoles_changes_every_2_weeks(mock_datetime):
     assert "Charlie" in result_week_4
 
 
-def test_getRoles_shows_papier_carton():
-    """DÉCHETS line now mentions papier + carton."""
+def test_getRoles_has_dechets():
+    """DÉCHETS line is present."""
     with patch("src.menage.datetime") as mock_dt:
         mock_dt.datetime.now.return_value = datetime.datetime(2023, 10, 9)
         result = menage.getRoles(["A", "B", "C", "D"])
-        assert "papier + carton" in result
+        assert "DÉCHETS" in result
 
 
 @patch("src.menage.get_role_assignments", return_value={
@@ -79,6 +79,7 @@ def test_get_papier_reminder(mock_assignments):
     result = menage.get_papier_reminder(["Alice", "Bob", "Charlie", "Diana"])
     assert "Diana" in result
     assert "papier" in result.lower()
+    assert "lundi" in result.lower()
 
 
 @patch("src.menage.get_role_assignments", return_value={
@@ -88,6 +89,7 @@ def test_get_carton_reminder(mock_assignments):
     result = menage.get_carton_reminder(["Alice", "Bob", "Charlie", "Diana"])
     assert "Diana" in result
     assert "carton" in result.lower()
+    assert "mercredi" in result.lower()
 
 
 @patch("src.menage.get_role_assignments", return_value={
