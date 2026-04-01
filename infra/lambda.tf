@@ -5,7 +5,7 @@ resource "aws_lambda_function" "bot" {
   runtime       = "python3.12"
   architectures = ["x86_64"]
   memory_size   = 128
-  timeout       = 3
+  timeout       = 10
 
   filename = "dummy.zip"
 
@@ -13,6 +13,7 @@ resource "aws_lambda_function" "bot" {
     variables = {
       TELEGRAM_TOKEN = var.telegram_token
       BOT_CHAT_ID    = var.bot_chat_id
+      DYNAMODB_TABLE = aws_dynamodb_table.chores.name
     }
   }
 
@@ -53,4 +54,28 @@ resource "aws_lambda_permission" "eventbridge_papier" {
   function_name = aws_lambda_function.bot.function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.papier.arn
+}
+
+resource "aws_lambda_permission" "eventbridge_carton" {
+  statement_id  = "AllowEventBridgeCarton"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.bot.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.carton.arn
+}
+
+resource "aws_lambda_permission" "eventbridge_reminder" {
+  statement_id  = "AllowEventBridgeReminder"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.bot.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.reminder.arn
+}
+
+resource "aws_lambda_permission" "eventbridge_recap" {
+  statement_id  = "AllowEventBridgeRecap"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.bot.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.recap.arn
 }

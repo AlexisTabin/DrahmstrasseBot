@@ -32,3 +32,21 @@ resource "aws_iam_role_policy" "ssm_read" {
   role   = aws_iam_role.lambda_role.id
   policy = data.aws_iam_policy_document.ssm_read.json
 }
+
+data "aws_iam_policy_document" "dynamodb_chores" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "dynamodb:GetItem",
+      "dynamodb:PutItem",
+      "dynamodb:UpdateItem",
+    ]
+    resources = [aws_dynamodb_table.chores.arn]
+  }
+}
+
+resource "aws_iam_role_policy" "dynamodb_chores" {
+  name   = "dynamodb-chores"
+  role   = aws_iam_role.lambda_role.id
+  policy = data.aws_iam_policy_document.dynamodb_chores.json
+}
