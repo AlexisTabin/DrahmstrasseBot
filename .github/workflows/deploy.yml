@@ -3,25 +3,29 @@ name: Deploy Telegram Bot to Lambda
 on:
   push:
     branches:
-      - main
+      - master
+    paths-ignore:
+      - 'infra/**'
+      - '*.md'
   pull_request:
     branches:
       - master
+    paths-ignore:
+      - 'infra/**'
+      - '*.md'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout code
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # 2. Setup Python
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'  # match your Lambda 
+          python-version: '3.12'
 
       - name: Install dependencies
         run: |
@@ -31,47 +35,37 @@ jobs:
 
       - name: Lint code with flake8
         run: |
-          echo "Running flake8..."
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          # Optional: exit-zero allows warnings but not errors
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
 
       - name: Run unit tests
         run: |
-          echo "Running pytest..."
           pytest --maxfail=1 --disable-warnings -q
 
-      # 3. Install dependencies into package folder
-      - name: Install dependencies
+      - name: Install dependencies into package
         run: |
-          python -m pip install --upgrade pip
           pip install -r requirements.txt -t package/
 
-      # 4. Copy bot code into package folder
       - name: Copy bot files
         run: |
           cp -r src/ package/
 
-      # 5. Zip the package
       - name: Package Lambda function
         run: |
           cd package
           zip -r ../function.zip .
-          cd ..
 
-      # 6. Configure AWS credentials
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        if: github.event_name == 'push'
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-north-1   
+          aws-region: eu-north-1
 
-      # 7. Deploy to Lambda
       - name: Deploy Lambda
+        if: github.event_name == 'push'
         run: |
           aws lambda update-function-code \
             --function-name drahmsstrasseTelegramBot \
             --zip-file fileb://function.zip
-
-
