@@ -11,12 +11,11 @@ import src.social as social
 logger = logging.getLogger(__name__)
 
 # Constants
-LEA = 'Lea'
-MARGAUX = 'Margaux'
-TIMON = 'timon'
+LEA = 'Léa'
+TIMON = 'Timon'
 MAEL = 'Maël'
 ALEXIS = 'Alexis'
-colocataires = [MARGAUX, MAEL, LEA, ALEXIS]
+colocataires = [TIMON, MAEL, LEA, ALEXIS]
 
 class Drahmbot:
     _instance = None  # Singleton instance
