@@ -31,7 +31,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install flake8 pytest
+          pip install flake8 pytest pytest-cov
 
       - name: Lint code with flake8
         run: |
@@ -40,7 +40,12 @@ jobs:
 
       - name: Run unit tests
         run: |
-          pytest --maxfail=1 --disable-warnings -q
+          pytest --cov=src --cov-report=xml --maxfail=1 --disable-warnings -q
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Install dependencies into package
         run: |
