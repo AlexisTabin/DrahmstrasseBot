@@ -2,6 +2,7 @@
 
 [![Deploy](https://github.com/AlexisTabin/DrahmstrasseBot/actions/workflows/deploy.yml/badge.svg)](https://github.com/AlexisTabin/DrahmstrasseBot/actions/workflows/deploy.yml)
 [![Infrastructure](https://github.com/AlexisTabin/DrahmstrasseBot/actions/workflows/infra.yml/badge.svg)](https://github.com/AlexisTabin/DrahmstrasseBot/actions/workflows/infra.yml)
+[![codecov](https://codecov.io/gh/AlexisTabin/DrahmstrasseBot/branch/master/graph/badge.svg)](https://codecov.io/gh/AlexisTabin/DrahmstrasseBot)
 
 Telegram bot for a shared flat — handles chore assignments, dinner polls, and recycling reminders.
 
