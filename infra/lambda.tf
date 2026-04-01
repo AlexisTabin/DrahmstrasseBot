@@ -13,6 +13,7 @@ resource "aws_lambda_function" "bot" {
     variables = {
       TELEGRAM_TOKEN = var.telegram_token
       BOT_CHAT_ID    = var.bot_chat_id
+      DEV_CHAT_ID    = local.dev_chat_id
       DYNAMODB_TABLE = aws_dynamodb_table.chores.name
     }
   }

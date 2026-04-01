@@ -21,6 +21,14 @@ def get_group_id():
         logger.warning("BOT_CHAT_ID not found in environment")
     return group_id
 
+def get_dev_chat_id():
+    dev_chat_id = os.environ.get('DEV_CHAT_ID')
+    if dev_chat_id:
+        logger.info("Retrieved DEV_CHAT_ID from environment: %s", dev_chat_id)
+    else:
+        logger.warning("DEV_CHAT_ID not found in environment")
+    return dev_chat_id
+
 def is_even_week():
     week_number = datetime.datetime.now().isocalendar()[1]
     even = week_number % 2 == 0
