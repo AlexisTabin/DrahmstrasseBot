@@ -1,61 +1,48 @@
-# DrahmstrasseBot - Le bot du Drame de la Rue de la Drahm 
+# DrahmstrasseBot
 
-# Marche à suivre pour se connecter en ssh au Raspberry et run le bot
+[![Deploy](https://github.com/AlexisTabin/DrahmstrasseBot/actions/workflows/deploy.yml/badge.svg)](https://github.com/AlexisTabin/DrahmstrasseBot/actions/workflows/deploy.yml)
+[![Infrastructure](https://github.com/AlexisTabin/DrahmstrasseBot/actions/workflows/infra.yml/badge.svg)](https://github.com/AlexisTabin/DrahmstrasseBot/actions/workflows/infra.yml)
 
-## 1. Connexion au Raspberry
-Pour se connecter au Raspberry en ssh, entrez cette commande dans un terminal.
-```console
-ssh pi@192.168.1.13
+Telegram bot for a shared flat — handles chore assignments, dinner polls, and recycling reminders.
+
+## Bot Commands
+
+| Command | Schedule | Description |
+|---|---|---|
+| `/roles` | Monday 08:00 UTC | Assigns weekly chore roles |
+| `/papier` | Monday 19:00 UTC | Paper/cardboard recycling reminder |
+| `/whoishere` | Weekdays 15:00 UTC | Dinner attendance poll |
+| `/lessive` | Manual | Laundry card info |
+
+## Architecture
+
+- **Runtime**: Python 3.12 on AWS Lambda (x86_64)
+- **Webhook**: API Gateway HTTP API → `POST /webhook` → Lambda
+- **Scheduled triggers**: EventBridge rules invoke the Lambda with fake Telegram payloads
+- **Secrets**: Telegram token stored in SSM Parameter Store
+- **Infrastructure**: Managed with Terraform (`infra/`)
+
+## Deployment
+
+Code and infrastructure are deployed separately via GitHub Actions:
+
+- **Code** (`deploy.yml`): Triggered on push to `master` (excluding `infra/`). Lints, tests, packages, and deploys to Lambda.
+- **Infrastructure** (`infra.yml`): Triggered on changes to `infra/`. Runs `terraform plan` on PRs, `terraform apply` on merge to `master`.
+
+### Required GitHub Secrets
+
+| Secret | Description |
+|---|---|
+| `AWS_ACCESS_KEY_ID` | AWS credentials for deployment |
+| `AWS_SECRET_ACCESS_KEY` | AWS credentials for deployment |
+| `BOT_CHAT_ID` | Telegram group chat ID |
+| `TELEGRAM_TOKEN` | Telegram bot API token |
+
+## Local Development
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pytest
 ```
-
-## 2. Environment:
-
-le fichier 'environment.yml' contient toutes les librairies nécessaires au fonctionnement du bot!
-
-un simple
-```console
-conda install -f environment.yml
- ```
-suffit!
-
-
-Petite astuce: le fichier examples.py est impeccable pour commencer rapidement avec le bot :)
-
-
-## 3. Run le bot
-
-```console
-cd ~/Documents/DrahmstrasseBot/ # Naviguer jusqu'au dossier du bot
-git pull                        # Pour avoir les dernières mises à jour du bot
-source activate py36            # Activer l'environnement conda requis
-nohup python3 bot_main.py &     # Lancer le bot en le détachant du terminal
-ps aux | grep -i python         # Vérifier que le bot run
-```
-Pour arrêter le bot:
-
-```console
-kill <PID>                      # Pour arrêter le bot
-```
-
-## 4. (optionel) Lancer le bot automatiquement au démarrage du Raspberry
-
-Pour lancer le bot automatiquement au démarrage du Raspberry, il faut ajouter une ligne dans le fichier crontab.
-
-```console
-  crontab -e
-```
-
-et ajouter la ligne suivante à la fin du fichier.
-
-```console
-@reboot /usr/bin/sleep 60;  ~/Documents/DrahmstrasseBot/run-on-start-pi.sh > ~/Documents/DrahmstrasseBot/bot-pi.log 2>&1
-```
-Avant cela, ne pas oublier de chmod+x le script qu'on veut lancer
-
-La commande `@reboot` permet de lancer la/les commande/s suivante/s au démarrage du Raspberry. Pour plus d'informations sur le fichier crontab, voir [ici](https://tecadmin.net/crontab-in-linux-with-20-examples-of-cron-schedule/).
-
-La commande `sleep 60` permet d'attendre 60 secondes avant de lancer le bot. Cela permet de laisser le temps au Raspberry de se connecter au réseau wifi avant de lancer le bot.
-
-La commande `> ~/Documents/DrahmstrasseBot/bot-pi.log 2>&1` permet de rediriger la sortie standard et la sortie d'erreur vers le fichier `bot-pi.log`. Cela permet de garder une trace des erreurs du bot. Plus précisément, `2>&1` permet de rediriger la sortie d'erreur vers la sortie standard. Pour rediriger toutes les sorties vers un fichier, il faut utiliser `&>`. Pour plus d'informations sur la redirection des sorties, voir [ici](https://www.tldp.org/LDP/abs/html/io-redirection.html).
-
-
