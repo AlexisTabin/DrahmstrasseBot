@@ -1,6 +1,7 @@
 import json
 import logging
 import asyncio
+import traceback
 from src.drahmbot import Drahmbot
 
 # Setup logging
@@ -35,6 +36,16 @@ async def handler(event, context):
             logger.info("Update processed successfully")
         except Exception as e:
             logger.exception("Error processing update")
+            try:
+                dev_chat_id = bot_instance.dev_chat_id
+                if dev_chat_id:
+                    tb = traceback.format_exc()
+                    if len(tb) > 3900:
+                        tb = tb[:3900] + "\n…truncated"
+                    msg = f"⚠️ Error processing update:\n\n<pre>{tb}</pre>"
+                    await bot_instance.bot.send_message(dev_chat_id, msg, parse_mode="HTML")
+            except Exception:
+                logger.exception("Failed to send error notification to dev chat")
     else:
         logger.warning("No 'body' in event; nothing to process")
 
