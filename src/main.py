@@ -31,6 +31,12 @@ async def handler(event, context):
             if isinstance(body, str):
                 body = json.loads(body)
 
+            # EventBridge fake payloads lack fields that telebot requires
+            body.setdefault("update_id", 0)
+            if isinstance(body.get("message"), dict):
+                body["message"].setdefault("message_id", 0)
+                body["message"].setdefault("date", 0)
+
             logger.info("Processing update from event body")
             await bot_instance.process_update(body)
             logger.info("Update processed successfully")

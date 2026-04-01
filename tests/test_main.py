@@ -8,13 +8,42 @@ async def test_lambda_handler_with_body_success():
     with patch("src.main.Drahmbot") as MockDrahmbot:
         mock_bot_instance = MockDrahmbot.return_value
         mock_bot_instance.process_update = AsyncMock()
-        event = {"body": '{"message":"test"}'}
+        event = {"body": '{"update_id": 1, "message":"test"}'}
         context = {}
 
         response = await main.handler(event, context)
 
-        mock_bot_instance.process_update.assert_called_once_with(json.loads(event["body"]))
+        mock_bot_instance.process_update.assert_called_once_with(
+            {"update_id": 1, "message": "test"}
+        )
         assert response["statusCode"] == 200
+
+@pytest.mark.asyncio
+async def test_lambda_handler_eventbridge_payload_adds_missing_fields():
+    """EventBridge fake payloads lack update_id/message_id/date that telebot requires."""
+    with patch("src.main.Drahmbot") as MockDrahmbot:
+        mock_bot_instance = MockDrahmbot.return_value
+        mock_bot_instance.process_update = AsyncMock()
+
+        # Exactly what EventBridge sends — no update_id, no message_id, no date
+        eventbridge_body = {
+            "message": {
+                "chat": {"id": -1001633433047},
+                "text": "/carton@DrahmstrasseBot",
+                "entities": [{"type": "bot_command", "offset": 0, "length": 23}],
+            }
+        }
+        event = {"body": json.dumps(eventbridge_body)}
+
+        response = await main.handler(event, {})
+
+        # The handler must inject the missing fields before calling process_update
+        called_body = mock_bot_instance.process_update.call_args[0][0]
+        assert called_body["update_id"] == 0
+        assert called_body["message"]["message_id"] == 0
+        assert called_body["message"]["date"] == 0
+        assert response["statusCode"] == 200
+
 
 @pytest.mark.asyncio
 async def test_lambda_handler_with_body_exception():
@@ -24,12 +53,14 @@ async def test_lambda_handler_with_body_exception():
         mock_bot_instance.dev_chat_id = "123456"
         mock_bot_instance.bot = MagicMock()
         mock_bot_instance.bot.send_message = AsyncMock()
-        event = {"body": '{"message":"test"}'}
+        event = {"body": '{"update_id": 1, "message":"test"}'}
         context = {}
 
         response = await main.handler(event, context)
 
-        mock_bot_instance.process_update.assert_called_once_with(json.loads(event["body"]))
+        mock_bot_instance.process_update.assert_called_once_with(
+            {"update_id": 1, "message": "test"}
+        )
         assert response["statusCode"] == 200
         assert json.loads(response["body"]) == "ok"
         mock_bot_instance.bot.send_message.assert_called_once()
@@ -48,7 +79,7 @@ async def test_lambda_handler_exception_notification_failure_does_not_crash():
         mock_bot_instance.dev_chat_id = "123456"
         mock_bot_instance.bot = MagicMock()
         mock_bot_instance.bot.send_message = AsyncMock(side_effect=Exception("telegram down"))
-        event = {"body": '{"message":"test"}'}
+        event = {"body": '{"update_id": 1, "message":"test"}'}
         context = {}
 
         response = await main.handler(event, context)
@@ -65,7 +96,7 @@ async def test_lambda_handler_exception_no_dev_chat_id():
         mock_bot_instance.dev_chat_id = None
         mock_bot_instance.bot = MagicMock()
         mock_bot_instance.bot.send_message = AsyncMock()
-        event = {"body": '{"message":"test"}'}
+        event = {"body": '{"update_id": 1, "message":"test"}'}
         context = {}
 
         response = await main.handler(event, context)
