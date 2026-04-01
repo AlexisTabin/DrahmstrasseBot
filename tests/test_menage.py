@@ -69,7 +69,7 @@ def test_getRoles_has_dechets():
     with patch("src.menage.datetime") as mock_dt:
         mock_dt.datetime.now.return_value = datetime.datetime(2023, 10, 9)
         result = menage.getRoles(["A", "B", "C", "D"])
-        assert "DÉCHETS" in result
+        assert "DÉCHET" in result
 
 
 @patch("src.menage.get_role_assignments", return_value={
