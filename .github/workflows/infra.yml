@@ -103,3 +103,9 @@ jobs:
       - name: Terraform Apply
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         run: terraform apply -auto-approve tfplan
+
+      - name: Set Telegram webhook
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: |
+          WEBHOOK_URL=$(terraform output -raw webhook_url)
+          curl -sf "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/setWebhook?url=${WEBHOOK_URL}"
