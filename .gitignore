@@ -25,3 +25,9 @@ infra/bootstrap/.terraform/
 
 # Claude
 CLAUDE.md
+SMELLS.md
+.claude/
+
+# Misc
+aws/
+TUPP_PLAN.md

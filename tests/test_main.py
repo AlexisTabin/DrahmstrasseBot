@@ -37,12 +37,37 @@ async def test_lambda_handler_eventbridge_payload_adds_missing_fields():
 
         response = await main.handler(event, {})
 
-        # The handler must inject the missing fields before calling process_update
+        # The handler must inject all fields that telebot requires.
+        # Chat requires both 'id' and 'type' per the Telegram Bot API;
+        # Message requires 'message_id' and 'date'; Update requires 'update_id'.
         called_body = mock_bot_instance.process_update.call_args[0][0]
         assert called_body["update_id"] == 0
         assert called_body["message"]["message_id"] == 0
         assert called_body["message"]["date"] == 0
+        assert called_body["message"]["chat"]["type"] == "group"
         assert response["statusCode"] == 200
+
+
+@pytest.mark.asyncio
+async def test_eventbridge_payload_deserialization_requires_chat_type():
+    """Reproduce: EventBridge payloads missing chat.type cause TypeError in telebot."""
+    import telebot
+
+    # Exactly what main.py passes to process_update after injecting
+    # update_id / message_id / date — but chat still has no 'type'.
+    payload = {
+        "update_id": 0,
+        "message": {
+            "message_id": 0,
+            "date": 0,
+            "chat": {"id": -1001633433047},
+            "text": "/roles@DrahmstrasseBot",
+            "entities": [{"type": "bot_command", "offset": 0, "length": 22}],
+        },
+    }
+
+    with pytest.raises(TypeError, match="missing 1 required positional argument: 'type'"):
+        telebot.types.Update.de_json(payload)
 
 
 @pytest.mark.asyncio

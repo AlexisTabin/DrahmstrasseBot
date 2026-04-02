@@ -36,6 +36,8 @@ async def handler(event, context):
             if isinstance(body.get("message"), dict):
                 body["message"].setdefault("message_id", 0)
                 body["message"].setdefault("date", 0)
+                if isinstance(body["message"].get("chat"), dict):
+                    body["message"]["chat"].setdefault("type", "group")
 
             logger.info("Processing update from event body")
             await bot_instance.process_update(body)
