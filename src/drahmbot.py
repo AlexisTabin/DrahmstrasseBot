@@ -175,5 +175,6 @@ class Drahmbot:
         """Process a single update (for testing or Lambda)."""
         logger.info("Processing update: %s", update_json)
         update = telebot.types.Update.de_json(update_json)
+        logger.info("Telebot deserialization succeeded")
         await self.bot.process_new_updates([update])
         logger.info("Update processed successfully")

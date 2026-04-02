@@ -74,3 +74,34 @@ jobs:
           aws lambda update-function-code \
             --function-name drahmsstrasseTelegramBot \
             --zip-file fileb://function.zip
+
+      - name: Wait for Lambda update
+        if: github.event_name == 'push'
+        run: aws lambda wait function-updated --function-name drahmsstrasseTelegramBot
+
+      - name: Smoke test EventBridge payload
+        if: github.event_name == 'push'
+        run: |
+          PAYLOAD='{"body":"{\"message\":{\"chat\":{\"id\":-4867763410},\"text\":\"/lessive\",\"entities\":[{\"type\":\"bot_command\",\"offset\":0,\"length\":8}]}}"}'
+
+          RESPONSE=$(aws lambda invoke \
+            --function-name drahmsstrasseTelegramBot \
+            --payload "$PAYLOAD" \
+            --log-type Tail \
+            --cli-binary-format raw-in-base64-out \
+            /dev/stdout 2>/dev/null)
+
+          LOG_RESULT=$(echo "$RESPONSE" | grep -o '"LogResult": "[^"]*"' | cut -d'"' -f4)
+          LOGS=$(echo "$LOG_RESULT" | base64 --decode)
+
+          echo "=== Lambda Logs ==="
+          echo "$LOGS"
+          echo "==================="
+
+          if echo "$LOGS" | grep -q "Telebot deserialization succeeded"; then
+            echo "Smoke test PASSED"
+          else
+            echo "Smoke test FAILED: EventBridge payload deserialization failed"
+            echo "Check src/main.py field injection against current telebot requirements."
+            exit 1
+          fi
