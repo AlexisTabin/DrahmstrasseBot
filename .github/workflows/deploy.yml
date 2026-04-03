@@ -81,8 +81,18 @@ jobs:
 
       - name: Smoke test EventBridge payloads
         if: github.event_name == 'push'
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
         run: |
           DEV_CHAT_ID=-4867763410
+          TG="https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage"
+
+          send_tg() {
+            curl -s -X POST "$TG" \
+              -d chat_id="$DEV_CHAT_ID" \
+              -d parse_mode=HTML \
+              -d text="$1" > /dev/null
+          }
 
           LAMBDA_ARN=$(aws lambda get-function \
             --function-name drahmsstrasseTelegramBot \
@@ -99,7 +109,13 @@ jobs:
             exit 0
           fi
 
+          COMMANDS=$(echo "$RULES" | jq -r '.[]' | paste -sd', ')
+          send_tg "🧪 <b>Smoke testing $COUNT EventBridge commands...</b>
+$COMMANDS"
+
           FAILED=0
+
+          RESULT_FILE=$(mktemp)
 
           for RULE in $(echo "$RULES" | jq -r '.[]'); do
             INPUT=$(aws events list-targets-by-rule \
@@ -114,31 +130,41 @@ jobs:
             CMD=$(echo "$INPUT" | jq -r '.body | fromjson | .message.text')
             echo "=== Testing $RULE ($CMD) ==="
 
-            RESPONSE=$(aws lambda invoke \
+            INVOKE_META=$(aws lambda invoke \
               --function-name drahmsstrasseTelegramBot \
               --payload "$PAYLOAD" \
               --log-type Tail \
               --cli-binary-format raw-in-base64-out \
-              /dev/stdout 2>/dev/null)
+              "$RESULT_FILE")
 
-            LOG_RESULT=$(echo "$RESPONSE" | grep -o '"LogResult": "[^"]*"' | cut -d'"' -f4)
-            LOGS=$(echo "$LOG_RESULT" | base64 --decode)
+            # Show logs for debugging (last 4KB only, may be truncated)
+            LOG_RESULT=$(echo "$INVOKE_META" | jq -r '.LogResult // empty')
+            if [ -n "$LOG_RESULT" ]; then
+              echo "$LOG_RESULT" | base64 --decode
+            fi
 
-            echo "$LOGS"
+            # Check for Lambda-level errors and response status
+            FUNC_ERROR=$(echo "$INVOKE_META" | jq -r '.FunctionError // empty')
+            STATUS=$(jq -r '.statusCode' "$RESULT_FILE" 2>/dev/null)
 
-            if echo "$LOGS" | grep -q "Telebot deserialization succeeded"; then
-              echo "PASSED: $RULE"
-            else
-              echo "FAILED: $RULE"
+            if [ -n "$FUNC_ERROR" ]; then
+              echo "FAILED: $RULE (FunctionError: $FUNC_ERROR)"
               FAILED=1
+            elif [ "$STATUS" != "200" ]; then
+              echo "FAILED: $RULE (statusCode: $STATUS)"
+              FAILED=1
+            else
+              echo "PASSED: $RULE"
             fi
             echo ""
           done
 
+          rm -f "$RESULT_FILE"
+
           if [ "$FAILED" -eq 1 ]; then
-            echo "Smoke test FAILED: one or more EventBridge commands failed deserialization"
-            echo "Check src/main.py field injection against current telebot requirements."
+            send_tg "❌ <b>Smoke test FAILED</b> — one or more EventBridge commands didn't pass"
             exit 1
           fi
 
+          send_tg "✅ <b>All $COUNT smoke tests passed!</b> Deploy complete."
           echo "All $COUNT smoke tests PASSED"
