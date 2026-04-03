@@ -79,29 +79,55 @@ jobs:
         if: github.event_name == 'push'
         run: aws lambda wait function-updated --function-name drahmsstrasseTelegramBot
 
-      - name: Smoke test EventBridge payload
+      - name: Smoke test EventBridge payloads
         if: github.event_name == 'push'
         run: |
-          PAYLOAD='{"body":"{\"message\":{\"chat\":{\"id\":-4867763410},\"text\":\"/lessive\",\"entities\":[{\"type\":\"bot_command\",\"offset\":0,\"length\":8}]}}"}'
+          DEV_CHAT_ID=-4867763410
+          COMMANDS=(
+            "/whoishere@DrahmstrasseBot"
+            "/roles"
+            "/papier@DrahmstrasseBot"
+            "/carton@DrahmstrasseBot"
+            "/reminder@DrahmstrasseBot"
+            "/recap@DrahmstrasseBot"
+          )
+          FAILED=0
 
-          RESPONSE=$(aws lambda invoke \
-            --function-name drahmsstrasseTelegramBot \
-            --payload "$PAYLOAD" \
-            --log-type Tail \
-            --cli-binary-format raw-in-base64-out \
-            /dev/stdout 2>/dev/null)
+          for CMD in "${COMMANDS[@]}"; do
+            LEN=${#CMD}
+            PAYLOAD=$(jq -n \
+              --arg cmd "$CMD" \
+              --argjson len "$LEN" \
+              --argjson chat "$DEV_CHAT_ID" \
+              '{body: ({message: {chat: {id: $chat}, text: $cmd, entities: [{type: "bot_command", offset: 0, length: $len}]}} | tostring)}')
 
-          LOG_RESULT=$(echo "$RESPONSE" | grep -o '"LogResult": "[^"]*"' | cut -d'"' -f4)
-          LOGS=$(echo "$LOG_RESULT" | base64 --decode)
+            echo "=== Testing $CMD ==="
 
-          echo "=== Lambda Logs ==="
-          echo "$LOGS"
-          echo "==================="
+            RESPONSE=$(aws lambda invoke \
+              --function-name drahmsstrasseTelegramBot \
+              --payload "$PAYLOAD" \
+              --log-type Tail \
+              --cli-binary-format raw-in-base64-out \
+              /dev/stdout 2>/dev/null)
 
-          if echo "$LOGS" | grep -q "Telebot deserialization succeeded"; then
-            echo "Smoke test PASSED"
-          else
-            echo "Smoke test FAILED: EventBridge payload deserialization failed"
+            LOG_RESULT=$(echo "$RESPONSE" | grep -o '"LogResult": "[^"]*"' | cut -d'"' -f4)
+            LOGS=$(echo "$LOG_RESULT" | base64 --decode)
+
+            echo "$LOGS"
+
+            if echo "$LOGS" | grep -q "Telebot deserialization succeeded"; then
+              echo "PASSED: $CMD"
+            else
+              echo "FAILED: $CMD"
+              FAILED=1
+            fi
+            echo ""
+          done
+
+          if [ "$FAILED" -eq 1 ]; then
+            echo "Smoke test FAILED: one or more EventBridge commands failed deserialization"
             echo "Check src/main.py field injection against current telebot requirements."
             exit 1
           fi
+
+          echo "All smoke tests PASSED"
