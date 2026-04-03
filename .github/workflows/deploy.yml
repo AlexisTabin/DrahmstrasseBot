@@ -110,8 +110,7 @@ jobs:
           fi
 
           COMMANDS=$(echo "$RULES" | jq -r '.[]' | paste -sd', ')
-          send_tg "🧪 <b>Smoke testing $COUNT EventBridge commands...</b>
-$COMMANDS"
+          send_tg "🧪 <b>Smoke testing $COUNT EventBridge commands...</b>"$'\n'"$COMMANDS"
 
           FAILED=0
 
