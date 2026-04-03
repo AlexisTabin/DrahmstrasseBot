@@ -81,8 +81,18 @@ jobs:
 
       - name: Smoke test EventBridge payloads
         if: github.event_name == 'push'
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
         run: |
           DEV_CHAT_ID=-4867763410
+          TG="https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage"
+
+          send_tg() {
+            curl -s -X POST "$TG" \
+              -d chat_id="$DEV_CHAT_ID" \
+              -d parse_mode=HTML \
+              -d text="$1" > /dev/null
+          }
 
           LAMBDA_ARN=$(aws lambda get-function \
             --function-name drahmsstrasseTelegramBot \
@@ -98,6 +108,10 @@ jobs:
             echo "No EventBridge rules found — skipping smoke test"
             exit 0
           fi
+
+          COMMANDS=$(echo "$RULES" | jq -r '.[]' | paste -sd', ')
+          send_tg "🧪 <b>Smoke testing $COUNT EventBridge commands...</b>
+$COMMANDS"
 
           FAILED=0
 
@@ -148,8 +162,9 @@ jobs:
           rm -f "$RESULT_FILE"
 
           if [ "$FAILED" -eq 1 ]; then
-            echo "Smoke test FAILED: one or more EventBridge commands failed"
+            send_tg "❌ <b>Smoke test FAILED</b> — one or more EventBridge commands didn't pass"
             exit 1
           fi
 
+          send_tg "✅ <b>All $COUNT smoke tests passed!</b> Deploy complete."
           echo "All $COUNT smoke tests PASSED"
