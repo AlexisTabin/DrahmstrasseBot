@@ -1,0 +1,13 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 80%
+
+comment:
+  layout: "diff, flags, components"
+  behavior: once
+  require_changes: true
+  require_base: false
+  after_n_builds: 1
+  require_head: true

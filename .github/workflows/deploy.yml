@@ -79,29 +79,66 @@ jobs:
         if: github.event_name == 'push'
         run: aws lambda wait function-updated --function-name drahmsstrasseTelegramBot
 
-      - name: Smoke test EventBridge payload
+      - name: Smoke test EventBridge payloads
         if: github.event_name == 'push'
         run: |
-          PAYLOAD='{"body":"{\"message\":{\"chat\":{\"id\":-4867763410},\"text\":\"/lessive\",\"entities\":[{\"type\":\"bot_command\",\"offset\":0,\"length\":8}]}}"}'
+          DEV_CHAT_ID=-4867763410
 
-          RESPONSE=$(aws lambda invoke \
+          LAMBDA_ARN=$(aws lambda get-function \
             --function-name drahmsstrasseTelegramBot \
-            --payload "$PAYLOAD" \
-            --log-type Tail \
-            --cli-binary-format raw-in-base64-out \
-            /dev/stdout 2>/dev/null)
+            --query 'Configuration.FunctionArn' --output text)
 
-          LOG_RESULT=$(echo "$RESPONSE" | grep -o '"LogResult": "[^"]*"' | cut -d'"' -f4)
-          LOGS=$(echo "$LOG_RESULT" | base64 --decode)
+          RULES=$(aws events list-rule-names-by-target \
+            --target-arn "$LAMBDA_ARN" --query 'RuleNames' --output json)
 
-          echo "=== Lambda Logs ==="
-          echo "$LOGS"
-          echo "==================="
+          COUNT=$(echo "$RULES" | jq 'length')
+          echo "Found $COUNT EventBridge rules targeting the Lambda"
 
-          if echo "$LOGS" | grep -q "Telebot deserialization succeeded"; then
-            echo "Smoke test PASSED"
-          else
-            echo "Smoke test FAILED: EventBridge payload deserialization failed"
+          if [ "$COUNT" -eq 0 ]; then
+            echo "No EventBridge rules found — skipping smoke test"
+            exit 0
+          fi
+
+          FAILED=0
+
+          for RULE in $(echo "$RULES" | jq -r '.[]'); do
+            INPUT=$(aws events list-targets-by-rule \
+              --rule "$RULE" \
+              --query "Targets[?Arn==\`$LAMBDA_ARN\`].Input | [0]" \
+              --output text)
+
+            # Swap chat ID to dev chat so smoke tests don't post to prod
+            PAYLOAD=$(echo "$INPUT" | jq --argjson dev "$DEV_CHAT_ID" \
+              '.body = (.body | fromjson | .message.chat.id = $dev | tojson)')
+
+            CMD=$(echo "$INPUT" | jq -r '.body | fromjson | .message.text')
+            echo "=== Testing $RULE ($CMD) ==="
+
+            RESPONSE=$(aws lambda invoke \
+              --function-name drahmsstrasseTelegramBot \
+              --payload "$PAYLOAD" \
+              --log-type Tail \
+              --cli-binary-format raw-in-base64-out \
+              /dev/stdout 2>/dev/null)
+
+            LOG_RESULT=$(echo "$RESPONSE" | grep -o '"LogResult": "[^"]*"' | cut -d'"' -f4)
+            LOGS=$(echo "$LOG_RESULT" | base64 --decode)
+
+            echo "$LOGS"
+
+            if echo "$LOGS" | grep -q "Telebot deserialization succeeded"; then
+              echo "PASSED: $RULE"
+            else
+              echo "FAILED: $RULE"
+              FAILED=1
+            fi
+            echo ""
+          done
+
+          if [ "$FAILED" -eq 1 ]; then
+            echo "Smoke test FAILED: one or more EventBridge commands failed deserialization"
             echo "Check src/main.py field injection against current telebot requirements."
             exit 1
           fi
+
+          echo "All $COUNT smoke tests PASSED"
