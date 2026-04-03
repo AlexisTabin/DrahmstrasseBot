@@ -83,25 +83,36 @@ jobs:
         if: github.event_name == 'push'
         run: |
           DEV_CHAT_ID=-4867763410
-          COMMANDS=(
-            "/whoishere@DrahmstrasseBot"
-            "/roles"
-            "/papier@DrahmstrasseBot"
-            "/carton@DrahmstrasseBot"
-            "/reminder@DrahmstrasseBot"
-            "/recap@DrahmstrasseBot"
-          )
+
+          LAMBDA_ARN=$(aws lambda get-function \
+            --function-name drahmsstrasseTelegramBot \
+            --query 'Configuration.FunctionArn' --output text)
+
+          RULES=$(aws events list-rule-names-by-target \
+            --target-arn "$LAMBDA_ARN" --query 'RuleNames' --output json)
+
+          COUNT=$(echo "$RULES" | jq 'length')
+          echo "Found $COUNT EventBridge rules targeting the Lambda"
+
+          if [ "$COUNT" -eq 0 ]; then
+            echo "No EventBridge rules found — skipping smoke test"
+            exit 0
+          fi
+
           FAILED=0
 
-          for CMD in "${COMMANDS[@]}"; do
-            LEN=${#CMD}
-            PAYLOAD=$(jq -n \
-              --arg cmd "$CMD" \
-              --argjson len "$LEN" \
-              --argjson chat "$DEV_CHAT_ID" \
-              '{body: ({message: {chat: {id: $chat}, text: $cmd, entities: [{type: "bot_command", offset: 0, length: $len}]}} | tostring)}')
+          for RULE in $(echo "$RULES" | jq -r '.[]'); do
+            INPUT=$(aws events list-targets-by-rule \
+              --rule "$RULE" \
+              --query "Targets[?Arn==\`$LAMBDA_ARN\`].Input | [0]" \
+              --output text)
 
-            echo "=== Testing $CMD ==="
+            # Swap chat ID to dev chat so smoke tests don't post to prod
+            PAYLOAD=$(echo "$INPUT" | jq --argjson dev "$DEV_CHAT_ID" \
+              '.body = (.body | fromjson | .message.chat.id = $dev | tojson)')
+
+            CMD=$(echo "$INPUT" | jq -r '.body | fromjson | .message.text')
+            echo "=== Testing $RULE ($CMD) ==="
 
             RESPONSE=$(aws lambda invoke \
               --function-name drahmsstrasseTelegramBot \
@@ -116,9 +127,9 @@ jobs:
             echo "$LOGS"
 
             if echo "$LOGS" | grep -q "Telebot deserialization succeeded"; then
-              echo "PASSED: $CMD"
+              echo "PASSED: $RULE"
             else
-              echo "FAILED: $CMD"
+              echo "FAILED: $RULE"
               FAILED=1
             fi
             echo ""
@@ -130,4 +141,4 @@ jobs:
             exit 1
           fi
 
-          echo "All smoke tests PASSED"
+          echo "All $COUNT smoke tests PASSED"
