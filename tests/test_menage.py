@@ -127,3 +127,66 @@ def test_changeRoles_odd_week(mock_getRoles, mock_even):
     assert "Coucou, changement" in result
     assert "roles text" in result
     mock_getRoles.assert_called_once_with(colocataires)
+
+
+# --- Sub-task definitions tests ---
+
+
+def test_role_subtasks_keys_match_roles():
+    from src.menage import ROLE_SUBTASKS, ROLES
+    assert set(ROLE_SUBTASKS.keys()) == set(ROLES)
+
+
+def test_simple_roles_have_no_subtasks():
+    from src.menage import ROLE_SUBTASKS
+    assert ROLE_SUBTASKS["CUISINE"] is None
+    assert ROLE_SUBTASKS["SDBs"] is None
+
+
+def test_sols_subtasks():
+    from src.menage import ROLE_SUBTASKS
+    assert ROLE_SUBTASKS["SOLs"] == ["aspirateur", "panosse"]
+
+
+def test_dechets_base_subtasks_exclude_papier():
+    from src.menage import ROLE_SUBTASKS
+    assert "papier" not in ROLE_SUBTASKS["DÉCHETS"]
+    assert "poubelle" in ROLE_SUBTASKS["DÉCHETS"]
+
+
+@patch("src.menage.is_even_week", return_value=True)
+def test_get_subtasks_dechets_even_week_includes_papier(mock_even):
+    from src.menage import get_subtasks_for_role
+    result = get_subtasks_for_role("DÉCHETS")
+    assert "papier" in result
+    assert "poubelle" in result
+    assert len(result) == 6
+
+
+@patch("src.menage.is_even_week", return_value=False)
+def test_get_subtasks_dechets_odd_week_excludes_papier(mock_even):
+    from src.menage import get_subtasks_for_role
+    result = get_subtasks_for_role("DÉCHETS")
+    assert "papier" not in result
+    assert "poubelle" in result
+    assert len(result) == 5
+
+
+def test_get_subtasks_simple_role_returns_none():
+    from src.menage import get_subtasks_for_role
+    assert get_subtasks_for_role("CUISINE") is None
+    assert get_subtasks_for_role("SDBs") is None
+
+
+def test_get_subtasks_sols():
+    from src.menage import get_subtasks_for_role
+    result = get_subtasks_for_role("SOLs")
+    assert result == ["aspirateur", "panosse"]
+
+
+def test_get_subtasks_returns_copy():
+    """Modifying the returned list should not affect the original."""
+    from src.menage import get_subtasks_for_role, ROLE_SUBTASKS
+    result = get_subtasks_for_role("SOLs")
+    result.append("extra")
+    assert "extra" not in ROLE_SUBTASKS["SOLs"]

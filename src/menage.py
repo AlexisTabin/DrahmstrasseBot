@@ -7,6 +7,25 @@ logger = logging.getLogger(__name__)
 
 ROLES = ["CUISINE", "SDBs", "SOLs", "DÉCHETS"]
 
+ROLE_SUBTASKS = {
+    "CUISINE": None,
+    "SDBs": None,
+    "SOLs": ["aspirateur", "panosse"],
+    "DÉCHETS": ["poubelle", "carton", "compost", "verre", "plastique"],
+}
+DECHETS_OPTIONAL_SUBTASK = "papier"
+
+
+def get_subtasks_for_role(role):
+    """Return the list of active sub-tasks for a role, or None for simple roles."""
+    subtasks = ROLE_SUBTASKS.get(role)
+    if subtasks is None:
+        return None
+    result = list(subtasks)
+    if role == "DÉCHETS" and is_even_week():
+        result.append(DECHETS_OPTIONAL_SUBTASK)
+    return result
+
 '''
 Role computation
 '''
