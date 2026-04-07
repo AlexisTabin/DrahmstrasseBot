@@ -64,7 +64,8 @@ class Drahmbot:
         self.token = token or utils.get_token()
         self.chat_id = chat_id or utils.get_group_id()
         self.dev_chat_id = utils.get_dev_chat_id()
-        self.bot = AsyncTeleBot(self.token, parse_mode=None, use_class_middlewares=True)
+        self.bot = AsyncTeleBot(self.token, parse_mode=None)
+        self.bot.use_class_middlewares = True
         logger.info("Initializing Drahmbot with chat_id: %s", self.chat_id)
         self.bot.setup_middleware(ColocAccessMiddleware(TELEGRAM_USER_MAP))
         self.register_handlers()
