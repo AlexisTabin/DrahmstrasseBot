@@ -1,8 +1,10 @@
+import datetime
 import json
 import logging
 import telebot
 
 from telebot.async_telebot import AsyncTeleBot
+from telebot.handler_backends import BaseMiddleware, CancelUpdate
 import src.utils as utils
 import src.menage as menage
 import src.social as social
@@ -24,7 +26,77 @@ TELEGRAM_USER_MAP = {
     5503636012: LEA,
     891406979: ALEXIS,
     981443207: MAEL,
+    1645783874: TIMON,
 }
+
+class ColocAccessMiddleware(BaseMiddleware):
+    def __init__(self, user_map):
+        super().__init__()
+        self.user_map = user_map
+        self.update_types = ['message', 'callback_query']
+
+    async def pre_process(self, message, data):
+        from_user = message.from_user
+        if from_user is None:
+            return
+        if hasattr(message, 'text') and message.text and message.text.strip().startswith('/myid'):
+            return
+        if from_user.id not in self.user_map:
+            return CancelUpdate()
+
+    async def post_process(self, message, data, exception):
+        pass
+
+
+def _build_done_keyboard(role, week_num):
+    """Build an InlineKeyboardMarkup for a role's done status."""
+    subtasks = menage.get_subtasks_for_role(role)
+    keyboard = telebot.types.InlineKeyboardMarkup()
+
+    completed = chores.get_week_status()
+    role_data = completed.get(role, {})
+
+    if subtasks is None:
+        is_done = "by" in role_data
+        icon = "\u2705" if is_done else "\u2b1c"
+        button = telebot.types.InlineKeyboardButton(
+            text=f"{icon} {role}",
+            callback_data=f"done:{week_num}:{role}",
+        )
+        keyboard.add(button)
+    else:
+        completed_subtasks = role_data.get("subtasks", {})
+        for subtask in subtasks:
+            is_done = subtask in completed_subtasks
+            icon = "\u2705" if is_done else "\u2b1c"
+            button = telebot.types.InlineKeyboardButton(
+                text=f"{icon} {subtask}",
+                callback_data=f"done:{week_num}:{role}:{subtask}",
+            )
+            keyboard.add(button)
+
+    return keyboard
+
+
+def _build_done_text(role, person):
+    """Build status text for a role's done message."""
+    subtasks = menage.get_subtasks_for_role(role)
+    completed = chores.get_week_status()
+    role_data = completed.get(role, {})
+
+    if subtasks is None:
+        is_done = "by" in role_data
+        if is_done:
+            return f"{person} \u2014 {role} : fait \u2705"
+        return f"{person} \u2014 {role} : clique pour marquer comme fait."
+    else:
+        completed_subtasks = role_data.get("subtasks", {})
+        done_count = sum(1 for s in subtasks if s in completed_subtasks)
+        total = len(subtasks)
+        if done_count == total:
+            return f"{person} \u2014 {role} : {done_count}/{total} sous-t\u00e2ches faites \u2705"
+        return f"{person} \u2014 {role} : {done_count}/{total} sous-t\u00e2ches faites."
+
 
 class Drahmbot:
     _instance = None  # Singleton instance
@@ -44,7 +116,9 @@ class Drahmbot:
         self.chat_id = chat_id or utils.get_group_id()
         self.dev_chat_id = utils.get_dev_chat_id()
         self.bot = AsyncTeleBot(self.token, parse_mode=None)
+        self.bot.use_class_middlewares = True
         logger.info("Initializing Drahmbot with chat_id: %s", self.chat_id)
+        self.bot.setup_middleware(ColocAccessMiddleware(TELEGRAM_USER_MAP))
         self.register_handlers()
         self._initialized = True
         logger.info("Drahmbot initialization complete")
@@ -62,6 +136,9 @@ class Drahmbot:
         @self.bot.message_handler(commands=['papier'])
         async def send_papier(message):
             logger.info("Command /papier received from %s", message.chat.id)
+            if not utils.is_even_week():
+                logger.info("Odd week — skipping papier reminder")
+                return
             answer = menage.get_papier_reminder(colocataires=colocataires)
             await self.bot.send_message(message.chat.id, answer)
             logger.info("Sent papier answer: %s", answer)
@@ -134,12 +211,66 @@ class Drahmbot:
                 )
                 return
 
-            newly_done = chores.mark_done(role, person)
-            if newly_done:
-                answer = f"Bien joué {person} ! {role} marqué comme fait."
+            week_num = datetime.date.today().isocalendar()[1]
+            keyboard = _build_done_keyboard(role, week_num)
+            text = _build_done_text(role, person)
+            await self.bot.send_message(message.chat.id, text, reply_markup=keyboard)
+
+        @self.bot.callback_query_handler(func=lambda call: call.data.startswith("done:"))
+        async def handle_done_callback(call):
+            parts = call.data.split(":")
+            if len(parts) < 3:
+                await self.bot.answer_callback_query(call.id, "Données invalides.")
+                return
+
+            week_num = int(parts[1])
+            role = parts[2]
+            subtask = parts[3] if len(parts) > 3 else None
+
+            current_week = datetime.date.today().isocalendar()[1]
+            if week_num != current_week:
+                await self.bot.answer_callback_query(
+                    call.id, "Cette semaine est terminée.", show_alert=True,
+                )
+                return
+
+            user_id = call.from_user.id
+            person = TELEGRAM_USER_MAP.get(user_id)
+            if not person:
+                await self.bot.answer_callback_query(
+                    call.id, "Tu n'es pas reconnu.", show_alert=True,
+                )
+                return
+
+            assigned_role = menage.get_role_for_person(colocataires, person)
+            if assigned_role != role:
+                await self.bot.answer_callback_query(
+                    call.id, "Ce n'est pas ta tâche !", show_alert=True,
+                )
+                return
+
+            if subtask:
+                valid_subtasks = menage.get_subtasks_for_role(role)
+                if valid_subtasks is None or subtask not in valid_subtasks:
+                    await self.bot.answer_callback_query(
+                        call.id, "Sous-tâche inconnue.", show_alert=True,
+                    )
+                    return
+                now_done = chores.toggle_subtask(role, subtask, person)
+                toast = f"{subtask} fait !" if now_done else f"{subtask} annulé."
             else:
-                answer = f"{role} est déjà marqué comme fait cette semaine."
-            await self.bot.send_message(message.chat.id, answer)
+                now_done = chores.toggle_role(role, person)
+                toast = f"{role} fait !" if now_done else f"{role} annulé."
+
+            keyboard = _build_done_keyboard(role, week_num)
+            text = _build_done_text(role, person)
+            await self.bot.edit_message_text(
+                text,
+                call.message.chat.id,
+                call.message.message_id,
+                reply_markup=keyboard,
+            )
+            await self.bot.answer_callback_query(call.id, toast)
 
         @self.bot.message_handler(commands=['reminder'])
         async def send_reminder(message):
