@@ -3,6 +3,7 @@ import logging
 import telebot
 
 from telebot.async_telebot import AsyncTeleBot
+from telebot.handler_backends import BaseMiddleware, CancelUpdate
 import src.utils as utils
 import src.menage as menage
 import src.social as social
@@ -24,7 +25,27 @@ TELEGRAM_USER_MAP = {
     5503636012: LEA,
     891406979: ALEXIS,
     981443207: MAEL,
+    1645783874: TIMON,
 }
+
+class ColocAccessMiddleware(BaseMiddleware):
+    def __init__(self, user_map):
+        super().__init__()
+        self.user_map = user_map
+        self.update_types = ['message']
+
+    async def pre_process(self, message, data):
+        from_user = message.from_user
+        if from_user is None:
+            return
+        if message.text and message.text.strip().startswith('/myid'):
+            return
+        if from_user.id not in self.user_map:
+            return CancelUpdate()
+
+    async def post_process(self, message, data, exception):
+        pass
+
 
 class Drahmbot:
     _instance = None  # Singleton instance
@@ -43,8 +64,9 @@ class Drahmbot:
         self.token = token or utils.get_token()
         self.chat_id = chat_id or utils.get_group_id()
         self.dev_chat_id = utils.get_dev_chat_id()
-        self.bot = AsyncTeleBot(self.token, parse_mode=None)
+        self.bot = AsyncTeleBot(self.token, parse_mode=None, use_class_middlewares=True)
         logger.info("Initializing Drahmbot with chat_id: %s", self.chat_id)
+        self.bot.setup_middleware(ColocAccessMiddleware(TELEGRAM_USER_MAP))
         self.register_handlers()
         self._initialized = True
         logger.info("Drahmbot initialization complete")
@@ -62,6 +84,9 @@ class Drahmbot:
         @self.bot.message_handler(commands=['papier'])
         async def send_papier(message):
             logger.info("Command /papier received from %s", message.chat.id)
+            if not utils.is_even_week():
+                logger.info("Odd week — skipping papier reminder")
+                return
             answer = menage.get_papier_reminder(colocataires=colocataires)
             await self.bot.send_message(message.chat.id, answer)
             logger.info("Sent papier answer: %s", answer)

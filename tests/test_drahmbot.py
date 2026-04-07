@@ -1,7 +1,7 @@
 import pytest
 import asyncio
 from unittest.mock import AsyncMock, patch, MagicMock
-from src.drahmbot import Drahmbot, colocataires
+from src.drahmbot import Drahmbot, ColocAccessMiddleware, TELEGRAM_USER_MAP, colocataires
 
 @pytest.mark.asyncio
 async def test_singleton_behavior():
@@ -44,12 +44,13 @@ def _capture_handlers(bot):
 @pytest.mark.asyncio
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
+@patch("src.drahmbot.utils.is_even_week", return_value=True)
 @patch("src.drahmbot.menage.getRoles", return_value="Roles info")
 @patch("src.drahmbot.menage.get_papier_reminder", return_value="Papier reminder")
 @patch("src.drahmbot.menage.getCarteDeLessive", return_value="Lessive info")
 @patch("src.drahmbot.social.is_present_dinner", return_value="Who is here?")
 async def test_bot_handlers(
-    mock_who, mock_lessive, mock_papier, mock_roles, mock_group, mock_token
+    mock_who, mock_lessive, mock_papier, mock_roles, mock_even, mock_group, mock_token
 ):
     bot = Drahmbot()
 
@@ -268,3 +269,64 @@ async def test_stats_handler_other_chat_ignored(mock_group, mock_token, mock_sta
 
     await handlers["stats"](message)
     bot.bot.send_message.assert_not_called()
+
+
+# --- Biweekly papier tests ---
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.utils.is_even_week", return_value=False)
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_papier_skipped_on_odd_week(mock_group, mock_token, mock_even):
+    bot = Drahmbot()
+    bot.bot.send_message = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    message = MagicMock()
+    message.chat.id = 999
+
+    await handlers["papier"](message)
+    bot.bot.send_message.assert_not_called()
+
+
+# --- ColocAccessMiddleware tests ---
+
+@pytest.mark.asyncio
+async def test_middleware_allows_known_user():
+    mw = ColocAccessMiddleware(TELEGRAM_USER_MAP)
+    message = MagicMock()
+    message.from_user.id = 891406979  # Alexis
+    message.text = "/roles"
+    result = await mw.pre_process(message, {})
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_middleware_blocks_unknown_user():
+    from telebot.handler_backends import CancelUpdate
+    mw = ColocAccessMiddleware(TELEGRAM_USER_MAP)
+    message = MagicMock()
+    message.from_user.id = 99999999  # Not in map
+    message.text = "/roles"
+    result = await mw.pre_process(message, {})
+    assert isinstance(result, CancelUpdate)
+
+
+@pytest.mark.asyncio
+async def test_middleware_allows_eventbridge():
+    mw = ColocAccessMiddleware(TELEGRAM_USER_MAP)
+    message = MagicMock()
+    message.from_user = None
+    message.text = "/papier"
+    result = await mw.pre_process(message, {})
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_middleware_allows_myid():
+    mw = ColocAccessMiddleware(TELEGRAM_USER_MAP)
+    message = MagicMock()
+    message.from_user.id = 99999999  # Unknown user
+    message.text = "/myid"
+    result = await mw.pre_process(message, {})
+    assert result is None
