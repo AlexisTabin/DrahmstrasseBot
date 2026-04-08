@@ -17,7 +17,7 @@ DECHETS_OPTIONAL_SUBTASK = "papier"
 
 
 def get_subtasks_for_role(role):
-    """Return the list of active sub-tasks for a role, or None for simple roles."""
+    """Return the list of active sub-tasks for a role, or None for unknown roles."""
     subtasks = ROLE_SUBTASKS.get(role)
     if subtasks is None:
         return None

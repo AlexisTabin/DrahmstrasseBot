@@ -127,15 +127,14 @@ def _pending_detail(role: str, completed: dict) -> str:
     """Return detail string for sub-task roles with missing items."""
     from src.menage import get_subtasks_for_role
 
-    if role not in completed:
-        return ""
-
-    role_data = completed[role]
-    if "subtasks" not in role_data:
-        return ""
-
     expected = get_subtasks_for_role(role)
     if expected is None:
+        return ""
+
+    role_data = completed.get(role, {})
+
+    # Old format: {by, at} — no subtask detail to show
+    if "by" in role_data:
         return ""
 
     completed_subtasks = role_data.get("subtasks", {})

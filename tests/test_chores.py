@@ -342,7 +342,9 @@ def test_pending_detail_with_missing(mock_even):
 
 def test_pending_detail_role_not_started():
     result = chores._pending_detail("SOLs", {})
-    assert result == ""
+    assert "manque" in result
+    assert "aspirateur" in result
+    assert "panosse" in result
 
 
 def test_pending_detail_old_format():
