@@ -385,24 +385,29 @@ async def test_middleware_blocks_unknown_user_callback():
 
 
 @patch("src.drahmbot.chores.get_week_status", return_value={})
-@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=None)
-def test_build_done_keyboard_simple_role(mock_subtasks, mock_status):
+@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail", "rangement"])
+def test_build_done_keyboard_cuisine_not_done(mock_subtasks, mock_status):
     keyboard = _build_done_keyboard("CUISINE", 15)
-    assert len(keyboard.keyboard) == 1
-    btn = keyboard.keyboard[0][0]
-    assert "CUISINE" in btn.text
-    assert btn.callback_data == "done:15:CUISINE"
-    assert "\u2b1c" in btn.text  # not done
+    assert len(keyboard.keyboard) == 3
+    assert "frigo" in keyboard.keyboard[0][0].text
+    assert "plan de travail" in keyboard.keyboard[1][0].text
+    assert "rangement" in keyboard.keyboard[2][0].text
+    assert keyboard.keyboard[0][0].callback_data == "done:15:CUISINE:frigo"
+    assert "\u2b1c" in keyboard.keyboard[0][0].text  # not done
 
 
 @patch("src.drahmbot.chores.get_week_status", return_value={
-    "CUISINE": {"by": "Timon", "at": "..."},
+    "CUISINE": {"subtasks": {
+        "frigo": {"by": "Timon", "at": "..."},
+        "plan de travail": {"by": "Timon", "at": "..."},
+        "rangement": {"by": "Timon", "at": "..."},
+    }},
 })
-@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=None)
-def test_build_done_keyboard_simple_done(mock_subtasks, mock_status):
+@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail", "rangement"])
+def test_build_done_keyboard_cuisine_done(mock_subtasks, mock_status):
     keyboard = _build_done_keyboard("CUISINE", 15)
-    btn = keyboard.keyboard[0][0]
-    assert "\u2705" in btn.text
+    assert len(keyboard.keyboard) == 3
+    assert "\u2705" in keyboard.keyboard[0][0].text
 
 
 @patch("src.drahmbot.chores.get_week_status", return_value={})
@@ -416,21 +421,25 @@ def test_build_done_keyboard_subtask_role(mock_subtasks, mock_status):
 
 
 @patch("src.drahmbot.chores.get_week_status", return_value={})
-@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=None)
-def test_build_done_text_simple_not_done(mock_subtasks, mock_status):
+@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail", "rangement"])
+def test_build_done_text_cuisine_not_done(mock_subtasks, mock_status):
     text = _build_done_text("CUISINE", "Timon")
     assert "CUISINE" in text
     assert "Timon" in text
-    assert "clique" in text
+    assert "0/3" in text
 
 
 @patch("src.drahmbot.chores.get_week_status", return_value={
-    "CUISINE": {"by": "Timon", "at": "..."},
+    "CUISINE": {"subtasks": {
+        "frigo": {"by": "Timon", "at": "..."},
+        "plan de travail": {"by": "Timon", "at": "..."},
+        "rangement": {"by": "Timon", "at": "..."},
+    }},
 })
-@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=None)
-def test_build_done_text_simple_done(mock_subtasks, mock_status):
+@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail", "rangement"])
+def test_build_done_text_cuisine_done(mock_subtasks, mock_status):
     text = _build_done_text("CUISINE", "Timon")
-    assert "fait" in text
+    assert "3/3" in text
     assert "\u2705" in text
 
 
@@ -448,15 +457,15 @@ def test_build_done_text_subtask_partial(mock_subtasks, mock_status):
 
 @pytest.mark.asyncio
 @patch("src.drahmbot.chores.get_week_status", return_value={
-    "CUISINE": {"by": "Timon", "at": "..."},
+    "CUISINE": {"subtasks": {"frigo": {"by": "Timon", "at": "..."}}},
 })
-@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=None)
-@patch("src.drahmbot.chores.toggle_role", return_value=False)
+@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail", "rangement"])
+@patch("src.drahmbot.chores.toggle_subtask", return_value=False)
 @patch("src.drahmbot.menage.get_role_for_person", return_value="CUISINE")
 @patch("src.drahmbot.datetime")
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
-async def test_callback_toggle_role(
+async def test_callback_toggle_cuisine_subtask(
     mock_group, mock_token, mock_dt, mock_role, mock_toggle,
     mock_subtasks, mock_status,
 ):
@@ -472,18 +481,18 @@ async def test_callback_toggle_role(
         handlers = _capture_handlers(bot)
 
         call = MagicMock()
-        call.data = "done:15:CUISINE"
+        call.data = "done:15:CUISINE:frigo"
         call.from_user.id = 42
         call.id = "cb1"
         call.message.chat.id = 999
         call.message.message_id = 100
 
         await handlers["_callback_query"](call)
-        mock_toggle.assert_called_once_with("CUISINE", "Timon")
+        mock_toggle.assert_called_once_with("CUISINE", "frigo", "Timon")
         bot.bot.edit_message_text.assert_called_once()
         bot.bot.answer_callback_query.assert_called_once()
         toast = bot.bot.answer_callback_query.call_args[0][1]
-        assert "annulé" in toast
+        assert "frigo annulé" in toast
     finally:
         drahmbot_module.TELEGRAM_USER_MAP.clear()
         drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
