@@ -8,8 +8,8 @@ logger = logging.getLogger(__name__)
 ROLES = ["CUISINE", "SDBs", "SOLs", "DÉCHETS"]
 
 ROLE_SUBTASKS = {
-    "CUISINE": None,
-    "SDBs": None,
+    "CUISINE": ["frigo", "plan de travail", "rangement"],
+    "SDBs": ["petit WC", "grand WC", "lavabo", "baignoire"],
     "SOLs": ["aspirateur", "panosse"],
     "DÉCHETS": ["poubelle", "carton", "compost", "verre", "plastique"],
 }
