@@ -144,7 +144,7 @@ async def test_done_handler_unknown_user(mock_group, mock_token):
 
 @pytest.mark.asyncio
 @patch("src.drahmbot.chores.get_week_status", return_value={})
-@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=None)
+@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail", "rangement"])
 @patch("src.drahmbot.menage.get_role_for_person", return_value="CUISINE")
 @patch("src.drahmbot.datetime")
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
@@ -170,6 +170,8 @@ async def test_done_handler_sends_keyboard(
         call_args = bot.bot.send_message.call_args
         assert "CUISINE" in call_args[0][1]
         assert "reply_markup" in call_args[1]
+        keyboard = call_args[1]["reply_markup"]
+        assert len(keyboard.keyboard) == 3  # frigo, plan de travail, rangement
     finally:
         drahmbot_module.TELEGRAM_USER_MAP.clear()
         drahmbot_module.TELEGRAM_USER_MAP.update(original_map)

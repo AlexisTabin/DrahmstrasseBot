@@ -137,10 +137,14 @@ def test_role_subtasks_keys_match_roles():
     assert set(ROLE_SUBTASKS.keys()) == set(ROLES)
 
 
-def test_simple_roles_have_no_subtasks():
+def test_cuisine_subtasks():
     from src.menage import ROLE_SUBTASKS
-    assert ROLE_SUBTASKS["CUISINE"] is None
-    assert ROLE_SUBTASKS["SDBs"] is None
+    assert ROLE_SUBTASKS["CUISINE"] == ["frigo", "plan de travail", "rangement"]
+
+
+def test_sdbs_subtasks():
+    from src.menage import ROLE_SUBTASKS
+    assert ROLE_SUBTASKS["SDBs"] == ["petit WC", "grand WC", "lavabo", "baignoire"]
 
 
 def test_sols_subtasks():
@@ -172,10 +176,21 @@ def test_get_subtasks_dechets_odd_week_excludes_papier(mock_even):
     assert len(result) == 5
 
 
-def test_get_subtasks_simple_role_returns_none():
+def test_get_subtasks_cuisine():
     from src.menage import get_subtasks_for_role
-    assert get_subtasks_for_role("CUISINE") is None
-    assert get_subtasks_for_role("SDBs") is None
+    result = get_subtasks_for_role("CUISINE")
+    assert result == ["frigo", "plan de travail", "rangement"]
+
+
+def test_get_subtasks_sdbs():
+    from src.menage import get_subtasks_for_role
+    result = get_subtasks_for_role("SDBs")
+    assert result == ["petit WC", "grand WC", "lavabo", "baignoire"]
+
+
+def test_get_subtasks_unknown_role_returns_none():
+    from src.menage import get_subtasks_for_role
+    assert get_subtasks_for_role("UNKNOWN") is None
 
 
 def test_get_subtasks_sols():
