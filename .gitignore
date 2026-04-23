@@ -12,6 +12,7 @@ bugs/
 nohup.out
 bot.log
 .venv
+.config
 
 # Terraform
 infra/.terraform/
