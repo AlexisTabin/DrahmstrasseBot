@@ -1,5 +1,6 @@
 import datetime
 import logging
+import random
 from src.utils import is_even_week
 from src import phrases
 
@@ -7,6 +8,9 @@ from src import phrases
 logger = logging.getLogger(__name__)
 
 ROLES = ["CUISINE", "SDBs", "SOLs", "DÉCHETS"]
+
+# Chance that roles don't rotate this week — pure chaos/joke
+CHAOS_KEEP_ROLES_PROBABILITY = 0.05
 
 ROLE_SUBTASKS = {
     "CUISINE": ["frigo", "plan de travail", "rangement"],
@@ -31,9 +35,23 @@ def get_subtasks_for_role(role):
 Role computation
 '''
 
+def _should_keep_same_roles() -> bool:
+    """Deterministic per ISO week — True ~5% of the time as a playful prank."""
+    iso = datetime.datetime.now().isocalendar()
+    rng = random.Random(f"drahmbot-roles-{iso[0]}-{iso[1]}")
+    return rng.random() < CHAOS_KEEP_ROLES_PROBABILITY
+
+
 def get_role_assignments(colocataires: list) -> dict:
-    """Return a dict mapping role name to the assigned person for this week."""
+    """Return a dict mapping role name to the assigned person for this week.
+
+    Normally rotates by +1 each week; on a chaos week (~5% chance, deterministic
+    per ISO week) the shift stays at last week's value so everyone keeps their
+    role.
+    """
     current_week_nb = datetime.datetime.now().isocalendar()[1] + 1
+    if _should_keep_same_roles():
+        current_week_nb -= 1
     logger.info("Calculated role index shift: %d", current_week_nb)
     return {
         role: colocataires[(current_week_nb + i) % len(colocataires)]
@@ -71,7 +89,12 @@ def getRoles(colocataires: list):
         assignments["DÉCHETS"],
     )
 
-    answer = phrases.pick(phrases.MONDAY_NEW_ROLES) + "\n" + body
+    if _should_keep_same_roles():
+        prefix = phrases.pick(phrases.MONDAY_SAME_ROLES)
+    else:
+        prefix = phrases.pick(phrases.MONDAY_NEW_ROLES)
+
+    answer = prefix + "\n" + body
     logger.info("Assigned roles:\n%s", answer.strip())
     return answer
 

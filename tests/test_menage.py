@@ -5,8 +5,9 @@ from unittest.mock import patch
 from src import menage
 
 
+@patch("src.menage._should_keep_same_roles", return_value=False)
 @patch("src.menage.datetime")
-def test_get_role_assignments(mock_datetime):
+def test_get_role_assignments(mock_datetime, mock_chaos):
     colocataires = ["Alice", "Bob", "Charlie", "Diana"]
     # Week 41 → shift = 42
     mock_datetime.datetime.now.return_value = datetime.datetime(2023, 10, 9)
@@ -15,8 +16,9 @@ def test_get_role_assignments(mock_datetime):
     assert set(assignments.values()) == set(colocataires)
 
 
+@patch("src.menage._should_keep_same_roles", return_value=False)
 @patch("src.menage.datetime")
-def test_get_role_assignments_rotates(mock_datetime):
+def test_get_role_assignments_rotates(mock_datetime, mock_chaos):
     colocataires = ["Alice", "Bob", "Charlie", "Diana"]
     # Week 41 → shift = 42
     mock_datetime.datetime.now.return_value = datetime.datetime(2023, 10, 9)
@@ -30,8 +32,9 @@ def test_get_role_assignments_rotates(mock_datetime):
     assert a1["CUISINE"] != a2["CUISINE"]
 
 
+@patch("src.menage._should_keep_same_roles", return_value=False)
 @patch("src.menage.datetime")
-def test_get_role_for_person(mock_datetime):
+def test_get_role_for_person(mock_datetime, mock_chaos):
     colocataires = ["Alice", "Bob", "Charlie", "Diana"]
     mock_datetime.datetime.now.return_value = datetime.datetime(2023, 10, 9)
     assignments = menage.get_role_assignments(colocataires)
@@ -44,18 +47,54 @@ def test_get_role_for_person(mock_datetime):
 
 def test_getRoles_has_dechets():
     """DÉCHETS line is present."""
-    with patch("src.menage.datetime") as mock_dt:
+    with patch("src.menage._should_keep_same_roles", return_value=False), \
+         patch("src.menage.datetime") as mock_dt:
         mock_dt.datetime.now.return_value = datetime.datetime(2023, 10, 9)
         result = menage.getRoles(["A", "B", "C", "D"])
         assert "DÉCHET" in result
 
 
+@patch("src.menage._should_keep_same_roles", return_value=False)
 @patch("src.menage.datetime")
-def test_getRoles_includes_new_roles_phrase(mock_datetime):
+def test_getRoles_normal_week_uses_new_roles_phrase(mock_datetime, mock_chaos):
     from src.phrases import MONDAY_NEW_ROLES
     mock_datetime.datetime.now.return_value = datetime.datetime(2023, 10, 9)
     result = menage.getRoles(["A", "B", "C", "D"])
     assert any(p in result for p in MONDAY_NEW_ROLES)
+
+
+@patch("src.menage._should_keep_same_roles", return_value=True)
+@patch("src.menage.datetime")
+def test_getRoles_chaos_week_uses_same_roles_phrase(mock_datetime, mock_chaos):
+    from src.phrases import MONDAY_SAME_ROLES
+    mock_datetime.datetime.now.return_value = datetime.datetime(2023, 10, 9)
+    result = menage.getRoles(["A", "B", "C", "D"])
+    assert any(p in result for p in MONDAY_SAME_ROLES)
+
+
+@patch("src.menage._should_keep_same_roles", return_value=True)
+@patch("src.menage.datetime")
+def test_get_role_assignments_chaos_matches_previous_week(mock_datetime, mock_chaos):
+    """On a chaos week the shift is -1, giving the same assignment as a normal previous week."""
+    colocataires = ["Alice", "Bob", "Charlie", "Diana"]
+    mock_datetime.datetime.now.return_value = datetime.datetime(2023, 10, 16)  # Week 42
+    chaos = menage.get_role_assignments(colocataires)
+
+    # Normal week 41 assignments
+    mock_chaos.return_value = False
+    mock_datetime.datetime.now.return_value = datetime.datetime(2023, 10, 9)  # Week 41
+    normal_previous = menage.get_role_assignments(colocataires)
+
+    assert chaos == normal_previous
+
+
+def test_should_keep_same_roles_is_deterministic_per_week():
+    """Calling twice in the same week yields the same result — required so reminders/recap agree with /roles."""
+    with patch("src.menage.datetime") as mock_dt:
+        mock_dt.datetime.now.return_value = datetime.datetime(2023, 10, 9)
+        first = menage._should_keep_same_roles()
+        second = menage._should_keep_same_roles()
+        assert first == second
 
 
 @patch("src.menage.get_role_assignments", return_value={
