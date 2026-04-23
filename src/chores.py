@@ -3,6 +3,8 @@ import logging
 import datetime
 import boto3
 
+from src import phrases
+
 logger = logging.getLogger(__name__)
 
 _table = None
@@ -218,13 +220,13 @@ def get_thursday_reminder(role_assignments: dict) -> str:
             pending.append(f"  {role} ({person}){detail}")
 
     if not pending:
-        return "Rappel du jeudi : tout est fait cette semaine, bravo !"
+        return phrases.pick(phrases.THURSDAY_ALL_DONE)
 
-    lines = ["Rappel du jeudi — tâches pas encore faites :"]
+    lines = [phrases.pick(phrases.THURSDAY_REMINDER_HEADER)]
     for item in pending:
         lines.append(f"  \u274c{item}")
     if done:
-        lines.append("Déjà fait :")
+        lines.append(phrases.pick(phrases.THURSDAY_DONE_SECTION))
         for item in done:
             lines.append(f"  \u2705{item}")
     return "\n".join(lines)
@@ -255,11 +257,11 @@ def get_stats() -> str:
                         counts[person] = counts.get(person, 0) + 1
 
     if not counts:
-        return "Pas encore de stats !"
+        return phrases.pick(phrases.STATS_EMPTY)
 
     medals = ["🥇", "🥈", "🥉"]
     sorted_people = sorted(counts.items(), key=lambda x: x[1], reverse=True)
-    lines = ["Stats :"]
+    lines = [phrases.pick(phrases.STATS_HEADER)]
     for i, (person, count) in enumerate(sorted_people):
         prefix = f"  {medals[i]} " if i < len(medals) else "  "
         lines.append(f"{prefix}{person} : {count} tâches")
@@ -273,7 +275,7 @@ def get_sunday_recap(role_assignments: dict) -> str:
         role_assignments: dict of {role: person} for the current week.
     """
     completed = get_week_status()
-    lines = ["Récap de la semaine :"]
+    lines = [phrases.pick(phrases.SUNDAY_RECAP_HEADER)]
     for role, person in role_assignments.items():
         if is_role_complete(role, completed):
             who = _who_did_it(completed[role])

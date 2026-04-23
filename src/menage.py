@@ -1,6 +1,7 @@
 import datetime
 import logging
 from src.utils import is_even_week
+from src import phrases
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -57,7 +58,7 @@ def getRoles(colocataires: list):
     assignments = get_role_assignments(colocataires)
     logger.info("Role assignments: %s", assignments)
 
-    answer = """
+    body = """
         ROLES DU MENAGES ATTRIBUÉS ALEATOIREMENT PAR LE DRAHMBOT    :
         - \U0001F373 CUISINE    : {}
         - \U0001F6BF SDBs       : {}
@@ -70,6 +71,7 @@ def getRoles(colocataires: list):
         assignments["DÉCHETS"],
     )
 
+    answer = phrases.pick(phrases.MONDAY_NEW_ROLES) + "\n" + body
     logger.info("Assigned roles:\n%s", answer.strip())
     return answer
 
@@ -116,17 +118,3 @@ et lâcher 100 balles
     return answer
 
 
-'''
-For schedulers
-'''
-
-def changeRoles(colocataires: list):
-    answer = getRoles(colocataires)
-
-    if is_even_week():
-        answer = "Encore une semaine avec les mêmes rôles ehehe\n" + answer
-    else:
-        answer = "Coucou, changement de rôles pour le ménage ehehe\n" + answer
-
-    logger.info("ChangeRoles message:\n%s", answer.strip())
-    return answer
