@@ -144,7 +144,9 @@ def test_cuisine_subtasks():
 
 def test_sdbs_subtasks():
     from src.menage import ROLE_SUBTASKS
-    assert ROLE_SUBTASKS["SDBs"] == ["petit WC", "grand WC", "lavabo", "baignoire"]
+    assert ROLE_SUBTASKS["SDBs"] == [
+        "petit WC", "grand WC", "lavabo", "baignoire", "Vider les petites poubelles",
+    ]
 
 
 def test_sols_subtasks():
@@ -185,7 +187,9 @@ def test_get_subtasks_cuisine():
 def test_get_subtasks_sdbs():
     from src.menage import get_subtasks_for_role
     result = get_subtasks_for_role("SDBs")
-    assert result == ["petit WC", "grand WC", "lavabo", "baignoire"]
+    assert result == [
+        "petit WC", "grand WC", "lavabo", "baignoire", "Vider les petites poubelles",
+    ]
 
 
 def test_get_subtasks_unknown_role_returns_none():

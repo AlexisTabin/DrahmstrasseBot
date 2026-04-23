@@ -9,7 +9,7 @@ ROLES = ["CUISINE", "SDBs", "SOLs", "DÉCHETS"]
 
 ROLE_SUBTASKS = {
     "CUISINE": ["frigo", "plan de travail", "rangement"],
-    "SDBs": ["petit WC", "grand WC", "lavabo", "baignoire"],
+    "SDBs": ["petit WC", "grand WC", "lavabo", "baignoire", "Vider les petites poubelles"],
     "SOLs": ["aspirateur", "panosse"],
     "DÉCHETS": ["poubelle", "carton", "compost", "verre", "plastique"],
 }
