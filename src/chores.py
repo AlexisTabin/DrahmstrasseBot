@@ -3,6 +3,8 @@ import logging
 import datetime
 import boto3
 
+from src import phrases
+
 logger = logging.getLogger(__name__)
 
 _table = None
@@ -157,39 +159,6 @@ def _who_did_it(role_data: dict) -> str:
     return "?"
 
 
-def mark_done(role: str, person: str) -> bool:
-    """Mark a role as done for the current week.
-
-    Returns True if newly marked, False if already done.
-    """
-    table = _get_table()
-    week_key = _current_week_key()
-    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
-
-    # Ensure the item and completed map exist (no-op if already present)
-    table.update_item(
-        Key={"week_key": week_key},
-        UpdateExpression="SET completed = if_not_exists(completed, :empty_map)",
-        ExpressionAttributeValues={":empty_map": {}},
-    )
-
-    try:
-        table.update_item(
-            Key={"week_key": week_key},
-            UpdateExpression="SET completed.#role = :val",
-            ConditionExpression="attribute_not_exists(completed.#role)",
-            ExpressionAttributeNames={"#role": role},
-            ExpressionAttributeValues={
-                ":val": {"by": person, "at": now}
-            },
-        )
-        logger.info("Marked %s as done by %s for %s", role, person, week_key)
-        return True
-    except table.meta.client.exceptions.ConditionalCheckFailedException:
-        logger.info("Role %s already marked done for %s", role, week_key)
-        return False
-
-
 def get_week_status(week_key: str = None) -> dict:
     """Get the completion status for a week. Returns the completed map (may be empty)."""
     table = _get_table()
@@ -218,13 +187,13 @@ def get_thursday_reminder(role_assignments: dict) -> str:
             pending.append(f"  {role} ({person}){detail}")
 
     if not pending:
-        return "Rappel du jeudi : tout est fait cette semaine, bravo !"
+        return phrases.pick(phrases.THURSDAY_ALL_DONE)
 
-    lines = ["Rappel du jeudi — tâches pas encore faites :"]
+    lines = [phrases.pick(phrases.THURSDAY_REMINDER_HEADER)]
     for item in pending:
         lines.append(f"  \u274c{item}")
     if done:
-        lines.append("Déjà fait :")
+        lines.append(phrases.pick(phrases.THURSDAY_DONE_SECTION))
         for item in done:
             lines.append(f"  \u2705{item}")
     return "\n".join(lines)
@@ -255,11 +224,11 @@ def get_stats() -> str:
                         counts[person] = counts.get(person, 0) + 1
 
     if not counts:
-        return "Pas encore de stats !"
+        return phrases.pick(phrases.STATS_EMPTY)
 
     medals = ["🥇", "🥈", "🥉"]
     sorted_people = sorted(counts.items(), key=lambda x: x[1], reverse=True)
-    lines = ["Stats :"]
+    lines = [phrases.pick(phrases.STATS_HEADER)]
     for i, (person, count) in enumerate(sorted_people):
         prefix = f"  {medals[i]} " if i < len(medals) else "  "
         lines.append(f"{prefix}{person} : {count} tâches")
@@ -273,7 +242,7 @@ def get_sunday_recap(role_assignments: dict) -> str:
         role_assignments: dict of {role: person} for the current week.
     """
     completed = get_week_status()
-    lines = ["Récap de la semaine :"]
+    lines = [phrases.pick(phrases.SUNDAY_RECAP_HEADER)]
     for role, person in role_assignments.items():
         if is_role_complete(role, completed):
             who = _who_did_it(completed[role])

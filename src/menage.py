@@ -1,15 +1,20 @@
 import datetime
 import logging
+import random
 from src.utils import is_even_week
+from src import phrases
 
 # Setup logging
 logger = logging.getLogger(__name__)
 
 ROLES = ["CUISINE", "SDBs", "SOLs", "DÉCHETS"]
 
+# Chance that roles don't rotate this week — pure chaos/joke
+CHAOS_KEEP_ROLES_PROBABILITY = 0.05
+
 ROLE_SUBTASKS = {
     "CUISINE": ["frigo", "plan de travail", "rangement"],
-    "SDBs": ["petit WC", "grand WC", "lavabo", "baignoire"],
+    "SDBs": ["petit WC", "grand WC", "lavabo", "baignoire", "Vider les petites poubelles"],
     "SOLs": ["aspirateur", "panosse"],
     "DÉCHETS": ["poubelle", "carton", "compost", "verre", "plastique"],
 }
@@ -30,9 +35,23 @@ def get_subtasks_for_role(role):
 Role computation
 '''
 
+def _should_keep_same_roles() -> bool:
+    """Deterministic per ISO week — True ~5% of the time as a playful prank."""
+    iso = datetime.datetime.now().isocalendar()
+    rng = random.Random(f"drahmbot-roles-{iso[0]}-{iso[1]}")
+    return rng.random() < CHAOS_KEEP_ROLES_PROBABILITY
+
+
 def get_role_assignments(colocataires: list) -> dict:
-    """Return a dict mapping role name to the assigned person for this week."""
+    """Return a dict mapping role name to the assigned person for this week.
+
+    Normally rotates by +1 each week; on a chaos week (~5% chance, deterministic
+    per ISO week) the shift stays at last week's value so everyone keeps their
+    role.
+    """
     current_week_nb = datetime.datetime.now().isocalendar()[1] + 1
+    if _should_keep_same_roles():
+        current_week_nb -= 1
     logger.info("Calculated role index shift: %d", current_week_nb)
     return {
         role: colocataires[(current_week_nb + i) % len(colocataires)]
@@ -57,7 +76,7 @@ def getRoles(colocataires: list):
     assignments = get_role_assignments(colocataires)
     logger.info("Role assignments: %s", assignments)
 
-    answer = """
+    body = """
         ROLES DU MENAGES ATTRIBUÉS ALEATOIREMENT PAR LE DRAHMBOT    :
         - \U0001F373 CUISINE    : {}
         - \U0001F6BF SDBs       : {}
@@ -70,6 +89,12 @@ def getRoles(colocataires: list):
         assignments["DÉCHETS"],
     )
 
+    if _should_keep_same_roles():
+        prefix = phrases.pick(phrases.MONDAY_SAME_ROLES)
+    else:
+        prefix = phrases.pick(phrases.MONDAY_NEW_ROLES)
+
+    answer = prefix + "\n" + body
     logger.info("Assigned roles:\n%s", answer.strip())
     return answer
 
@@ -92,20 +117,6 @@ def get_carton_reminder(colocataires: list) -> str:
     return answer
 
 
-def getCartonOrPapier(colocataires: list) -> str:
-    """Show the new papier/carton schedule and responsible person."""
-    assignments = get_role_assignments(colocataires)
-    name = assignments["DÉCHETS"]
-    answer = (
-        "Nouveau calendrier :\n"
-        "- Papier : tous les lundis soir\n"
-        "- Carton : tous les mercredis soir\n"
-        f"Cette semaine, c'est {name} (DÉCHETS) qui s'en occupe !"
-    )
-    logger.info("Carton/Papier info: %s", answer)
-    return answer
-
-
 def getCarteDeLessive():
     answer = """Pour commander une carte ou un badge, veuillez consulter le site internet
 https://www.lavorent.ch/fr/product/hyperion-100/
@@ -116,17 +127,3 @@ et lâcher 100 balles
     return answer
 
 
-'''
-For schedulers
-'''
-
-def changeRoles(colocataires: list):
-    answer = getRoles(colocataires)
-
-    if is_even_week():
-        answer = "Encore une semaine avec les mêmes rôles ehehe\n" + answer
-    else:
-        answer = "Coucou, changement de rôles pour le ménage ehehe\n" + answer
-
-    logger.info("ChangeRoles message:\n%s", answer.strip())
-    return answer

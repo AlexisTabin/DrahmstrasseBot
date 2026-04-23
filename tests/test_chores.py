@@ -22,39 +22,6 @@ def reset_table_cache():
 
 @patch("src.chores._current_week_key", return_value="2026-W14")
 @patch("src.chores._get_table")
-def test_mark_done_new(mock_get_table, mock_week):
-    mock_table = MagicMock()
-    mock_get_table.return_value = mock_table
-
-    result = chores.mark_done("CUISINE", "Timon")
-    assert result is True
-    # Two calls: first ensures map exists, second sets the role
-    assert mock_table.update_item.call_count == 2
-    call_kwargs = mock_table.update_item.call_args_list[1][1]
-    assert call_kwargs["Key"] == {"week_key": "2026-W14"}
-    assert call_kwargs["ExpressionAttributeNames"] == {"#role": "CUISINE"}
-
-
-@patch("src.chores._current_week_key", return_value="2026-W14")
-@patch("src.chores._get_table")
-def test_mark_done_already_done(mock_get_table, mock_week):
-    mock_table = MagicMock()
-    mock_client = MagicMock()
-    mock_table.meta.client = mock_client
-
-    # Simulate ConditionalCheckFailedException on the second call only
-    exc_class = type("ConditionalCheckFailedException", (Exception,), {})
-    mock_client.exceptions.ConditionalCheckFailedException = exc_class
-    # First call (ensure map) succeeds, second call (set role) fails
-    mock_table.update_item.side_effect = [None, exc_class("already done")]
-    mock_get_table.return_value = mock_table
-
-    result = chores.mark_done("CUISINE", "Timon")
-    assert result is False
-
-
-@patch("src.chores._current_week_key", return_value="2026-W14")
-@patch("src.chores._get_table")
 def test_get_week_status_empty(mock_get_table, mock_week):
     mock_table = MagicMock()
     mock_table.get_item.return_value = {}
@@ -83,8 +50,9 @@ def test_get_week_status_with_data(mock_get_table, mock_week):
 
 @patch("src.chores.get_week_status", return_value={})
 def test_get_thursday_reminder_all_pending(mock_status):
+    from src.phrases import THURSDAY_REMINDER_HEADER
     result = chores.get_thursday_reminder(SAMPLE_ASSIGNMENTS)
-    assert "Rappel du jeudi" in result
+    assert any(h in result for h in THURSDAY_REMINDER_HEADER)
     assert "CUISINE" in result
     assert "SDBs" in result
 
@@ -96,26 +64,29 @@ def test_get_thursday_reminder_all_pending(mock_status):
     "DÉCHETS": {"by": "Alexis", "at": "..."},
 })
 def test_get_thursday_reminder_all_done(mock_status):
+    from src.phrases import THURSDAY_ALL_DONE
     result = chores.get_thursday_reminder(SAMPLE_ASSIGNMENTS)
-    assert "bravo" in result.lower()
+    assert result in THURSDAY_ALL_DONE
 
 
 @patch("src.chores.get_week_status", return_value={
     "CUISINE": {"by": "Timon", "at": "..."},
 })
 def test_get_thursday_reminder_partial(mock_status):
+    from src.phrases import THURSDAY_REMINDER_HEADER
     result = chores.get_thursday_reminder(SAMPLE_ASSIGNMENTS)
     assert "CUISINE" in result
     assert "SDBs" in result
-    assert "Rappel du jeudi" in result
+    assert any(h in result for h in THURSDAY_REMINDER_HEADER)
 
 
 @patch("src.chores.get_week_status", return_value={
     "CUISINE": {"by": "Timon", "at": "..."},
 })
 def test_get_sunday_recap(mock_status):
+    from src.phrases import SUNDAY_RECAP_HEADER
     result = chores.get_sunday_recap(SAMPLE_ASSIGNMENTS)
-    assert "Récap" in result
+    assert any(h in result for h in SUNDAY_RECAP_HEADER)
     assert "CUISINE" in result
     assert "fait par Timon" in result
     assert "pas fait" in result  # other roles not done
@@ -128,8 +99,9 @@ def test_get_sunday_recap(mock_status):
     "DÉCHETS": {"by": "Alexis", "at": "..."},
 })
 def test_get_sunday_recap_all_done(mock_status):
+    from src.phrases import SUNDAY_RECAP_HEADER
     result = chores.get_sunday_recap(SAMPLE_ASSIGNMENTS)
-    assert "Récap" in result
+    assert any(h in result for h in SUNDAY_RECAP_HEADER)
     assert "pas fait" not in result
 
 
@@ -139,8 +111,9 @@ def test_get_stats_empty(mock_get_table):
     mock_table.scan.return_value = {"Items": []}
     mock_get_table.return_value = mock_table
 
+    from src.phrases import STATS_EMPTY
     result = chores.get_stats()
-    assert result == "Pas encore de stats !"
+    assert result in STATS_EMPTY
 
 
 @patch("src.chores._get_table")
@@ -173,8 +146,9 @@ def test_get_stats_multiple_weeks(mock_get_table):
     }
     mock_get_table.return_value = mock_table
 
+    from src.phrases import STATS_HEADER
     result = chores.get_stats()
-    assert "Stats :" in result
+    assert any(h in result for h in STATS_HEADER)
     # Timon: 3 (W10 CUISINE, W11 CUISINE, W11 DÉCHETS)
     assert "Timon : 3 tâches" in result
     # Maël: 2 (W10 SDBs, W12 CUISINE)
@@ -199,8 +173,9 @@ def test_get_stats_no_completed_field(mock_get_table):
     }
     mock_get_table.return_value = mock_table
 
+    from src.phrases import STATS_EMPTY
     result = chores.get_stats()
-    assert result == "Pas encore de stats !"
+    assert result in STATS_EMPTY
 
 
 # --- toggle_role tests ---
@@ -390,12 +365,13 @@ def test_who_did_it_empty():
 })
 @patch("src.menage.is_even_week", return_value=False)
 def test_thursday_reminder_with_subtasks(mock_even, mock_status):
+    from src.phrases import THURSDAY_DONE_SECTION
     result = chores.get_thursday_reminder(SAMPLE_ASSIGNMENTS)
     # DÉCHETS is not fully done (only poubelle of 5)
     assert "DÉCHETS" in result
     assert "manque" in result
     # SOLs is fully done
-    assert "Déjà fait" in result
+    assert any(s in result for s in THURSDAY_DONE_SECTION)
 
 
 @patch("src.chores.get_week_status", return_value={
@@ -408,8 +384,9 @@ def test_thursday_reminder_with_subtasks(mock_even, mock_status):
     "DÉCHETS": {"by": "Alexis", "at": "..."},
 })
 def test_sunday_recap_mixed_formats(mock_status):
+    from src.phrases import SUNDAY_RECAP_HEADER
     result = chores.get_sunday_recap(SAMPLE_ASSIGNMENTS)
-    assert "Récap" in result
+    assert any(h in result for h in SUNDAY_RECAP_HEADER)
     assert "fait par Timon" in result
     assert "fait par Léa" in result
     assert "fait par Alexis" in result
