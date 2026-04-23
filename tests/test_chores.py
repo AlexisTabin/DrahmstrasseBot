@@ -22,39 +22,6 @@ def reset_table_cache():
 
 @patch("src.chores._current_week_key", return_value="2026-W14")
 @patch("src.chores._get_table")
-def test_mark_done_new(mock_get_table, mock_week):
-    mock_table = MagicMock()
-    mock_get_table.return_value = mock_table
-
-    result = chores.mark_done("CUISINE", "Timon")
-    assert result is True
-    # Two calls: first ensures map exists, second sets the role
-    assert mock_table.update_item.call_count == 2
-    call_kwargs = mock_table.update_item.call_args_list[1][1]
-    assert call_kwargs["Key"] == {"week_key": "2026-W14"}
-    assert call_kwargs["ExpressionAttributeNames"] == {"#role": "CUISINE"}
-
-
-@patch("src.chores._current_week_key", return_value="2026-W14")
-@patch("src.chores._get_table")
-def test_mark_done_already_done(mock_get_table, mock_week):
-    mock_table = MagicMock()
-    mock_client = MagicMock()
-    mock_table.meta.client = mock_client
-
-    # Simulate ConditionalCheckFailedException on the second call only
-    exc_class = type("ConditionalCheckFailedException", (Exception,), {})
-    mock_client.exceptions.ConditionalCheckFailedException = exc_class
-    # First call (ensure map) succeeds, second call (set role) fails
-    mock_table.update_item.side_effect = [None, exc_class("already done")]
-    mock_get_table.return_value = mock_table
-
-    result = chores.mark_done("CUISINE", "Timon")
-    assert result is False
-
-
-@patch("src.chores._current_week_key", return_value="2026-W14")
-@patch("src.chores._get_table")
 def test_get_week_status_empty(mock_get_table, mock_week):
     mock_table = MagicMock()
     mock_table.get_item.return_value = {}

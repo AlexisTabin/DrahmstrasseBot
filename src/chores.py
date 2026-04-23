@@ -159,39 +159,6 @@ def _who_did_it(role_data: dict) -> str:
     return "?"
 
 
-def mark_done(role: str, person: str) -> bool:
-    """Mark a role as done for the current week.
-
-    Returns True if newly marked, False if already done.
-    """
-    table = _get_table()
-    week_key = _current_week_key()
-    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
-
-    # Ensure the item and completed map exist (no-op if already present)
-    table.update_item(
-        Key={"week_key": week_key},
-        UpdateExpression="SET completed = if_not_exists(completed, :empty_map)",
-        ExpressionAttributeValues={":empty_map": {}},
-    )
-
-    try:
-        table.update_item(
-            Key={"week_key": week_key},
-            UpdateExpression="SET completed.#role = :val",
-            ConditionExpression="attribute_not_exists(completed.#role)",
-            ExpressionAttributeNames={"#role": role},
-            ExpressionAttributeValues={
-                ":val": {"by": person, "at": now}
-            },
-        )
-        logger.info("Marked %s as done by %s for %s", role, person, week_key)
-        return True
-    except table.meta.client.exceptions.ConditionalCheckFailedException:
-        logger.info("Role %s already marked done for %s", role, week_key)
-        return False
-
-
 def get_week_status(week_key: str = None) -> dict:
     """Get the completion status for a week. Returns the completed map (may be empty)."""
     table = _get_table()

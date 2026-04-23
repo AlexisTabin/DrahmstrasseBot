@@ -11,6 +11,3 @@ def is_present_dinner():
     logger.info("Generated dinner question: %s", question)
     return question
 
-# belle l'API de zuricho
-# https://github.com/opendatazurich/opendatazurich.github.io/tree/master
-

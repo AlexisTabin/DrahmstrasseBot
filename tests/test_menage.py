@@ -117,16 +117,6 @@ def test_get_carton_reminder(mock_assignments):
     assert "mercredi" in result.lower()
 
 
-@patch("src.menage.get_role_assignments", return_value={
-    "CUISINE": "Alice", "SDBs": "Bob", "SOLs": "Charlie", "DÉCHETS": "Diana"
-})
-def test_getCartonOrPapier(mock_assignments):
-    result = menage.getCartonOrPapier(["Alice", "Bob", "Charlie", "Diana"])
-    assert "Diana" in result
-    assert "lundi" in result.lower()
-    assert "mercredi" in result.lower()
-
-
 def test_getCarteDeLessive_contains_url():
     result = menage.getCarteDeLessive()
     assert "https://www.lavorent.ch" in result

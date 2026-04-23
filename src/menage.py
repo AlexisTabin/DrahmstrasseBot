@@ -117,20 +117,6 @@ def get_carton_reminder(colocataires: list) -> str:
     return answer
 
 
-def getCartonOrPapier(colocataires: list) -> str:
-    """Show the new papier/carton schedule and responsible person."""
-    assignments = get_role_assignments(colocataires)
-    name = assignments["DÉCHETS"]
-    answer = (
-        "Nouveau calendrier :\n"
-        "- Papier : tous les lundis soir\n"
-        "- Carton : tous les mercredis soir\n"
-        f"Cette semaine, c'est {name} (DÉCHETS) qui s'en occupe !"
-    )
-    logger.info("Carton/Papier info: %s", answer)
-    return answer
-
-
 def getCarteDeLessive():
     answer = """Pour commander une carte ou un badge, veuillez consulter le site internet
 https://www.lavorent.ch/fr/product/hyperion-100/
