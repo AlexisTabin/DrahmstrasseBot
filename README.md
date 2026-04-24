@@ -39,6 +39,7 @@ Code and infrastructure are deployed separately via GitHub Actions:
 | `BOT_CHAT_ID` | Telegram group chat ID |
 | `TELEGRAM_TOKEN` | Telegram bot API token |
 | `TELEGRAM_WEBHOOK_SECRET` | Shared secret verified on every inbound webhook call (any random `A-Za-z0-9_-` string, ≤256 chars) |
+| `ALERT_EMAIL` | Email that receives AWS Budget and CloudWatch alarm notifications |
 
 ## Local Development
 
