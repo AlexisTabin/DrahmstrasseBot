@@ -20,3 +20,9 @@ variable "telegram_token" {
   type        = string
   sensitive   = true
 }
+
+variable "telegram_webhook_secret" {
+  description = "Shared secret used as Telegram's webhook secret_token — verified on every inbound webhook call"
+  type        = string
+  sensitive   = true
+}

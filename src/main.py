@@ -1,8 +1,11 @@
 import json
 import logging
 import asyncio
+import os
 import traceback
 from src.drahmbot import Drahmbot
+
+TELEGRAM_SECRET_HEADER = "x-telegram-bot-api-secret-token"
 
 # Setup logging
 root = logging.getLogger()
@@ -21,6 +24,21 @@ logger = logging.getLogger(__name__)
 async def handler(event, context):
     logger.info("Lambda invoked")
     logger.info("Received event: %s", event)
+
+    # API Gateway calls carry 'headers'; EventBridge direct invocations don't
+    # and are already authenticated via IAM.
+    if "headers" in event:
+        expected = os.environ.get("TELEGRAM_WEBHOOK_SECRET")
+        if expected:
+            headers = event.get("headers") or {}
+            provided = next(
+                (v for k, v in headers.items() if k.lower() == TELEGRAM_SECRET_HEADER),
+                None,
+            )
+            if provided != expected:
+                logger.warning("Rejected webhook call: invalid or missing secret token")
+                return {"statusCode": 401, "body": json.dumps("unauthorized")}
+
     bot_instance = Drahmbot()
     logger.info("Drahmbot instance retrieved")
 

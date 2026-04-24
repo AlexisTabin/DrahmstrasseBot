@@ -73,6 +73,7 @@ jobs:
           terraform plan -no-color \
             -var="bot_chat_id=${{ secrets.BOT_CHAT_ID }}" \
             -var="telegram_token=${{ secrets.TELEGRAM_TOKEN }}" \
+            -var="telegram_webhook_secret=${{ secrets.TELEGRAM_WEBHOOK_SECRET }}" \
             -out=tfplan
         continue-on-error: true
 
@@ -110,4 +111,4 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         run: |
           WEBHOOK_URL=$(terraform output -raw webhook_url)
-          curl -sf "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/setWebhook?url=${WEBHOOK_URL}"
+          curl -sf "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/setWebhook?url=${WEBHOOK_URL}&secret_token=${{ secrets.TELEGRAM_WEBHOOK_SECRET }}"
