@@ -141,3 +141,69 @@ async def test_lambda_handler_without_body():
 
         mock_bot_instance.process_update.assert_not_called()
         assert response["statusCode"] == 200
+
+
+@pytest.mark.asyncio
+async def test_lambda_handler_webhook_with_valid_secret(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_WEBHOOK_SECRET", "s3cret")
+    with patch("src.main.Drahmbot") as MockDrahmbot:
+        mock_bot_instance = MockDrahmbot.return_value
+        mock_bot_instance.process_update = AsyncMock()
+        event = {
+            "headers": {"x-telegram-bot-api-secret-token": "s3cret"},
+            "body": '{"update_id": 1, "message": "test"}',
+        }
+
+        response = await main.handler(event, {})
+
+        mock_bot_instance.process_update.assert_called_once()
+        assert response["statusCode"] == 200
+
+
+@pytest.mark.asyncio
+async def test_lambda_handler_webhook_with_wrong_secret_rejected(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_WEBHOOK_SECRET", "s3cret")
+    with patch("src.main.Drahmbot") as MockDrahmbot:
+        mock_bot_instance = MockDrahmbot.return_value
+        mock_bot_instance.process_update = AsyncMock()
+        event = {
+            "headers": {"x-telegram-bot-api-secret-token": "wrong"},
+            "body": '{"update_id": 1, "message": "test"}',
+        }
+
+        response = await main.handler(event, {})
+
+        mock_bot_instance.process_update.assert_not_called()
+        assert response["statusCode"] == 401
+
+
+@pytest.mark.asyncio
+async def test_lambda_handler_webhook_without_secret_header_rejected(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_WEBHOOK_SECRET", "s3cret")
+    with patch("src.main.Drahmbot") as MockDrahmbot:
+        mock_bot_instance = MockDrahmbot.return_value
+        mock_bot_instance.process_update = AsyncMock()
+        event = {
+            "headers": {"content-type": "application/json"},
+            "body": '{"update_id": 1, "message": "test"}',
+        }
+
+        response = await main.handler(event, {})
+
+        mock_bot_instance.process_update.assert_not_called()
+        assert response["statusCode"] == 401
+
+
+@pytest.mark.asyncio
+async def test_lambda_handler_eventbridge_skips_secret_check(monkeypatch):
+    """EventBridge events have no 'headers' and must pass through without a secret."""
+    monkeypatch.setenv("TELEGRAM_WEBHOOK_SECRET", "s3cret")
+    with patch("src.main.Drahmbot") as MockDrahmbot:
+        mock_bot_instance = MockDrahmbot.return_value
+        mock_bot_instance.process_update = AsyncMock()
+        event = {"body": '{"update_id": 1, "message": "test"}'}  # no 'headers' key
+
+        response = await main.handler(event, {})
+
+        mock_bot_instance.process_update.assert_called_once()
+        assert response["statusCode"] == 200

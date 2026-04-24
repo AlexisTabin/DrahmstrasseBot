@@ -38,6 +38,7 @@ Code and infrastructure are deployed separately via GitHub Actions:
 | `AWS_SECRET_ACCESS_KEY` | AWS credentials for deployment |
 | `BOT_CHAT_ID` | Telegram group chat ID |
 | `TELEGRAM_TOKEN` | Telegram bot API token |
+| `TELEGRAM_WEBHOOK_SECRET` | Shared secret verified on every inbound webhook call (any random `A-Za-z0-9_-` string, ≤256 chars) |
 
 ## Local Development
 
@@ -47,3 +48,56 @@ source .venv/bin/activate
 pip install -r requirements.txt
 pytest
 ```
+
+## Request Flow
+
+What happens when a user types a command in the Telegram chat:
+
+```
+  👤 User in Telegram chat
+   │
+   │ 1. types "/roles"
+   ▼
+  ┌─────────────────────────┐
+  │    Telegram servers     │
+  │   (api.telegram.org)    │
+  └───────────┬─────────────┘
+              │
+              │ 2. POST update JSON to webhook URL
+              │    header: X-Telegram-Bot-Api-Secret-Token  🔒 ②
+              ▼
+  ┌─────────────────────────┐
+  │   AWS API Gateway       │
+  │   POST /webhook         │
+  │   (rate-limited)        │
+  └───────────┬─────────────┘
+              │
+              │ 3. invoke
+              ▼
+  ┌─────────────────────────┐        ┌──────────────┐
+  │   AWS Lambda            │ 4. r/w │  DynamoDB    │
+  │   src.main.lambda_      │◀──────▶│  (chores     │
+  │   handler               │        │   state)     │
+  │                         │        └──────────────┘
+  │   • verify secret 🔒 ②  │
+  │   • dispatch /roles     │
+  │   • build reply         │
+  └───────────┬─────────────┘
+              │
+              │ 5. POST sendMessage
+              │    URL: /bot<TELEGRAM_TOKEN>/sendMessage  🔒 ①
+              ▼
+  ┌─────────────────────────┐
+  │    Telegram servers     │
+  └───────────┬─────────────┘
+              │
+              │ 6. deliver reply
+              ▼
+  👤 User sees bot's answer
+```
+
+**Two secrets, two directions:**
+
+- 🔒 ① `TELEGRAM_TOKEN` — Lambda → Telegram (outbound). Proves "this is my bot" when calling `sendMessage`, `setWebhook`, etc.
+- 🔒 ② `secret_token` on `setWebhook` — Telegram → Lambda (inbound). Telegram sends it as the `X-Telegram-Bot-Api-Secret-Token` header on every webhook call; the Lambda rejects anything without it, so random traffic to the public API Gateway URL can't trigger bot logic.
+
