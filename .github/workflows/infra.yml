@@ -74,6 +74,7 @@ jobs:
             -var="bot_chat_id=${{ secrets.BOT_CHAT_ID }}" \
             -var="telegram_token=${{ secrets.TELEGRAM_TOKEN }}" \
             -var="telegram_webhook_secret=${{ secrets.TELEGRAM_WEBHOOK_SECRET }}" \
+            -var="alert_email=${{ secrets.ALERT_EMAIL }}" \
             -out=tfplan
         continue-on-error: true
 
