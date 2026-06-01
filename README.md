@@ -14,6 +14,7 @@ Telegram bot for a shared flat — handles chore assignments, dinner polls, and 
 | `/papier` | Monday 19:00 UTC | Paper/cardboard recycling reminder |
 | `/whoishere` | Weekdays 15:00 UTC | Dinner attendance poll |
 | `/lessive` | Manual | Laundry card info |
+| `/arrosage` | Daily 07:00 UTC | Plant watering vote (silent if Zürich forecast ≤ 25°C) |
 
 ## Architecture
 

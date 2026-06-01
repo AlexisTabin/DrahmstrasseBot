@@ -33,6 +33,11 @@ locals {
       description = "Weekly chore recap (Sunday 19:00 UTC)"
       command     = "/recap@DrahmstrasseBot"
     }
+    arrosage = {
+      schedule    = "cron(0 7 * * ? *)"
+      description = "Plant watering reminder (daily 07:00 UTC, skipped if cool)"
+      command     = "/arrosage@DrahmstrasseBot"
+    }
   }
 }
 
@@ -157,6 +162,27 @@ resource "aws_cloudwatch_event_target" "recap" {
         chat = { id = tonumber(local.prod_chat_id) }
         text = local.schedules.recap.command
         entities = [{ type = "bot_command", offset = 0, length = length(local.schedules.recap.command) }]
+      }
+    })
+  })
+}
+
+resource "aws_cloudwatch_event_rule" "arrosage" {
+  name                = "arrosage"
+  description         = local.schedules.arrosage.description
+  schedule_expression = local.schedules.arrosage.schedule
+}
+
+resource "aws_cloudwatch_event_target" "arrosage" {
+  rule = aws_cloudwatch_event_rule.arrosage.name
+  arn  = aws_lambda_function.bot.arn
+
+  input = jsonencode({
+    body = jsonencode({
+      message = {
+        chat = { id = tonumber(local.prod_chat_id) }
+        text = local.schedules.arrosage.command
+        entities = [{ type = "bot_command", offset = 0, length = length(local.schedules.arrosage.command) }]
       }
     })
   })

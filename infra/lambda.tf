@@ -81,3 +81,11 @@ resource "aws_lambda_permission" "eventbridge_recap" {
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.recap.arn
 }
+
+resource "aws_lambda_permission" "eventbridge_arrosage" {
+  statement_id  = "AllowEventBridgeArrosage"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.bot.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.arrosage.arn
+}

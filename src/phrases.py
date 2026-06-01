@@ -116,6 +116,18 @@ STATS_EMPTY = [
     "C'est le désert niveau stats, bougez-vous ehehe",
 ]
 
+ARROSAGE_HEADER = [
+    "🌡️ {temp}°C aujourd'hui à Zürich. Les plantes vous regardent.",
+    "Yo, il va faire {temp}°C aujourd'hui. Pensez aux plantes.",
+    "🌵 Annoncé : {temp}°C. Spoiler : c'est chaud pour la verdure.",
+    "{temp}°C prévus à Zürich. Faut décider du sort des plantes.",
+    "Alerte canicule à {temp}°C : les plantes ont (peut-être) soif.",
+    "Il va cogner aujourd'hui : {temp}°C. On arrose ou on parie ?",
+]
+
+ARROSAGE_LABEL_NEEDS = "Ouaiiiis faut arroser tout crève là aled !!"
+ARROSAGE_LABEL_OK = "TOUT BON CA SURVIT UN JOUR DE +"
+
 
 def pick(phrases):
     """Return a random phrase from the given list."""
