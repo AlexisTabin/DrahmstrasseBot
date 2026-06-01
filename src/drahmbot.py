@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging
+import random
 import telebot
 
 from telebot.async_telebot import AsyncTeleBot
@@ -9,6 +10,9 @@ import src.utils as utils
 import src.menage as menage
 import src.social as social
 import src.chores as chores
+import src.phrases as phrases
+import src.plants as plants
+import src.weather as weather
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -96,6 +100,42 @@ def _build_done_text(role, person):
         if done_count == total:
             return f"{person} \u2014 {role} : {done_count}/{total} sous-t\u00e2ches faites \u2705"
         return f"{person} \u2014 {role} : {done_count}/{total} sous-t\u00e2ches faites."
+
+
+def _build_plants_keyboard(date_iso, current_state):
+    """Two-button radio for the daily watering vote."""
+    keyboard = telebot.types.InlineKeyboardMarkup()
+    options = [
+        (plants.STATE_NEEDS_WATER, phrases.ARROSAGE_LABEL_NEEDS),
+        (plants.STATE_OK, phrases.ARROSAGE_LABEL_OK),
+    ]
+    for state, label in options:
+        icon = "✅" if state == current_state else "⬜"
+        keyboard.add(telebot.types.InlineKeyboardButton(
+            text=f"{icon} {label}",
+            callback_data=f"plants:{date_iso}:{state}",
+        ))
+    return keyboard
+
+
+def _pick_arrosage_header(date_iso):
+    """Pick a header phrase deterministically per date so edits stay stable."""
+    rng = random.Random(f"drahmbot-arrosage-{date_iso}")
+    return rng.choice(phrases.ARROSAGE_HEADER)
+
+
+def _build_plants_text(date_iso, temp_c, state_data):
+    """Build status text for the watering message."""
+    header = _pick_arrosage_header(date_iso).format(temp=round(temp_c))
+    if not state_data:
+        return header
+    state = state_data.get("state")
+    by = state_data.get("by", "?")
+    if state == plants.STATE_NEEDS_WATER:
+        return f"{header}\n\n\U0001f4a7 {by} dit : faut arroser !"
+    if state == plants.STATE_OK:
+        return f"{header}\n\n\U0001f4aa {by} dit : ça survit un jour de +."
+    return header
 
 
 class Drahmbot:
@@ -285,6 +325,74 @@ class Drahmbot:
             assignments = menage.get_role_assignments(colocataires)
             answer = chores.get_sunday_recap(assignments)
             await self.bot.send_message(message.chat.id, answer)
+
+        @self.bot.message_handler(commands=['arrosage'])
+        async def send_arrosage(message):
+            logger.info("Command /arrosage received from %s", message.chat.id)
+            max_temp = weather.get_zurich_max_temp_today()
+            if max_temp is None or max_temp < weather.HOT_THRESHOLD_C:
+                logger.info("Skipping arrosage: max_temp=%s threshold=%s",
+                            max_temp, weather.HOT_THRESHOLD_C)
+                return
+            today_iso = datetime.date.today().isoformat()
+            state_data = plants.get_today_state()
+            current_state = state_data.get("state") if state_data else None
+            keyboard = _build_plants_keyboard(today_iso, current_state)
+            text = _build_plants_text(today_iso, max_temp, state_data)
+            await self.bot.send_message(message.chat.id, text, reply_markup=keyboard)
+            logger.info("Sent arrosage message (max_temp=%.1f)", max_temp)
+
+        @self.bot.callback_query_handler(func=lambda call: call.data.startswith("plants:"))
+        async def handle_plants_callback(call):
+            parts = call.data.split(":")
+            if len(parts) != 3:
+                await self.bot.answer_callback_query(call.id, "Données invalides.")
+                return
+
+            date_iso = parts[1]
+            new_state = parts[2]
+
+            today_iso = datetime.date.today().isoformat()
+            if date_iso != today_iso:
+                await self.bot.answer_callback_query(
+                    call.id, "Trop tard, le vote d'arrosage est clos.", show_alert=True,
+                )
+                return
+
+            user_id = call.from_user.id
+            person = TELEGRAM_USER_MAP.get(user_id)
+            if not person:
+                await self.bot.answer_callback_query(
+                    call.id, "Tu n'es pas reconnu.", show_alert=True,
+                )
+                return
+
+            if new_state not in plants.VALID_STATES:
+                await self.bot.answer_callback_query(
+                    call.id, "Choix inconnu.", show_alert=True,
+                )
+                return
+
+            state_data = plants.set_today_state(new_state, person)
+            toast = "Noté, faut arroser !" if new_state == plants.STATE_NEEDS_WATER \
+                else "Noté, ça survit !"
+
+            # Re-read the temperature for the message. Cheap enough; if it fails
+            # we just rebuild without the header refreshing — the existing
+            # message text already has it, but we need *something* to pass.
+            max_temp = weather.get_zurich_max_temp_today()
+            if max_temp is None:
+                max_temp = weather.HOT_THRESHOLD_C  # fallback so format() works
+
+            keyboard = _build_plants_keyboard(date_iso, new_state)
+            text = _build_plants_text(date_iso, max_temp, state_data)
+            await self.bot.edit_message_text(
+                text,
+                call.message.chat.id,
+                call.message.message_id,
+                reply_markup=keyboard,
+            )
+            await self.bot.answer_callback_query(call.id, toast)
 
         @self.bot.message_handler(commands=['stats'])
         async def send_stats(message):
