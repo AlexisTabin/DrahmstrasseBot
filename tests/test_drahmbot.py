@@ -41,9 +41,19 @@ def _capture_handlers(bot):
         return wrapper
 
     def capture_callback_handler(*args, **kwargs):
-        def wrapper(func):
-            handlers["_callback_query"] = func
-            return func
+        func_filter = kwargs.get("func")
+
+        def wrapper(handler_fn):
+            pairs = handlers.setdefault("_callback_pairs", [])
+            pairs.append((func_filter, handler_fn))
+
+            async def dispatcher(call):
+                for filt, h in handlers["_callback_pairs"]:
+                    if filt is None or filt(call):
+                        return await h(call)
+
+            handlers["_callback_query"] = dispatcher
+            return handler_fn
         return wrapper
 
     bot.bot.message_handler = capture_message_handler
