@@ -43,6 +43,23 @@ def get_today_state() -> dict:
     return item.get("watering", {})
 
 
+def get_last_watered_date(lookback_days: int = 5):
+    """Most recent date in the last `lookback_days` where someone clicked
+    'faut arroser' (state == 'needs'), which we treat as a commitment that
+    plants got watered that day. Returns None if no such row is found.
+    """
+    table = _get_table()
+    today = datetime.date.today()
+    for offset in range(lookback_days + 1):
+        date = today - datetime.timedelta(days=offset)
+        key = f"{PLANT_KEY_PREFIX}{date.isoformat()}"
+        response = table.get_item(Key={"week_key": key})
+        watering = response.get("Item", {}).get("watering", {})
+        if watering.get("state") == STATE_NEEDS_WATER:
+            return date
+    return None
+
+
 def set_today_state(state: str, person: str) -> dict:
     """Set today's watering state, overwriting any prior vote. Returns the new state."""
     if state not in VALID_STATES:

@@ -330,10 +330,32 @@ class Drahmbot:
         async def send_arrosage(message):
             logger.info("Command /arrosage received from %s", message.chat.id)
             max_temp = weather.get_zurich_max_temp_today()
-            if max_temp is None or max_temp < weather.HOT_THRESHOLD_C:
-                logger.info("Skipping arrosage: max_temp=%s threshold=%s",
-                            max_temp, weather.HOT_THRESHOLD_C)
+            if max_temp is None:
+                logger.info("Skipping arrosage: weather unavailable")
                 return
+
+            if max_temp >= weather.HOT_THRESHOLD_C:
+                should_remind = True
+            elif max_temp >= weather.WARM_THRESHOLD_C:
+                last_watered = plants.get_last_watered_date()
+                today = datetime.date.today()
+                days_since = (
+                    (today - last_watered).days
+                    if last_watered is not None
+                    else weather.WARM_BAND_COOLDOWN_DAYS
+                )
+                should_remind = days_since >= weather.WARM_BAND_COOLDOWN_DAYS
+                logger.info(
+                    "Warm band: max=%.1f last_watered=%s days_since=%s remind=%s",
+                    max_temp, last_watered, days_since, should_remind,
+                )
+            else:
+                should_remind = False
+                logger.info("Cool day, skipping: max_temp=%.1f", max_temp)
+
+            if not should_remind:
+                return
+
             today_iso = datetime.date.today().isoformat()
             state_data = plants.get_today_state()
             current_state = state_data.get("state") if state_data else None
