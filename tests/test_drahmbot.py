@@ -708,6 +708,99 @@ async def test_arrosage_weather_unavailable_silent(mock_group, mock_token, mock_
 
 
 @pytest.mark.asyncio
+@patch("src.drahmbot.plants.get_today_state", return_value={})
+@patch("src.drahmbot.plants.get_last_watered_date", return_value=None)
+@patch("src.drahmbot.weather.get_zurich_max_temp_today", return_value=22.0)
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_arrosage_warm_day_no_history_reminds(
+    mock_group, mock_token, mock_temp, mock_last, mock_state,
+):
+    bot = Drahmbot()
+    bot.bot.send_message = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    message = MagicMock()
+    message.chat.id = 999
+
+    await handlers["arrosage"](message)
+    bot.bot.send_message.assert_called_once()
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.plants.get_last_watered_date")
+@patch("src.drahmbot.weather.get_zurich_max_temp_today", return_value=22.0)
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_arrosage_warm_day_recent_water_silent(
+    mock_group, mock_token, mock_dt, mock_temp, mock_last,
+):
+    today = datetime.date(2026, 6, 3)
+    mock_dt.date.today.return_value = today
+    mock_last.return_value = today  # watered today
+
+    bot = Drahmbot()
+    bot.bot.send_message = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    message = MagicMock()
+    message.chat.id = 999
+
+    await handlers["arrosage"](message)
+    bot.bot.send_message.assert_not_called()
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.plants.get_last_watered_date")
+@patch("src.drahmbot.weather.get_zurich_max_temp_today", return_value=22.0)
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_arrosage_warm_day_yesterday_water_silent(
+    mock_group, mock_token, mock_dt, mock_temp, mock_last,
+):
+    today = datetime.date(2026, 6, 3)
+    mock_dt.date.today.return_value = today
+    mock_last.return_value = today - datetime.timedelta(days=1)  # 1 day < cooldown
+
+    bot = Drahmbot()
+    bot.bot.send_message = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    message = MagicMock()
+    message.chat.id = 999
+
+    await handlers["arrosage"](message)
+    bot.bot.send_message.assert_not_called()
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.plants.get_today_state", return_value={})
+@patch("src.drahmbot.plants.get_last_watered_date")
+@patch("src.drahmbot.weather.get_zurich_max_temp_today", return_value=22.0)
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_arrosage_warm_day_old_water_reminds(
+    mock_group, mock_token, mock_dt, mock_temp, mock_last, mock_state,
+):
+    today = datetime.date(2026, 6, 3)
+    mock_dt.date.today.return_value = today
+    mock_last.return_value = today - datetime.timedelta(days=2)  # cooldown met
+
+    bot = Drahmbot()
+    bot.bot.send_message = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    message = MagicMock()
+    message.chat.id = 999
+
+    await handlers["arrosage"](message)
+    bot.bot.send_message.assert_called_once()
+
+
+@pytest.mark.asyncio
 @patch("src.drahmbot.weather.get_zurich_max_temp_today", return_value=29.0)
 @patch("src.drahmbot.plants.set_today_state",
        return_value={"state": "needs", "by": "Léa", "at": "..."})

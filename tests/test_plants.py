@@ -1,3 +1,5 @@
+import datetime
+
 import pytest
 from unittest.mock import MagicMock, patch
 
@@ -77,3 +79,109 @@ def test_today_key_format():
     parts = date_part.split("-")
     assert len(parts) == 3
     assert len(parts[0]) == 4
+
+
+# --- get_last_watered_date tests ---
+
+
+def _fake_rows(rows):
+    """Return a get_item side_effect that serves the given rows by key.
+
+    `rows` is a dict mapping date string ('2026-06-01') to a watering payload
+    (or None for an empty row).
+    """
+    def side_effect(**kwargs):
+        key = kwargs["Key"]["week_key"]
+        date_str = key.split(":", 1)[1]
+        if date_str in rows and rows[date_str] is not None:
+            return {"Item": {"watering": rows[date_str]}}
+        return {}
+    return side_effect
+
+
+@patch("src.plants._get_table")
+@patch("src.plants.datetime")
+def test_get_last_watered_date_no_rows(mock_dt, mock_get_table):
+    mock_dt.date.today.return_value = datetime.date(2026, 6, 3)
+    mock_dt.timedelta = datetime.timedelta
+    mock_table = MagicMock()
+    mock_table.get_item.return_value = {}
+    mock_get_table.return_value = mock_table
+
+    assert plants.get_last_watered_date() is None
+
+
+@patch("src.plants._get_table")
+@patch("src.plants.datetime")
+def test_get_last_watered_date_today_needs(mock_dt, mock_get_table):
+    mock_dt.date.today.return_value = datetime.date(2026, 6, 3)
+    mock_dt.timedelta = datetime.timedelta
+    mock_table = MagicMock()
+    mock_table.get_item.side_effect = _fake_rows({
+        "2026-06-03": {"state": "needs", "by": "Léa", "at": "..."},
+    })
+    mock_get_table.return_value = mock_table
+
+    assert plants.get_last_watered_date() == datetime.date(2026, 6, 3)
+
+
+@patch("src.plants._get_table")
+@patch("src.plants.datetime")
+def test_get_last_watered_date_today_ok_only(mock_dt, mock_get_table):
+    """'ok' votes don't count as watered days."""
+    mock_dt.date.today.return_value = datetime.date(2026, 6, 3)
+    mock_dt.timedelta = datetime.timedelta
+    mock_table = MagicMock()
+    mock_table.get_item.side_effect = _fake_rows({
+        "2026-06-03": {"state": "ok", "by": "Timon", "at": "..."},
+    })
+    mock_get_table.return_value = mock_table
+
+    assert plants.get_last_watered_date() is None
+
+
+@patch("src.plants._get_table")
+@patch("src.plants.datetime")
+def test_get_last_watered_date_yesterday_needs(mock_dt, mock_get_table):
+    mock_dt.date.today.return_value = datetime.date(2026, 6, 3)
+    mock_dt.timedelta = datetime.timedelta
+    mock_table = MagicMock()
+    mock_table.get_item.side_effect = _fake_rows({
+        "2026-06-02": {"state": "needs", "by": "Léa", "at": "..."},
+    })
+    mock_get_table.return_value = mock_table
+
+    assert plants.get_last_watered_date() == datetime.date(2026, 6, 2)
+
+
+@patch("src.plants._get_table")
+@patch("src.plants.datetime")
+def test_get_last_watered_date_picks_most_recent(mock_dt, mock_get_table):
+    """When multiple needs rows exist, return the most recent."""
+    mock_dt.date.today.return_value = datetime.date(2026, 6, 3)
+    mock_dt.timedelta = datetime.timedelta
+    mock_table = MagicMock()
+    mock_table.get_item.side_effect = _fake_rows({
+        "2026-06-03": {"state": "needs", "by": "Léa", "at": "..."},
+        "2026-05-31": {"state": "needs", "by": "Timon", "at": "..."},
+    })
+    mock_get_table.return_value = mock_table
+
+    assert plants.get_last_watered_date() == datetime.date(2026, 6, 3)
+
+
+@patch("src.plants._get_table")
+@patch("src.plants.datetime")
+def test_get_last_watered_date_respects_lookback(mock_dt, mock_get_table):
+    """Rows older than lookback_days are ignored."""
+    mock_dt.date.today.return_value = datetime.date(2026, 6, 10)
+    mock_dt.timedelta = datetime.timedelta
+    mock_table = MagicMock()
+    mock_table.get_item.side_effect = _fake_rows({
+        "2026-06-01": {"state": "needs", "by": "Léa", "at": "..."},
+    })
+    mock_get_table.return_value = mock_table
+
+    # lookback_days=5 means we check today..today-5, so 06-05..06-10.
+    # 06-01 is outside the window.
+    assert plants.get_last_watered_date(lookback_days=5) is None
