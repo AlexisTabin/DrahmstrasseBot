@@ -125,8 +125,7 @@ ARROSAGE_HEADER = [
     "Il va cogner aujourd'hui : {temp}°C. On arrose ou on parie ?",
 ]
 
-ARROSAGE_LABEL_NEEDS = "Ouaiiiis faut arroser tout crève là aled !!"
-ARROSAGE_LABEL_OK = "TOUT BON CA SURVIT UN JOUR DE +"
+ARROSAGE_LABEL_WATERED = "J'ai arrosé !"
 
 
 def pick(phrases):

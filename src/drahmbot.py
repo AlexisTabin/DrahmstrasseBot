@@ -102,19 +102,14 @@ def _build_done_text(role, person):
         return f"{person} \u2014 {role} : {done_count}/{total} sous-t\u00e2ches faites."
 
 
-def _build_plants_keyboard(date_iso, current_state):
-    """Two-button radio for the daily watering vote."""
+def _build_plants_keyboard(date_iso, watered):
+    """Single toggleable button: 'J'ai arrosé !' Re-clicking unmarks."""
     keyboard = telebot.types.InlineKeyboardMarkup()
-    options = [
-        (plants.STATE_NEEDS_WATER, phrases.ARROSAGE_LABEL_NEEDS),
-        (plants.STATE_OK, phrases.ARROSAGE_LABEL_OK),
-    ]
-    for state, label in options:
-        icon = "✅" if state == current_state else "⬜"
-        keyboard.add(telebot.types.InlineKeyboardButton(
-            text=f"{icon} {label}",
-            callback_data=f"plants:{date_iso}:{state}",
-        ))
+    icon = "✅" if watered else "⬜"
+    keyboard.add(telebot.types.InlineKeyboardButton(
+        text=f"{icon} {phrases.ARROSAGE_LABEL_WATERED}",
+        callback_data=f"plants:{date_iso}",
+    ))
     return keyboard
 
 
@@ -127,15 +122,10 @@ def _pick_arrosage_header(date_iso):
 def _build_plants_text(date_iso, temp_c, state_data):
     """Build status text for the watering message."""
     header = _pick_arrosage_header(date_iso).format(temp=round(temp_c))
-    if not state_data:
+    if not plants.is_watered(state_data):
         return header
-    state = state_data.get("state")
     by = state_data.get("by", "?")
-    if state == plants.STATE_NEEDS_WATER:
-        return f"{header}\n\n\U0001f4a7 {by} dit : faut arroser !"
-    if state == plants.STATE_OK:
-        return f"{header}\n\n\U0001f4aa {by} dit : ça survit un jour de +."
-    return header
+    return f"{header}\n\n\U0001f4a7 {by} a arrosé les plantes."
 
 
 class Drahmbot:
@@ -358,8 +348,7 @@ class Drahmbot:
 
             today_iso = datetime.date.today().isoformat()
             state_data = plants.get_today_state()
-            current_state = state_data.get("state") if state_data else None
-            keyboard = _build_plants_keyboard(today_iso, current_state)
+            keyboard = _build_plants_keyboard(today_iso, plants.is_watered(state_data))
             text = _build_plants_text(today_iso, max_temp, state_data)
             await self.bot.send_message(message.chat.id, text, reply_markup=keyboard)
             logger.info("Sent arrosage message (max_temp=%.1f)", max_temp)
@@ -367,12 +356,11 @@ class Drahmbot:
         @self.bot.callback_query_handler(func=lambda call: call.data.startswith("plants:"))
         async def handle_plants_callback(call):
             parts = call.data.split(":")
-            if len(parts) != 3:
+            if len(parts) != 2:
                 await self.bot.answer_callback_query(call.id, "Données invalides.")
                 return
 
             date_iso = parts[1]
-            new_state = parts[2]
 
             today_iso = datetime.date.today().isoformat()
             if date_iso != today_iso:
@@ -389,24 +377,15 @@ class Drahmbot:
                 )
                 return
 
-            if new_state not in plants.VALID_STATES:
-                await self.bot.answer_callback_query(
-                    call.id, "Choix inconnu.", show_alert=True,
-                )
-                return
+            state_data = plants.toggle_today_state(person)
+            now_watered = plants.is_watered(state_data)
+            toast = "Merci, c'est noté !" if now_watered else "Annulé."
 
-            state_data = plants.set_today_state(new_state, person)
-            toast = "Noté, faut arroser !" if new_state == plants.STATE_NEEDS_WATER \
-                else "Noté, ça survit !"
-
-            # Re-read the temperature for the message. Cheap enough; if it fails
-            # we just rebuild without the header refreshing — the existing
-            # message text already has it, but we need *something* to pass.
             max_temp = weather.get_zurich_max_temp_today()
             if max_temp is None:
                 max_temp = weather.HOT_THRESHOLD_C  # fallback so format() works
 
-            keyboard = _build_plants_keyboard(date_iso, new_state)
+            keyboard = _build_plants_keyboard(date_iso, now_watered)
             text = _build_plants_text(date_iso, max_temp, state_data)
             await self.bot.edit_message_text(
                 text,

@@ -601,25 +601,17 @@ async def test_callback_wrong_user(mock_group, mock_token, mock_dt, mock_role):
 # --- /arrosage tests ---
 
 
-def test_build_plants_keyboard_no_vote():
-    kb = _build_plants_keyboard("2026-06-01", None)
-    assert len(kb.keyboard) == 2
+def test_build_plants_keyboard_unwatered():
+    kb = _build_plants_keyboard("2026-06-01", False)
+    assert len(kb.keyboard) == 1
     assert "⬜" in kb.keyboard[0][0].text
-    assert "⬜" in kb.keyboard[1][0].text
-    assert kb.keyboard[0][0].callback_data == "plants:2026-06-01:needs"
-    assert kb.keyboard[1][0].callback_data == "plants:2026-06-01:ok"
+    assert kb.keyboard[0][0].callback_data == "plants:2026-06-01"
 
 
-def test_build_plants_keyboard_needs_selected():
-    kb = _build_plants_keyboard("2026-06-01", "needs")
-    assert "✅" in kb.keyboard[0][0].text  # needs row selected
-    assert "⬜" in kb.keyboard[1][0].text  # ok row not selected
-
-
-def test_build_plants_keyboard_ok_selected():
-    kb = _build_plants_keyboard("2026-06-01", "ok")
-    assert "⬜" in kb.keyboard[0][0].text
-    assert "✅" in kb.keyboard[1][0].text
+def test_build_plants_keyboard_watered():
+    kb = _build_plants_keyboard("2026-06-01", True)
+    assert len(kb.keyboard) == 1
+    assert "✅" in kb.keyboard[0][0].text
 
 
 def test_build_plants_text_no_vote():
@@ -633,22 +625,23 @@ def test_build_plants_text_header_stable_across_calls():
     assert a == b
 
 
-def test_build_plants_text_with_needs_vote():
+def test_build_plants_text_with_watered_vote():
     text = _build_plants_text(
         "2026-06-01", 28.0,
-        {"state": "needs", "by": "Léa", "at": "..."},
+        {"state": "watered", "by": "Léa", "at": "..."},
     )
     assert "Léa" in text
-    assert "arroser" in text.lower()
+    assert "arrosé" in text
 
 
-def test_build_plants_text_with_ok_vote():
+def test_build_plants_text_with_legacy_needs_vote():
+    """Pre-revision rows still render as 'watered' messages."""
     text = _build_plants_text(
         "2026-06-01", 28.0,
-        {"state": "ok", "by": "Timon", "at": "..."},
+        {"state": "needs", "by": "Timon", "at": "..."},
     )
     assert "Timon" in text
-    assert "survit" in text.lower()
+    assert "arrosé" in text
 
 
 @pytest.mark.asyncio
@@ -672,7 +665,7 @@ async def test_arrosage_hot_day_sends_message(
     assert call_args[0][0] == 999
     assert "reply_markup" in call_args[1]
     kb = call_args[1]["reply_markup"]
-    assert len(kb.keyboard) == 2
+    assert len(kb.keyboard) == 1
 
 
 @pytest.mark.asyncio
@@ -802,13 +795,13 @@ async def test_arrosage_warm_day_old_water_reminds(
 
 @pytest.mark.asyncio
 @patch("src.drahmbot.weather.get_zurich_max_temp_today", return_value=29.0)
-@patch("src.drahmbot.plants.set_today_state",
-       return_value={"state": "needs", "by": "Léa", "at": "..."})
+@patch("src.drahmbot.plants.toggle_today_state",
+       return_value={"state": "watered", "by": "Léa", "at": "..."})
 @patch("src.drahmbot.datetime")
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
-async def test_plants_callback_sets_needs(
-    mock_group, mock_token, mock_dt, mock_set, mock_temp,
+async def test_plants_callback_marks_watered(
+    mock_group, mock_token, mock_dt, mock_toggle, mock_temp,
 ):
     mock_dt.date.today.return_value.isoformat.return_value = "2026-06-01"
     import src.drahmbot as drahmbot_module
@@ -822,17 +815,17 @@ async def test_plants_callback_sets_needs(
         handlers = _capture_handlers(bot)
 
         call = MagicMock()
-        call.data = "plants:2026-06-01:needs"
+        call.data = "plants:2026-06-01"
         call.from_user.id = 42
         call.id = "cbp1"
         call.message.chat.id = 999
         call.message.message_id = 100
 
         await handlers["_callback_query"](call)
-        mock_set.assert_called_once_with("needs", "Léa")
+        mock_toggle.assert_called_once_with("Léa")
         bot.bot.edit_message_text.assert_called_once()
         toast = bot.bot.answer_callback_query.call_args[0][1]
-        assert "arroser" in toast.lower()
+        assert "noté" in toast.lower()
     finally:
         drahmbot_module.TELEGRAM_USER_MAP.clear()
         drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
@@ -840,14 +833,14 @@ async def test_plants_callback_sets_needs(
 
 @pytest.mark.asyncio
 @patch("src.drahmbot.weather.get_zurich_max_temp_today", return_value=29.0)
-@patch("src.drahmbot.plants.set_today_state",
-       return_value={"state": "ok", "by": "Timon", "at": "..."})
+@patch("src.drahmbot.plants.toggle_today_state", return_value={})
 @patch("src.drahmbot.datetime")
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
-async def test_plants_callback_sets_ok(
-    mock_group, mock_token, mock_dt, mock_set, mock_temp,
+async def test_plants_callback_unmarks_when_already_watered(
+    mock_group, mock_token, mock_dt, mock_toggle, mock_temp,
 ):
+    """Re-clicking the button clears the watered mark (toggle off)."""
     mock_dt.date.today.return_value.isoformat.return_value = "2026-06-01"
     import src.drahmbot as drahmbot_module
     original_map = drahmbot_module.TELEGRAM_USER_MAP.copy()
@@ -860,27 +853,27 @@ async def test_plants_callback_sets_ok(
         handlers = _capture_handlers(bot)
 
         call = MagicMock()
-        call.data = "plants:2026-06-01:ok"
+        call.data = "plants:2026-06-01"
         call.from_user.id = 42
         call.id = "cbp2"
         call.message.chat.id = 999
         call.message.message_id = 100
 
         await handlers["_callback_query"](call)
-        mock_set.assert_called_once_with("ok", "Timon")
+        mock_toggle.assert_called_once_with("Timon")
         toast = bot.bot.answer_callback_query.call_args[0][1]
-        assert "survit" in toast.lower()
+        assert "annulé" in toast.lower()
     finally:
         drahmbot_module.TELEGRAM_USER_MAP.clear()
         drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
 
 
 @pytest.mark.asyncio
-@patch("src.drahmbot.plants.set_today_state")
+@patch("src.drahmbot.plants.toggle_today_state")
 @patch("src.drahmbot.datetime")
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
-async def test_plants_callback_stale_date(mock_group, mock_token, mock_dt, mock_set):
+async def test_plants_callback_stale_date(mock_group, mock_token, mock_dt, mock_toggle):
     mock_dt.date.today.return_value.isoformat.return_value = "2026-06-02"
 
     bot = Drahmbot()
@@ -889,22 +882,22 @@ async def test_plants_callback_stale_date(mock_group, mock_token, mock_dt, mock_
     handlers = _capture_handlers(bot)
 
     call = MagicMock()
-    call.data = "plants:2026-06-01:needs"  # yesterday's vote
+    call.data = "plants:2026-06-01"  # yesterday's vote
     call.from_user.id = 891406979
     call.id = "cbp3"
 
     await handlers["_callback_query"](call)
-    mock_set.assert_not_called()
+    mock_toggle.assert_not_called()
     toast = bot.bot.answer_callback_query.call_args
     assert "Trop tard" in toast[0][1]
 
 
 @pytest.mark.asyncio
-@patch("src.drahmbot.plants.set_today_state")
+@patch("src.drahmbot.plants.toggle_today_state")
 @patch("src.drahmbot.datetime")
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
-async def test_plants_callback_unknown_user(mock_group, mock_token, mock_dt, mock_set):
+async def test_plants_callback_unknown_user(mock_group, mock_token, mock_dt, mock_toggle):
     mock_dt.date.today.return_value.isoformat.return_value = "2026-06-01"
 
     bot = Drahmbot()
@@ -912,41 +905,34 @@ async def test_plants_callback_unknown_user(mock_group, mock_token, mock_dt, moc
     handlers = _capture_handlers(bot)
 
     call = MagicMock()
-    call.data = "plants:2026-06-01:ok"
+    call.data = "plants:2026-06-01"
     call.from_user.id = 99999  # not in TELEGRAM_USER_MAP
     call.id = "cbp4"
 
     await handlers["_callback_query"](call)
-    mock_set.assert_not_called()
+    mock_toggle.assert_not_called()
     toast = bot.bot.answer_callback_query.call_args
     assert "reconnu" in toast[0][1]
 
 
 @pytest.mark.asyncio
-@patch("src.drahmbot.plants.set_today_state")
+@patch("src.drahmbot.plants.toggle_today_state")
 @patch("src.drahmbot.datetime")
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
-async def test_plants_callback_invalid_state(mock_group, mock_token, mock_dt, mock_set):
+async def test_plants_callback_malformed_data(mock_group, mock_token, mock_dt, mock_toggle):
     mock_dt.date.today.return_value.isoformat.return_value = "2026-06-01"
-    import src.drahmbot as drahmbot_module
-    original_map = drahmbot_module.TELEGRAM_USER_MAP.copy()
-    drahmbot_module.TELEGRAM_USER_MAP[42] = "Léa"
 
-    try:
-        bot = Drahmbot()
-        bot.bot.answer_callback_query = AsyncMock()
-        handlers = _capture_handlers(bot)
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
 
-        call = MagicMock()
-        call.data = "plants:2026-06-01:maybe"
-        call.from_user.id = 42
-        call.id = "cbp5"
+    call = MagicMock()
+    call.data = "plants:2026-06-01:extra"  # too many parts for the new format
+    call.from_user.id = 891406979
+    call.id = "cbp5"
 
-        await handlers["_callback_query"](call)
-        mock_set.assert_not_called()
-        toast = bot.bot.answer_callback_query.call_args
-        assert "inconnu" in toast[0][1]
-    finally:
-        drahmbot_module.TELEGRAM_USER_MAP.clear()
-        drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
+    await handlers["_callback_query"](call)
+    mock_toggle.assert_not_called()
+    toast = bot.bot.answer_callback_query.call_args
+    assert "invalides" in toast[0][1].lower()

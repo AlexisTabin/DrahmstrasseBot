@@ -41,13 +41,14 @@ def test_get_today_state_with_data(mock_get_table, _key):
 
 
 @patch("src.plants.today_key", return_value="plant:2026-06-01")
+@patch("src.plants.get_today_state", return_value={})
 @patch("src.plants._get_table")
-def test_set_today_state_needs(mock_get_table, _key):
+def test_toggle_today_state_sets_watered(mock_get_table, _state, _key):
     mock_table = MagicMock()
     mock_get_table.return_value = mock_table
 
-    result = plants.set_today_state(plants.STATE_NEEDS_WATER, "Alexis")
-    assert result["state"] == "needs"
+    result = plants.toggle_today_state("Alexis")
+    assert result["state"] == "watered"
     assert result["by"] == "Alexis"
     assert "at" in result
     mock_table.update_item.assert_called_once()
@@ -57,18 +58,42 @@ def test_set_today_state_needs(mock_get_table, _key):
 
 
 @patch("src.plants.today_key", return_value="plant:2026-06-01")
+@patch("src.plants.get_today_state",
+       return_value={"state": "watered", "by": "Léa", "at": "..."})
 @patch("src.plants._get_table")
-def test_set_today_state_ok(mock_get_table, _key):
+def test_toggle_today_state_clears_when_watered(mock_get_table, _state, _key):
     mock_table = MagicMock()
     mock_get_table.return_value = mock_table
 
-    result = plants.set_today_state(plants.STATE_OK, "Timon")
-    assert result["state"] == "ok"
+    result = plants.toggle_today_state("Léa")
+    assert result == {}
+    call = mock_table.update_item.call_args[1]
+    assert "REMOVE watering" in call["UpdateExpression"]
 
 
-def test_set_today_state_invalid():
-    with pytest.raises(ValueError):
-        plants.set_today_state("maybe", "Alexis")
+@patch("src.plants.today_key", return_value="plant:2026-06-01")
+@patch("src.plants.get_today_state",
+       return_value={"state": "needs", "by": "Léa", "at": "..."})
+@patch("src.plants._get_table")
+def test_toggle_today_state_treats_legacy_needs_as_watered(
+    mock_get_table, _state, _key,
+):
+    """Pre-revision rows with state='needs' should be clearable like new ones."""
+    mock_table = MagicMock()
+    mock_get_table.return_value = mock_table
+
+    result = plants.toggle_today_state("Léa")
+    assert result == {}
+    call = mock_table.update_item.call_args[1]
+    assert "REMOVE watering" in call["UpdateExpression"]
+
+
+def test_is_watered_helper():
+    assert plants.is_watered({"state": "watered"}) is True
+    assert plants.is_watered({"state": "needs"}) is True  # legacy
+    assert plants.is_watered({}) is False
+    assert plants.is_watered({"state": "ok"}) is False  # legacy negative
+    assert plants.is_watered({"state": "bogus"}) is False
 
 
 def test_today_key_format():
@@ -113,16 +138,31 @@ def test_get_last_watered_date_no_rows(mock_dt, mock_get_table):
 
 @patch("src.plants._get_table")
 @patch("src.plants.datetime")
-def test_get_last_watered_date_today_needs(mock_dt, mock_get_table):
+def test_get_last_watered_date_today_watered(mock_dt, mock_get_table):
     mock_dt.date.today.return_value = datetime.date(2026, 6, 3)
     mock_dt.timedelta = datetime.timedelta
     mock_table = MagicMock()
     mock_table.get_item.side_effect = _fake_rows({
-        "2026-06-03": {"state": "needs", "by": "Léa", "at": "..."},
+        "2026-06-03": {"state": "watered", "by": "Léa", "at": "..."},
     })
     mock_get_table.return_value = mock_table
 
     assert plants.get_last_watered_date() == datetime.date(2026, 6, 3)
+
+
+@patch("src.plants._get_table")
+@patch("src.plants.datetime")
+def test_get_last_watered_date_legacy_needs_state(mock_dt, mock_get_table):
+    """Pre-revision rows with state='needs' still count toward the cooldown."""
+    mock_dt.date.today.return_value = datetime.date(2026, 6, 3)
+    mock_dt.timedelta = datetime.timedelta
+    mock_table = MagicMock()
+    mock_table.get_item.side_effect = _fake_rows({
+        "2026-06-02": {"state": "needs", "by": "Timon", "at": "..."},
+    })
+    mock_get_table.return_value = mock_table
+
+    assert plants.get_last_watered_date() == datetime.date(2026, 6, 2)
 
 
 @patch("src.plants._get_table")
@@ -142,12 +182,12 @@ def test_get_last_watered_date_today_ok_only(mock_dt, mock_get_table):
 
 @patch("src.plants._get_table")
 @patch("src.plants.datetime")
-def test_get_last_watered_date_yesterday_needs(mock_dt, mock_get_table):
+def test_get_last_watered_date_yesterday_watered(mock_dt, mock_get_table):
     mock_dt.date.today.return_value = datetime.date(2026, 6, 3)
     mock_dt.timedelta = datetime.timedelta
     mock_table = MagicMock()
     mock_table.get_item.side_effect = _fake_rows({
-        "2026-06-02": {"state": "needs", "by": "Léa", "at": "..."},
+        "2026-06-02": {"state": "watered", "by": "Léa", "at": "..."},
     })
     mock_get_table.return_value = mock_table
 
@@ -157,13 +197,13 @@ def test_get_last_watered_date_yesterday_needs(mock_dt, mock_get_table):
 @patch("src.plants._get_table")
 @patch("src.plants.datetime")
 def test_get_last_watered_date_picks_most_recent(mock_dt, mock_get_table):
-    """When multiple needs rows exist, return the most recent."""
+    """When multiple watered rows exist, return the most recent."""
     mock_dt.date.today.return_value = datetime.date(2026, 6, 3)
     mock_dt.timedelta = datetime.timedelta
     mock_table = MagicMock()
     mock_table.get_item.side_effect = _fake_rows({
-        "2026-06-03": {"state": "needs", "by": "Léa", "at": "..."},
-        "2026-05-31": {"state": "needs", "by": "Timon", "at": "..."},
+        "2026-06-03": {"state": "watered", "by": "Léa", "at": "..."},
+        "2026-05-31": {"state": "watered", "by": "Timon", "at": "..."},
     })
     mock_get_table.return_value = mock_table
 
@@ -178,7 +218,7 @@ def test_get_last_watered_date_respects_lookback(mock_dt, mock_get_table):
     mock_dt.timedelta = datetime.timedelta
     mock_table = MagicMock()
     mock_table.get_item.side_effect = _fake_rows({
-        "2026-06-01": {"state": "needs", "by": "Léa", "at": "..."},
+        "2026-06-01": {"state": "watered", "by": "Léa", "at": "..."},
     })
     mock_get_table.return_value = mock_table
 
