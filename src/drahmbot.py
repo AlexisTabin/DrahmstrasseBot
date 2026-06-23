@@ -128,6 +128,28 @@ def _build_plants_text(date_iso, temp_c, state_data):
     return f"{header}\n\n\U0001f4a7 {by} a arrosé les plantes."
 
 
+def _build_dechets_keyboard(week_num, subtask, role_data):
+    """Single toggleable button for a DÉCHETS subtask (papier/carton)."""
+    subtasks = role_data.get("subtasks", {})
+    is_done = subtask in subtasks
+    icon = "✅" if is_done else "⬜"
+    keyboard = telebot.types.InlineKeyboardMarkup()
+    keyboard.add(telebot.types.InlineKeyboardButton(
+        text=f"{icon} J'ai sorti le {subtask} !",
+        callback_data=f"dechets:{week_num}:{subtask}",
+    ))
+    return keyboard
+
+
+def _build_dechets_text(base_text, subtask, role_data):
+    """Append a doer line to the reminder text once someone marks it done."""
+    sub_data = role_data.get("subtasks", {}).get(subtask)
+    if not sub_data:
+        return base_text
+    by = sub_data.get("by", "?")
+    return f"{base_text}\n\n✅ {by} a sorti le {subtask}."
+
+
 class Drahmbot:
     _instance = None  # Singleton instance
 
@@ -169,16 +191,24 @@ class Drahmbot:
             if not utils.is_even_week():
                 logger.info("Odd week — skipping papier reminder")
                 return
-            answer = menage.get_papier_reminder(colocataires=colocataires)
-            await self.bot.send_message(message.chat.id, answer)
-            logger.info("Sent papier answer: %s", answer)
+            base = menage.get_papier_reminder(colocataires=colocataires)
+            week_num = datetime.date.today().isocalendar()[1]
+            role_data = chores.get_week_status().get("DÉCHETS", {})
+            text = _build_dechets_text(base, "papier", role_data)
+            keyboard = _build_dechets_keyboard(week_num, "papier", role_data)
+            await self.bot.send_message(message.chat.id, text, reply_markup=keyboard)
+            logger.info("Sent papier answer: %s", text)
 
         @self.bot.message_handler(commands=['carton'])
         async def send_carton(message):
             logger.info("Command /carton received from %s", message.chat.id)
-            answer = menage.get_carton_reminder(colocataires=colocataires)
-            await self.bot.send_message(message.chat.id, answer)
-            logger.info("Sent carton answer: %s", answer)
+            base = menage.get_carton_reminder(colocataires=colocataires)
+            week_num = datetime.date.today().isocalendar()[1]
+            role_data = chores.get_week_status().get("DÉCHETS", {})
+            text = _build_dechets_text(base, "carton", role_data)
+            keyboard = _build_dechets_keyboard(week_num, "carton", role_data)
+            await self.bot.send_message(message.chat.id, text, reply_markup=keyboard)
+            logger.info("Sent carton answer: %s", text)
 
         @self.bot.message_handler(commands=['lessive'])
         async def send_lessive(message):
@@ -387,6 +417,71 @@ class Drahmbot:
 
             keyboard = _build_plants_keyboard(date_iso, now_watered)
             text = _build_plants_text(date_iso, max_temp, state_data)
+            await self.bot.edit_message_text(
+                text,
+                call.message.chat.id,
+                call.message.message_id,
+                reply_markup=keyboard,
+            )
+            await self.bot.answer_callback_query(call.id, toast)
+
+        @self.bot.callback_query_handler(func=lambda call: call.data.startswith("dechets:"))
+        async def handle_dechets_callback(call):
+            parts = call.data.split(":")
+            if len(parts) != 3:
+                await self.bot.answer_callback_query(call.id, "Données invalides.")
+                return
+
+            try:
+                week_num = int(parts[1])
+            except ValueError:
+                await self.bot.answer_callback_query(call.id, "Données invalides.")
+                return
+            subtask = parts[2]
+
+            current_week = datetime.date.today().isocalendar()[1]
+            if week_num != current_week:
+                await self.bot.answer_callback_query(
+                    call.id, "Trop tard, c'est une autre semaine.", show_alert=True,
+                )
+                return
+
+            user_id = call.from_user.id
+            person = TELEGRAM_USER_MAP.get(user_id)
+            if not person:
+                await self.bot.answer_callback_query(
+                    call.id, "Tu n'es pas reconnu.", show_alert=True,
+                )
+                return
+
+            valid_subtasks = menage.get_subtasks_for_role("DÉCHETS")
+            if valid_subtasks is None or subtask not in valid_subtasks:
+                await self.bot.answer_callback_query(
+                    call.id, "Sous-tâche inconnue.", show_alert=True,
+                )
+                return
+
+            role_data = chores.get_week_status().get("DÉCHETS", {})
+            existing = role_data.get("subtasks", {}).get(subtask)
+            # Only the doer may untoggle. Open click to mark; restricted undo.
+            if existing and existing.get("by") != person:
+                await self.bot.answer_callback_query(
+                    call.id,
+                    f"Seul·e {existing['by']} peut annuler.",
+                    show_alert=True,
+                )
+                return
+
+            now_done = chores.toggle_subtask("DÉCHETS", subtask, person)
+            toast = f"{subtask} fait !" if now_done else f"{subtask} annulé."
+
+            if subtask == "papier":
+                base = menage.get_papier_reminder(colocataires=colocataires)
+            else:
+                base = menage.get_carton_reminder(colocataires=colocataires)
+            new_role_data = chores.get_week_status().get("DÉCHETS", {})
+            text = _build_dechets_text(base, subtask, new_role_data)
+            keyboard = _build_dechets_keyboard(week_num, subtask, new_role_data)
             await self.bot.edit_message_text(
                 text,
                 call.message.chat.id,
