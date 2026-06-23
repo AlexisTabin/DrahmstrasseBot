@@ -6,6 +6,7 @@ from src.drahmbot import (
     Drahmbot, ColocAccessMiddleware, TELEGRAM_USER_MAP, colocataires,
     _build_done_keyboard, _build_done_text,
     _build_plants_keyboard, _build_plants_text,
+    _build_dechets_keyboard, _build_dechets_text,
 )
 
 @pytest.mark.asyncio
@@ -63,6 +64,7 @@ def _capture_handlers(bot):
 
 
 @pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_week_status", return_value={})
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
 @patch("src.drahmbot.utils.is_even_week", return_value=True)
@@ -71,7 +73,8 @@ def _capture_handlers(bot):
 @patch("src.drahmbot.menage.getCarteDeLessive", return_value="Lessive info")
 @patch("src.drahmbot.social.is_present_dinner", return_value="Who is here?")
 async def test_bot_handlers(
-    mock_who, mock_lessive, mock_papier, mock_roles, mock_even, mock_group, mock_token
+    mock_who, mock_lessive, mock_papier, mock_roles, mock_even,
+    mock_group, mock_token, mock_status,
 ):
     bot = Drahmbot()
 
@@ -88,9 +91,12 @@ async def test_bot_handlers(
     await handlers["roles"](message)
     bot.bot.send_message.assert_called_with(999, "Roles info")
 
-    # /papier
+    # /papier — now sends with reply_markup
     await handlers["papier"](message)
-    bot.bot.send_message.assert_called_with(999, "Papier reminder")
+    papier_call = bot.bot.send_message.call_args
+    assert papier_call[0][0] == 999
+    assert papier_call[0][1] == "Papier reminder"
+    assert "reply_markup" in papier_call[1]
 
     # /lessive
     await handlers["lessive"](message)
@@ -260,10 +266,11 @@ async def test_recap_handler(mock_group, mock_token, mock_assignments, mock_reca
 
 
 @pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_week_status", return_value={})
 @patch("src.drahmbot.menage.get_carton_reminder", return_value="Carton reminder")
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
-async def test_carton_handler(mock_group, mock_token, mock_carton):
+async def test_carton_handler(mock_group, mock_token, mock_carton, mock_status):
     bot = Drahmbot()
     bot.bot.send_message = AsyncMock()
     handlers = _capture_handlers(bot)
@@ -272,7 +279,10 @@ async def test_carton_handler(mock_group, mock_token, mock_carton):
     message.chat.id = 999
 
     await handlers["carton"](message)
-    bot.bot.send_message.assert_called_with(999, "Carton reminder")
+    call_args = bot.bot.send_message.call_args
+    assert call_args[0][0] == 999
+    assert call_args[0][1] == "Carton reminder"
+    assert "reply_markup" in call_args[1]
 
 
 @pytest.mark.asyncio
@@ -936,3 +946,373 @@ async def test_plants_callback_malformed_data(mock_group, mock_token, mock_dt, m
     mock_toggle.assert_not_called()
     toast = bot.bot.answer_callback_query.call_args
     assert "invalides" in toast[0][1].lower()
+
+
+# --- Dechets (papier/carton done-button) keyboard/text helpers ---
+
+
+def test_build_dechets_keyboard_unchecked():
+    kb = _build_dechets_keyboard(15, "carton", {})
+    assert len(kb.keyboard) == 1
+    button = kb.keyboard[0][0]
+    assert "⬜" in button.text
+    assert "carton" in button.text
+    assert button.callback_data == "dechets:15:carton"
+
+
+def test_build_dechets_keyboard_checked():
+    role_data = {"subtasks": {"carton": {"by": "Timon", "at": "..."}}}
+    kb = _build_dechets_keyboard(15, "carton", role_data)
+    button = kb.keyboard[0][0]
+    assert "✅" in button.text
+
+
+def test_build_dechets_keyboard_only_reflects_own_subtask():
+    """A papier-done state must not flip the carton keyboard to checked."""
+    role_data = {"subtasks": {"papier": {"by": "Timon", "at": "..."}}}
+    kb = _build_dechets_keyboard(15, "carton", role_data)
+    assert "⬜" in kb.keyboard[0][0].text
+
+
+def test_build_dechets_keyboard_papier_callback_data():
+    kb = _build_dechets_keyboard(20, "papier", {})
+    assert kb.keyboard[0][0].callback_data == "dechets:20:papier"
+
+
+def test_build_dechets_text_no_doer():
+    text = _build_dechets_text("Timon doit sortir le carton mercredi", "carton", {})
+    assert text == "Timon doit sortir le carton mercredi"
+
+
+def test_build_dechets_text_with_doer():
+    role_data = {"subtasks": {"carton": {"by": "Léa", "at": "..."}}}
+    text = _build_dechets_text(
+        "Timon doit sortir le carton mercredi", "carton", role_data,
+    )
+    assert "Timon doit sortir le carton mercredi" in text
+    assert "Léa" in text
+    assert "carton" in text
+    assert "✅" in text
+
+
+def test_build_dechets_text_other_subtask_done_does_not_pollute():
+    """If only papier is marked, the carton message stays clean."""
+    role_data = {"subtasks": {"papier": {"by": "Léa", "at": "..."}}}
+    text = _build_dechets_text(
+        "Timon doit sortir le carton mercredi", "carton", role_data,
+    )
+    assert text == "Timon doit sortir le carton mercredi"
+
+
+# --- /papier and /carton: keyboard attachment ---
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_week_status", return_value={})
+@patch("src.drahmbot.menage.get_papier_reminder",
+       return_value="Timon doit sortir le papier lundi")
+@patch("src.drahmbot.utils.is_even_week", return_value=True)
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_papier_handler_attaches_keyboard(
+    mock_group, mock_token, mock_dt, mock_even, mock_papier, mock_status,
+):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    bot = Drahmbot()
+    bot.bot.send_message = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    message = MagicMock()
+    message.chat.id = 999
+
+    await handlers["papier"](message)
+    bot.bot.send_message.assert_called_once()
+    call_args = bot.bot.send_message.call_args
+    assert call_args[0][0] == 999
+    assert "papier" in call_args[0][1].lower()
+    assert "reply_markup" in call_args[1]
+    kb = call_args[1]["reply_markup"]
+    assert len(kb.keyboard) == 1
+    assert kb.keyboard[0][0].callback_data == "dechets:15:papier"
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_week_status", return_value={
+    "DÉCHETS": {"subtasks": {"papier": {"by": "Léa", "at": "..."}}},
+})
+@patch("src.drahmbot.menage.get_papier_reminder",
+       return_value="Timon doit sortir le papier lundi")
+@patch("src.drahmbot.utils.is_even_week", return_value=True)
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_papier_handler_reflects_existing_done_state(
+    mock_group, mock_token, mock_dt, mock_even, mock_papier, mock_status,
+):
+    """If papier was already marked, /papier shows the doer + checked button."""
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    bot = Drahmbot()
+    bot.bot.send_message = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    message = MagicMock()
+    message.chat.id = 999
+
+    await handlers["papier"](message)
+    call_args = bot.bot.send_message.call_args
+    text = call_args[0][1]
+    assert "Léa" in text
+    kb = call_args[1]["reply_markup"]
+    assert "✅" in kb.keyboard[0][0].text
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_week_status", return_value={})
+@patch("src.drahmbot.menage.get_carton_reminder",
+       return_value="Timon doit sortir le carton mercredi")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_carton_handler_attaches_keyboard(
+    mock_group, mock_token, mock_dt, mock_carton, mock_status,
+):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    bot = Drahmbot()
+    bot.bot.send_message = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    message = MagicMock()
+    message.chat.id = 999
+
+    await handlers["carton"](message)
+    call_args = bot.bot.send_message.call_args
+    assert "carton" in call_args[0][1].lower()
+    kb = call_args[1]["reply_markup"]
+    assert kb.keyboard[0][0].callback_data == "dechets:15:carton"
+
+
+# --- Dechets callback handler tests ---
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.menage.get_papier_reminder",
+       return_value="Timon doit sortir le papier lundi")
+@patch("src.drahmbot.chores.get_week_status", return_value={})
+@patch("src.drahmbot.menage.get_subtasks_for_role",
+       return_value=["poubelle", "carton", "compost", "verre", "plastique", "papier"])
+@patch("src.drahmbot.chores.toggle_subtask", return_value=True)
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_dechets_callback_open_click_anyone_can_mark(
+    mock_group, mock_token, mock_dt, mock_toggle, mock_subtasks, mock_status, mock_papier,
+):
+    """Anyone in the coloc can mark papier/carton as done, even if they're not
+    the assigned DÉCHETS person."""
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    import src.drahmbot as drahmbot_module
+    original_map = drahmbot_module.TELEGRAM_USER_MAP.copy()
+    drahmbot_module.TELEGRAM_USER_MAP[42] = "Léa"  # not the assigned person
+
+    try:
+        bot = Drahmbot()
+        bot.bot.edit_message_text = AsyncMock()
+        bot.bot.answer_callback_query = AsyncMock()
+        handlers = _capture_handlers(bot)
+
+        call = MagicMock()
+        call.data = "dechets:15:papier"
+        call.from_user.id = 42
+        call.id = "cbd1"
+        call.message.chat.id = 999
+        call.message.message_id = 100
+
+        await handlers["_callback_query"](call)
+        mock_toggle.assert_called_once_with("DÉCHETS", "papier", "Léa")
+        bot.bot.edit_message_text.assert_called_once()
+        toast = bot.bot.answer_callback_query.call_args[0][1]
+        assert "papier" in toast.lower()
+        assert "fait" in toast.lower()
+    finally:
+        drahmbot_module.TELEGRAM_USER_MAP.clear()
+        drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.menage.get_carton_reminder",
+       return_value="Timon doit sortir le carton mercredi")
+@patch("src.drahmbot.chores.get_week_status", return_value={
+    "DÉCHETS": {"subtasks": {"carton": {"by": "Léa", "at": "..."}}},
+})
+@patch("src.drahmbot.menage.get_subtasks_for_role",
+       return_value=["poubelle", "carton", "compost", "verre", "plastique"])
+@patch("src.drahmbot.chores.toggle_subtask", return_value=False)
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_dechets_callback_doer_can_undo(
+    mock_group, mock_token, mock_dt, mock_toggle, mock_subtasks, mock_status, mock_carton,
+):
+    """The original doer can untoggle their own mark."""
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    import src.drahmbot as drahmbot_module
+    original_map = drahmbot_module.TELEGRAM_USER_MAP.copy()
+    drahmbot_module.TELEGRAM_USER_MAP[42] = "Léa"
+
+    try:
+        bot = Drahmbot()
+        bot.bot.edit_message_text = AsyncMock()
+        bot.bot.answer_callback_query = AsyncMock()
+        handlers = _capture_handlers(bot)
+
+        call = MagicMock()
+        call.data = "dechets:15:carton"
+        call.from_user.id = 42
+        call.id = "cbd2"
+        call.message.chat.id = 999
+        call.message.message_id = 100
+
+        await handlers["_callback_query"](call)
+        mock_toggle.assert_called_once_with("DÉCHETS", "carton", "Léa")
+        toast = bot.bot.answer_callback_query.call_args[0][1]
+        assert "annul" in toast.lower()
+    finally:
+        drahmbot_module.TELEGRAM_USER_MAP.clear()
+        drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_week_status", return_value={
+    "DÉCHETS": {"subtasks": {"carton": {"by": "Léa", "at": "..."}}},
+})
+@patch("src.drahmbot.menage.get_subtasks_for_role",
+       return_value=["poubelle", "carton", "compost", "verre", "plastique"])
+@patch("src.drahmbot.chores.toggle_subtask")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_dechets_callback_non_doer_cannot_undo(
+    mock_group, mock_token, mock_dt, mock_toggle, mock_subtasks, mock_status,
+):
+    """A different coloc cannot untoggle someone else's mark. The doer's name is
+    surfaced in the toast so people know who to ask."""
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    import src.drahmbot as drahmbot_module
+    original_map = drahmbot_module.TELEGRAM_USER_MAP.copy()
+    drahmbot_module.TELEGRAM_USER_MAP[42] = "Timon"  # not Léa
+
+    try:
+        bot = Drahmbot()
+        bot.bot.edit_message_text = AsyncMock()
+        bot.bot.answer_callback_query = AsyncMock()
+        handlers = _capture_handlers(bot)
+
+        call = MagicMock()
+        call.data = "dechets:15:carton"
+        call.from_user.id = 42
+        call.id = "cbd3"
+
+        await handlers["_callback_query"](call)
+        mock_toggle.assert_not_called()
+        toast = bot.bot.answer_callback_query.call_args[0][1]
+        assert "Léa" in toast  # doer's name mentioned
+    finally:
+        drahmbot_module.TELEGRAM_USER_MAP.clear()
+        drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.toggle_subtask")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_dechets_callback_stale_week(mock_group, mock_token, mock_dt, mock_toggle):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 16, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "dechets:15:carton"  # last week
+    call.from_user.id = 891406979
+    call.id = "cbd4"
+
+    await handlers["_callback_query"](call)
+    mock_toggle.assert_not_called()
+    toast = bot.bot.answer_callback_query.call_args[0][1]
+    assert "semaine" in toast.lower()
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.toggle_subtask")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_dechets_callback_unknown_user(mock_group, mock_token, mock_dt, mock_toggle):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "dechets:15:carton"
+    call.from_user.id = 99999  # not in TELEGRAM_USER_MAP
+    call.id = "cbd5"
+
+    await handlers["_callback_query"](call)
+    mock_toggle.assert_not_called()
+    toast = bot.bot.answer_callback_query.call_args[0][1]
+    assert "reconnu" in toast.lower()
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.toggle_subtask")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_dechets_callback_malformed_data(mock_group, mock_token, mock_dt, mock_toggle):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "dechets:15"  # missing subtask part
+    call.from_user.id = 891406979
+    call.id = "cbd6"
+
+    await handlers["_callback_query"](call)
+    mock_toggle.assert_not_called()
+    toast = bot.bot.answer_callback_query.call_args[0][1]
+    assert "invalides" in toast.lower()
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.menage.get_subtasks_for_role",
+       return_value=["poubelle", "carton", "compost"])  # papier NOT included (odd week)
+@patch("src.drahmbot.chores.toggle_subtask")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_dechets_callback_invalid_subtask(
+    mock_group, mock_token, mock_dt, mock_toggle, mock_subtasks,
+):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "dechets:15:papier"  # papier not a subtask this week
+    call.from_user.id = 891406979
+    call.id = "cbd7"
+
+    await handlers["_callback_query"](call)
+    mock_toggle.assert_not_called()
+    toast = bot.bot.answer_callback_query.call_args[0][1]
+    assert "inconnue" in toast.lower()
