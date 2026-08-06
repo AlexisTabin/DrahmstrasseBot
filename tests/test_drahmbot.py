@@ -66,6 +66,7 @@ def _capture_handlers(bot):
 
 
 @pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_holiday_people", return_value=set())
 @patch("src.drahmbot.chores.get_week_status", return_value={})
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
@@ -76,7 +77,7 @@ def _capture_handlers(bot):
 @patch("src.drahmbot.social.is_present_dinner", return_value="Who is here?")
 async def test_bot_handlers(
     mock_who, mock_lessive, mock_papier, mock_roles, mock_even,
-    mock_group, mock_token, mock_status,
+    mock_group, mock_token, mock_status, mock_holiday,
 ):
     bot = Drahmbot()
 
@@ -162,14 +163,17 @@ async def test_done_handler_unknown_user(mock_group, mock_token):
 
 
 @pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_holiday_people", return_value=set())
 @patch("src.drahmbot.chores.get_week_status", return_value={})
 @patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail", "rangement"])
-@patch("src.drahmbot.menage.get_role_for_person", return_value="CUISINE")
+@patch("src.drahmbot.menage.get_role_assignments", return_value={
+    "CUISINE": "Timon", "SDBs": "Maël", "SOLs": "Léa", "DÉCHETS": "Alexis",
+})
 @patch("src.drahmbot.datetime")
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
 async def test_done_handler_sends_keyboard(
-    mock_group, mock_token, mock_dt, mock_role, mock_subtasks, mock_status,
+    mock_group, mock_token, mock_dt, mock_assignments, mock_subtasks, mock_status, mock_holiday,
 ):
     mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
     import src.drahmbot as drahmbot_module
@@ -187,26 +191,30 @@ async def test_done_handler_sends_keyboard(
 
         await handlers["done"](message)
         call_args = bot.bot.send_message.call_args
-        assert "CUISINE" in call_args[0][1]
+        assert "Timon" in call_args[0][1]
         assert "reply_markup" in call_args[1]
         keyboard = call_args[1]["reply_markup"]
         assert len(keyboard.keyboard) == 3  # frigo, plan de travail, rangement
+        assert "CUISINE" in keyboard.keyboard[0][0].text
     finally:
         drahmbot_module.TELEGRAM_USER_MAP.clear()
         drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
 
 
 @pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_holiday_people", return_value=set())
 @patch("src.drahmbot.chores.get_week_status", return_value={
     "SOLs": {"subtasks": {"aspirateur": {"by": "Léa", "at": "..."}}},
 })
 @patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["aspirateur", "panosse"])
-@patch("src.drahmbot.menage.get_role_for_person", return_value="SOLs")
+@patch("src.drahmbot.menage.get_role_assignments", return_value={
+    "CUISINE": "Timon", "SDBs": "Maël", "SOLs": "Léa", "DÉCHETS": "Alexis",
+})
 @patch("src.drahmbot.datetime")
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
 async def test_done_handler_subtask_role(
-    mock_group, mock_token, mock_dt, mock_role, mock_subtasks, mock_status,
+    mock_group, mock_token, mock_dt, mock_assignments, mock_subtasks, mock_status, mock_holiday,
 ):
     mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
     import src.drahmbot as drahmbot_module
@@ -268,11 +276,12 @@ async def test_recap_handler(mock_group, mock_token, mock_assignments, mock_reca
 
 
 @pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_holiday_people", return_value=set())
 @patch("src.drahmbot.chores.get_week_status", return_value={})
 @patch("src.drahmbot.menage.get_carton_reminder", return_value="Carton reminder")
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
-async def test_carton_handler(mock_group, mock_token, mock_carton, mock_status):
+async def test_carton_handler(mock_group, mock_token, mock_carton, mock_status, mock_holiday):
     bot = Drahmbot()
     bot.bot.send_message = AsyncMock()
     handlers = _capture_handlers(bot)
@@ -410,7 +419,8 @@ async def test_middleware_blocks_unknown_user_callback():
 @patch("src.drahmbot.chores.get_week_status", return_value={})
 @patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail", "rangement"])
 def test_build_done_keyboard_cuisine_not_done(mock_subtasks, mock_status):
-    keyboard = _build_done_keyboard("CUISINE", 15)
+    pairs = [("CUISINE", "frigo"), ("CUISINE", "plan de travail"), ("CUISINE", "rangement")]
+    keyboard = _build_done_keyboard(pairs, 15)
     assert len(keyboard.keyboard) == 3
     assert "frigo" in keyboard.keyboard[0][0].text
     assert "plan de travail" in keyboard.keyboard[1][0].text
@@ -428,7 +438,8 @@ def test_build_done_keyboard_cuisine_not_done(mock_subtasks, mock_status):
 })
 @patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail", "rangement"])
 def test_build_done_keyboard_cuisine_done(mock_subtasks, mock_status):
-    keyboard = _build_done_keyboard("CUISINE", 15)
+    pairs = [("CUISINE", "frigo"), ("CUISINE", "plan de travail"), ("CUISINE", "rangement")]
+    keyboard = _build_done_keyboard(pairs, 15)
     assert len(keyboard.keyboard) == 3
     assert "\u2705" in keyboard.keyboard[0][0].text
 
@@ -436,7 +447,8 @@ def test_build_done_keyboard_cuisine_done(mock_subtasks, mock_status):
 @patch("src.drahmbot.chores.get_week_status", return_value={})
 @patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["aspirateur", "panosse"])
 def test_build_done_keyboard_subtask_role(mock_subtasks, mock_status):
-    keyboard = _build_done_keyboard("SOLs", 15)
+    pairs = [("SOLs", "aspirateur"), ("SOLs", "panosse")]
+    keyboard = _build_done_keyboard(pairs, 15)
     assert len(keyboard.keyboard) == 2
     assert "aspirateur" in keyboard.keyboard[0][0].text
     assert "panosse" in keyboard.keyboard[1][0].text
@@ -444,10 +456,9 @@ def test_build_done_keyboard_subtask_role(mock_subtasks, mock_status):
 
 
 @patch("src.drahmbot.chores.get_week_status", return_value={})
-@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail", "rangement"])
-def test_build_done_text_cuisine_not_done(mock_subtasks, mock_status):
-    text = _build_done_text("CUISINE", "Timon")
-    assert "CUISINE" in text
+def test_build_done_text_cuisine_not_done(mock_status):
+    pairs = [("CUISINE", "frigo"), ("CUISINE", "plan de travail"), ("CUISINE", "rangement")]
+    text = _build_done_text(pairs, "Timon")
     assert "Timon" in text
     assert "0/3" in text
 
@@ -459,9 +470,9 @@ def test_build_done_text_cuisine_not_done(mock_subtasks, mock_status):
         "rangement": {"by": "Timon", "at": "..."},
     }},
 })
-@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail", "rangement"])
-def test_build_done_text_cuisine_done(mock_subtasks, mock_status):
-    text = _build_done_text("CUISINE", "Timon")
+def test_build_done_text_cuisine_done(mock_status):
+    pairs = [("CUISINE", "frigo"), ("CUISINE", "plan de travail"), ("CUISINE", "rangement")]
+    text = _build_done_text(pairs, "Timon")
     assert "3/3" in text
     assert "\u2705" in text
 
@@ -469,28 +480,39 @@ def test_build_done_text_cuisine_done(mock_subtasks, mock_status):
 @patch("src.drahmbot.chores.get_week_status", return_value={
     "SOLs": {"subtasks": {"aspirateur": {"by": "Léa", "at": "..."}}},
 })
-@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["aspirateur", "panosse"])
-def test_build_done_text_subtask_partial(mock_subtasks, mock_status):
-    text = _build_done_text("SOLs", "Léa")
+def test_build_done_text_subtask_partial(mock_status):
+    pairs = [("SOLs", "aspirateur"), ("SOLs", "panosse")]
+    text = _build_done_text(pairs, "Léa")
     assert "1/2" in text
+
+
+def test_build_done_text_empty_pairs_means_on_holiday():
+    """No effective subtasks (everything redistributed away) shows a
+    holiday-specific message instead of a bogus 0/0."""
+    text = _build_done_text([], "Léa")
+    assert "Léa" in text
+    assert "vacances" in text
 
 
 # --- Callback handler tests ---
 
 
 @pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_holiday_people", return_value=set())
 @patch("src.drahmbot.chores.get_week_status", return_value={
     "CUISINE": {"subtasks": {"frigo": {"by": "Timon", "at": "..."}}},
 })
 @patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail", "rangement"])
 @patch("src.drahmbot.chores.toggle_subtask", return_value=False)
-@patch("src.drahmbot.menage.get_role_for_person", return_value="CUISINE")
+@patch("src.drahmbot.menage.get_role_assignments", return_value={
+    "CUISINE": "Timon", "SDBs": "Maël", "SOLs": "Léa", "DÉCHETS": "Alexis",
+})
 @patch("src.drahmbot.datetime")
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
 async def test_callback_toggle_cuisine_subtask(
     mock_group, mock_token, mock_dt, mock_role, mock_toggle,
-    mock_subtasks, mock_status,
+    mock_subtasks, mock_status, mock_holiday,
 ):
     mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
     import src.drahmbot as drahmbot_module
@@ -522,16 +544,19 @@ async def test_callback_toggle_cuisine_subtask(
 
 
 @pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_holiday_people", return_value=set())
 @patch("src.drahmbot.chores.get_week_status", return_value={})
 @patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["aspirateur", "panosse"])
 @patch("src.drahmbot.chores.toggle_subtask", return_value=True)
-@patch("src.drahmbot.menage.get_role_for_person", return_value="SOLs")
+@patch("src.drahmbot.menage.get_role_assignments", return_value={
+    "CUISINE": "Timon", "SDBs": "Maël", "SOLs": "Léa", "DÉCHETS": "Alexis",
+})
 @patch("src.drahmbot.datetime")
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
 async def test_callback_toggle_subtask(
     mock_group, mock_token, mock_dt, mock_role, mock_toggle,
-    mock_subtasks, mock_status,
+    mock_subtasks, mock_status, mock_holiday,
 ):
     mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
     import src.drahmbot as drahmbot_module
@@ -582,11 +607,14 @@ async def test_callback_stale_week(mock_group, mock_token, mock_dt):
 
 
 @pytest.mark.asyncio
-@patch("src.drahmbot.menage.get_role_for_person", return_value="SDBs")
+@patch("src.drahmbot.chores.get_holiday_people", return_value=set())
+@patch("src.drahmbot.menage.get_role_assignments", return_value={
+    "CUISINE": "Timon", "SDBs": "Maël", "SOLs": "Léa", "DÉCHETS": "Alexis",
+})
 @patch("src.drahmbot.datetime")
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
-async def test_callback_wrong_user(mock_group, mock_token, mock_dt, mock_role):
+async def test_callback_wrong_user(mock_group, mock_token, mock_dt, mock_role, mock_holiday):
     mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
     import src.drahmbot as drahmbot_module
     original_map = drahmbot_module.TELEGRAM_USER_MAP.copy()
@@ -608,6 +636,32 @@ async def test_callback_wrong_user(mock_group, mock_token, mock_dt, mock_role):
     finally:
         drahmbot_module.TELEGRAM_USER_MAP.clear()
         drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.menage.get_role_assignments", return_value={
+    "CUISINE": "Timon", "SDBs": "Maël", "SOLs": "Léa", "DÉCHETS": "Alexis",
+})
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_callback_done_unknown_role(mock_group, mock_token, mock_dt, mock_assignments):
+    """Defends against malformed/stale callback data naming a role that
+    doesn't exist in the current assignments."""
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "done:15:GARAGE:balai"  # not a real role
+    call.from_user.id = 891406979
+    call.id = "cb7"
+
+    await handlers["_callback_query"](call)
+    toast = bot.bot.answer_callback_query.call_args
+    assert "rôle inconnu" in toast[0][1].lower()
 
 
 # --- /arrosage tests ---
@@ -1010,6 +1064,7 @@ def test_build_dechets_text_other_subtask_done_does_not_pollute():
 
 
 @pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_holiday_people", return_value=set())
 @patch("src.drahmbot.chores.get_week_status", return_value={})
 @patch("src.drahmbot.menage.get_papier_reminder",
        return_value="Timon doit sortir le papier lundi")
@@ -1018,7 +1073,7 @@ def test_build_dechets_text_other_subtask_done_does_not_pollute():
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
 async def test_papier_handler_attaches_keyboard(
-    mock_group, mock_token, mock_dt, mock_even, mock_papier, mock_status,
+    mock_group, mock_token, mock_dt, mock_even, mock_papier, mock_status, mock_holiday,
 ):
     mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
     bot = Drahmbot()
@@ -1040,6 +1095,7 @@ async def test_papier_handler_attaches_keyboard(
 
 
 @pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_holiday_people", return_value=set())
 @patch("src.drahmbot.chores.get_week_status", return_value={
     "DÉCHETS": {"subtasks": {"papier": {"by": "Léa", "at": "..."}}},
 })
@@ -1050,7 +1106,7 @@ async def test_papier_handler_attaches_keyboard(
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
 async def test_papier_handler_reflects_existing_done_state(
-    mock_group, mock_token, mock_dt, mock_even, mock_papier, mock_status,
+    mock_group, mock_token, mock_dt, mock_even, mock_papier, mock_status, mock_holiday,
 ):
     """If papier was already marked, /papier shows the doer + checked button."""
     mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
@@ -1070,6 +1126,7 @@ async def test_papier_handler_reflects_existing_done_state(
 
 
 @pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_holiday_people", return_value=set())
 @patch("src.drahmbot.chores.get_week_status", return_value={})
 @patch("src.drahmbot.menage.get_carton_reminder",
        return_value="Timon doit sortir le carton mercredi")
@@ -1077,7 +1134,7 @@ async def test_papier_handler_reflects_existing_done_state(
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
 async def test_carton_handler_attaches_keyboard(
-    mock_group, mock_token, mock_dt, mock_carton, mock_status,
+    mock_group, mock_token, mock_dt, mock_carton, mock_status, mock_holiday,
 ):
     mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
     bot = Drahmbot()
@@ -1098,6 +1155,7 @@ async def test_carton_handler_attaches_keyboard(
 
 
 @pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_holiday_people", return_value=set())
 @patch("src.drahmbot.menage.get_papier_reminder",
        return_value="Timon doit sortir le papier lundi")
 @patch("src.drahmbot.chores.get_week_status", return_value={})
@@ -1109,6 +1167,7 @@ async def test_carton_handler_attaches_keyboard(
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
 async def test_dechets_callback_open_click_anyone_can_mark(
     mock_group, mock_token, mock_dt, mock_toggle, mock_subtasks, mock_status, mock_papier,
+    mock_holiday,
 ):
     """Anyone in the coloc can mark papier/carton as done, even if they're not
     the assigned DÉCHETS person."""
@@ -1142,6 +1201,7 @@ async def test_dechets_callback_open_click_anyone_can_mark(
 
 
 @pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_holiday_people", return_value=set())
 @patch("src.drahmbot.menage.get_carton_reminder",
        return_value="Timon doit sortir le carton mercredi")
 @patch("src.drahmbot.chores.get_week_status", return_value={
@@ -1155,6 +1215,7 @@ async def test_dechets_callback_open_click_anyone_can_mark(
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
 async def test_dechets_callback_doer_can_undo(
     mock_group, mock_token, mock_dt, mock_toggle, mock_subtasks, mock_status, mock_carton,
+    mock_holiday,
 ):
     """The original doer can untoggle their own mark."""
     mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
@@ -1361,13 +1422,14 @@ def test_build_subtask_text_done_by_someone_else():
 
 
 @pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_holiday_people", return_value=set())
 @patch("src.drahmbot.chores.get_week_status", return_value={})
 @patch("src.drahmbot.menage.get_role_assignments", return_value={"CUISINE": "Timon"})
 @patch("src.drahmbot.datetime")
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
 async def test_subtask_command_sends_keyboard(
-    mock_group, mock_token, mock_dt, mock_assignments, mock_status,
+    mock_group, mock_token, mock_dt, mock_assignments, mock_status, mock_holiday,
 ):
     mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
     bot = Drahmbot()
@@ -1387,6 +1449,7 @@ async def test_subtask_command_sends_keyboard(
 
 
 @pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_holiday_people", return_value=set())
 @patch("src.drahmbot.chores.get_week_status", return_value={
     "CUISINE": {"subtasks": {"frigo": {"by": "Léa", "at": "..."}}},
 })
@@ -1395,7 +1458,7 @@ async def test_subtask_command_sends_keyboard(
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
 async def test_subtask_command_reflects_existing_done_state(
-    mock_group, mock_token, mock_dt, mock_assignments, mock_status,
+    mock_group, mock_token, mock_dt, mock_assignments, mock_status, mock_holiday,
 ):
     mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
     bot = Drahmbot()
@@ -1413,6 +1476,7 @@ async def test_subtask_command_reflects_existing_done_state(
 
 
 @pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_holiday_people", return_value=set())
 @patch("src.drahmbot.chores.get_week_status", return_value={})
 @patch("src.drahmbot.menage.get_subtasks_for_role",
        return_value=["frigo", "plan de travail", "rangement"])
@@ -1423,6 +1487,7 @@ async def test_subtask_command_reflects_existing_done_state(
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
 async def test_subtask_callback_anyone_can_mark(
     mock_group, mock_token, mock_dt, mock_assignments, mock_toggle, mock_subtasks, mock_status,
+    mock_holiday,
 ):
     """Léa can mark /frigo done even though the CUISINE role is Timon's this week."""
     mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
@@ -1860,3 +1925,98 @@ async def test_cendrier_callback_non_numeric_week(mock_group, mock_token, mock_d
     mock_toggle.assert_not_called()
     toast = bot.bot.answer_callback_query.call_args[0][1]
     assert "invalides" in toast.lower()
+
+
+# --- /vacances ---
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_vacances_unknown_user(mock_group, mock_token):
+    bot = Drahmbot()
+    bot.bot.send_message = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    message = MagicMock()
+    message.chat.id = 999
+    message.from_user.id = 99999  # not in TELEGRAM_USER_MAP
+
+    await handlers["vacances"](message)
+    call_args = bot.bot.send_message.call_args
+    assert "Je ne sais pas qui tu es" in call_args[0][1]
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.menage.get_role_for_person", return_value=None)
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_vacances_no_role(mock_group, mock_token, mock_role):
+    bot = Drahmbot()
+    bot.bot.send_message = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    message = MagicMock()
+    message.chat.id = 999
+    message.from_user.id = 891406979  # Alexis
+
+    await handlers["vacances"](message)
+    call_args = bot.bot.send_message.call_args
+    assert "pas de rôle attribué" in call_args[0][1]
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_holiday_people", return_value={"Timon"})
+@patch("src.drahmbot.menage.get_holiday_redistribution", return_value={
+    "aspirateur": "Léa", "panosse": "Alexis",
+})
+@patch("src.drahmbot.chores.set_on_holiday")
+@patch("src.drahmbot.chores.is_on_holiday", return_value=False)
+@patch("src.drahmbot.menage.get_role_for_person", return_value="SOLs")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_vacances_announces_redistribution(
+    mock_group, mock_token, mock_role, mock_is_holiday, mock_set, mock_redistribution,
+    mock_holiday_people,
+):
+    bot = Drahmbot()
+    bot.bot.send_message = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    message = MagicMock()
+    message.chat.id = 999
+    message.from_user.id = 1645783874  # Timon
+
+    await handlers["vacances"](message)
+
+    mock_set.assert_called_once_with("Timon")
+    text = bot.bot.send_message.call_args[0][1]
+    assert "Timon" in text
+    assert "SOLs" in text
+    assert "aspirateur -> Léa" in text
+    assert "panosse -> Alexis" in text
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.cancel_holiday")
+@patch("src.drahmbot.chores.is_on_holiday", return_value=True)
+@patch("src.drahmbot.menage.get_role_for_person", return_value="SOLs")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_vacances_toggles_off_when_already_on_holiday(
+    mock_group, mock_token, mock_role, mock_is_holiday, mock_cancel,
+):
+    bot = Drahmbot()
+    bot.bot.send_message = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    message = MagicMock()
+    message.chat.id = 999
+    message.from_user.id = 1645783874  # Timon
+
+    await handlers["vacances"](message)
+
+    mock_cancel.assert_called_once_with("Timon")
+    text = bot.bot.send_message.call_args[0][1]
+    assert "Timon" in text
+    assert "SOLs" in text

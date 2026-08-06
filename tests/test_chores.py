@@ -48,8 +48,9 @@ def test_get_week_status_with_data(mock_get_table, mock_week):
     assert status["CUISINE"]["by"] == "Timon"
 
 
+@patch("src.chores.get_holiday_people", return_value=set())
 @patch("src.chores.get_week_status", return_value={})
-def test_get_thursday_reminder_all_pending(mock_status):
+def test_get_thursday_reminder_all_pending(mock_status, mock_holiday):
     from src.phrases import THURSDAY_REMINDER_HEADER
     result = chores.get_thursday_reminder(SAMPLE_ASSIGNMENTS)
     assert any(h in result for h in THURSDAY_REMINDER_HEADER)
@@ -57,22 +58,24 @@ def test_get_thursday_reminder_all_pending(mock_status):
     assert "SDBs" in result
 
 
+@patch("src.chores.get_holiday_people", return_value=set())
 @patch("src.chores.get_week_status", return_value={
     "CUISINE": {"by": "Timon", "at": "..."},
     "SDBs": {"by": "Maël", "at": "..."},
     "SOLs": {"by": "Léa", "at": "..."},
     "DÉCHETS": {"by": "Alexis", "at": "..."},
 })
-def test_get_thursday_reminder_all_done(mock_status):
+def test_get_thursday_reminder_all_done(mock_status, mock_holiday):
     from src.phrases import THURSDAY_ALL_DONE
     result = chores.get_thursday_reminder(SAMPLE_ASSIGNMENTS)
     assert result in THURSDAY_ALL_DONE
 
 
+@patch("src.chores.get_holiday_people", return_value=set())
 @patch("src.chores.get_week_status", return_value={
     "CUISINE": {"by": "Timon", "at": "..."},
 })
-def test_get_thursday_reminder_partial(mock_status):
+def test_get_thursday_reminder_partial(mock_status, mock_holiday):
     from src.phrases import THURSDAY_REMINDER_HEADER
     result = chores.get_thursday_reminder(SAMPLE_ASSIGNMENTS)
     assert "CUISINE" in result
@@ -80,10 +83,11 @@ def test_get_thursday_reminder_partial(mock_status):
     assert any(h in result for h in THURSDAY_REMINDER_HEADER)
 
 
+@patch("src.chores.get_holiday_people", return_value=set())
 @patch("src.chores.get_week_status", return_value={
     "CUISINE": {"by": "Timon", "at": "..."},
 })
-def test_get_sunday_recap(mock_status):
+def test_get_sunday_recap(mock_status, mock_holiday):
     from src.phrases import SUNDAY_RECAP_HEADER
     result = chores.get_sunday_recap(SAMPLE_ASSIGNMENTS)
     assert any(h in result for h in SUNDAY_RECAP_HEADER)
@@ -92,13 +96,14 @@ def test_get_sunday_recap(mock_status):
     assert "pas fait" in result  # other roles not done
 
 
+@patch("src.chores.get_holiday_people", return_value=set())
 @patch("src.chores.get_week_status", return_value={
     "CUISINE": {"by": "Timon", "at": "..."},
     "SDBs": {"by": "Maël", "at": "..."},
     "SOLs": {"by": "Léa", "at": "..."},
     "DÉCHETS": {"by": "Alexis", "at": "..."},
 })
-def test_get_sunday_recap_all_done(mock_status):
+def test_get_sunday_recap_all_done(mock_status, mock_holiday):
     from src.phrases import SUNDAY_RECAP_HEADER
     result = chores.get_sunday_recap(SAMPLE_ASSIGNMENTS)
     assert any(h in result for h in SUNDAY_RECAP_HEADER)
@@ -176,6 +181,71 @@ def test_get_stats_no_completed_field(mock_get_table):
     from src.phrases import STATS_EMPTY
     result = chores.get_stats()
     assert result in STATS_EMPTY
+
+
+# --- Holiday state tests ---
+
+
+@patch("src.chores._current_week_key", return_value="2026-W14")
+@patch("src.chores._get_table")
+def test_get_holiday_people_empty(mock_get_table, mock_week):
+    mock_table = MagicMock()
+    mock_table.get_item.return_value = {}
+    mock_get_table.return_value = mock_table
+
+    assert chores.get_holiday_people() == set()
+
+
+@patch("src.chores._current_week_key", return_value="2026-W14")
+@patch("src.chores._get_table")
+def test_get_holiday_people_with_data(mock_get_table, mock_week):
+    mock_table = MagicMock()
+    mock_table.get_item.return_value = {
+        "Item": {"week_key": "2026-W14", "vacances": {"Timon", "Léa"}},
+    }
+    mock_get_table.return_value = mock_table
+
+    assert chores.get_holiday_people() == {"Timon", "Léa"}
+
+
+@patch("src.chores.get_holiday_people", return_value={"Timon"})
+def test_is_on_holiday_true(mock_holiday):
+    assert chores.is_on_holiday("Timon") is True
+
+
+@patch("src.chores.get_holiday_people", return_value={"Timon"})
+def test_is_on_holiday_false(mock_holiday):
+    assert chores.is_on_holiday("Léa") is False
+
+
+@patch("src.chores._current_week_key", return_value="2026-W14")
+@patch("src.chores._get_table")
+def test_set_on_holiday_adds_to_set(mock_get_table, mock_week):
+    mock_table = MagicMock()
+    mock_get_table.return_value = mock_table
+
+    chores.set_on_holiday("Timon")
+
+    mock_table.update_item.assert_called_once_with(
+        Key={"week_key": "2026-W14"},
+        UpdateExpression="ADD vacances :person",
+        ExpressionAttributeValues={":person": {"Timon"}},
+    )
+
+
+@patch("src.chores._current_week_key", return_value="2026-W14")
+@patch("src.chores._get_table")
+def test_cancel_holiday_removes_from_set(mock_get_table, mock_week):
+    mock_table = MagicMock()
+    mock_get_table.return_value = mock_table
+
+    chores.cancel_holiday("Timon")
+
+    mock_table.update_item.assert_called_once_with(
+        Key={"week_key": "2026-W14"},
+        UpdateExpression="DELETE vacances :person",
+        ExpressionAttributeValues={":person": {"Timon"}},
+    )
 
 
 # --- toggle_role tests ---
@@ -352,18 +422,21 @@ def test_who_did_it_empty():
 # --- _helper_lines tests ---
 
 
+ALL_COLOCATAIRES = ["Timon", "Maël", "Léa", "Alexis"]
+
+
 def test_helper_lines_empty_when_no_subtasks():
-    assert chores._helper_lines("Timon", {}) == []
+    assert chores._helper_lines("CUISINE", "Timon", {}, set(), ALL_COLOCATAIRES) == []
 
 
 def test_helper_lines_empty_when_only_assigned_person_did_it():
     role_data = {"subtasks": {"frigo": {"by": "Timon", "at": "..."}}}
-    assert chores._helper_lines("Timon", role_data) == []
+    assert chores._helper_lines("CUISINE", "Timon", role_data, set(), ALL_COLOCATAIRES) == []
 
 
 def test_helper_lines_flags_someone_else():
     role_data = {"subtasks": {"frigo": {"by": "Léa", "at": "..."}}}
-    lines = chores._helper_lines("Timon", role_data)
+    lines = chores._helper_lines("CUISINE", "Timon", role_data, set(), ALL_COLOCATAIRES)
     assert len(lines) == 1
     assert "frigo" in lines[0]
     assert "Léa" in lines[0]
@@ -375,14 +448,37 @@ def test_helper_lines_only_flags_the_non_assigned_subtasks():
         "frigo": {"by": "Léa", "at": "..."},
         "rangement": {"by": "Timon", "at": "..."},
     }}
-    lines = chores._helper_lines("Timon", role_data)
+    lines = chores._helper_lines("CUISINE", "Timon", role_data, set(), ALL_COLOCATAIRES)
     assert len(lines) == 1
     assert "frigo" in lines[0]
+
+
+def test_helper_lines_no_flag_when_holiday_redistribution_matches():
+    """If Timon is on holiday and frigo was redistributed to Léa, Léa doing
+    frigo is expected, not a 'helper' — it shouldn't be flagged."""
+    role_data = {"subtasks": {"frigo": {"by": "Léa", "at": "..."}}}
+    with patch(
+        "src.menage.get_holiday_redistribution",
+        return_value={"frigo": "Léa", "plan de travail": "Alexis", "rangement": "Alexis"},
+    ):
+        lines = chores._helper_lines(
+            "CUISINE", "Timon", role_data, {"Timon"}, ALL_COLOCATAIRES,
+        )
+    assert lines == []
+
+
+def test_helper_lines_skips_subtask_without_by():
+    """Defensive: a subtask entry with no 'by' (shouldn't happen in practice,
+    since toggle_subtask always sets it) is simply skipped, not a crash."""
+    role_data = {"subtasks": {"frigo": {"at": "..."}}}
+    lines = chores._helper_lines("CUISINE", "Timon", role_data, set(), ALL_COLOCATAIRES)
+    assert lines == []
 
 
 # --- get_sunday_recap with helper credit ---
 
 
+@patch("src.chores.get_holiday_people", return_value=set())
 @patch("src.chores.get_week_status", return_value={
     "CUISINE": {"subtasks": {
         "frigo": {"by": "Léa", "at": "..."},
@@ -390,7 +486,7 @@ def test_helper_lines_only_flags_the_non_assigned_subtasks():
         "rangement": {"by": "Timon", "at": "..."},
     }},
 })
-def test_get_sunday_recap_credits_helper_on_complete_role(mock_status):
+def test_get_sunday_recap_credits_helper_on_complete_role(mock_status, mock_holiday):
     """CUISINE is fully done, but Léa (not the assigned Timon) did the fridge."""
     result = chores.get_sunday_recap(SAMPLE_ASSIGNMENTS)
     assert "CUISINE" in result
@@ -398,12 +494,13 @@ def test_get_sunday_recap_credits_helper_on_complete_role(mock_status):
     assert "pas Timon" in result
 
 
+@patch("src.chores.get_holiday_people", return_value=set())
 @patch("src.chores.get_week_status", return_value={
     "SDBs": {"subtasks": {
         "petit WC": {"by": "Alexis", "at": "..."},
     }},
 })
-def test_get_sunday_recap_credits_helper_on_incomplete_role(mock_status):
+def test_get_sunday_recap_credits_helper_on_incomplete_role(mock_status, mock_holiday):
     """SDBs isn't fully done, but someone other than Maël already helped."""
     result = chores.get_sunday_recap(SAMPLE_ASSIGNMENTS)
     assert "SDBs" in result
@@ -414,6 +511,7 @@ def test_get_sunday_recap_credits_helper_on_incomplete_role(mock_status):
 # --- reminder/recap with subtask format ---
 
 
+@patch("src.chores.get_holiday_people", return_value=set())
 @patch("src.chores.get_week_status", return_value={
     "CUISINE": {"by": "Timon", "at": "..."},
     "SDBs": {"by": "Maël", "at": "..."},
@@ -426,7 +524,7 @@ def test_get_sunday_recap_credits_helper_on_incomplete_role(mock_status):
     }},
 })
 @patch("src.menage.is_even_week", return_value=False)
-def test_thursday_reminder_with_subtasks(mock_even, mock_status):
+def test_thursday_reminder_with_subtasks(mock_even, mock_status, mock_holiday):
     from src.phrases import THURSDAY_DONE_SECTION
     result = chores.get_thursday_reminder(SAMPLE_ASSIGNMENTS)
     # DÉCHETS is not fully done (only poubelle of 5)
@@ -436,6 +534,7 @@ def test_thursday_reminder_with_subtasks(mock_even, mock_status):
     assert any(s in result for s in THURSDAY_DONE_SECTION)
 
 
+@patch("src.chores.get_holiday_people", return_value=set())
 @patch("src.chores.get_week_status", return_value={
     "CUISINE": {"by": "Timon", "at": "..."},
     "SDBs": {"by": "Maël", "at": "..."},
@@ -445,7 +544,7 @@ def test_thursday_reminder_with_subtasks(mock_even, mock_status):
     }},
     "DÉCHETS": {"by": "Alexis", "at": "..."},
 })
-def test_sunday_recap_mixed_formats(mock_status):
+def test_sunday_recap_mixed_formats(mock_status, mock_holiday):
     from src.phrases import SUNDAY_RECAP_HEADER
     result = chores.get_sunday_recap(SAMPLE_ASSIGNMENTS)
     assert any(h in result for h in SUNDAY_RECAP_HEADER)

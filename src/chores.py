@@ -101,6 +101,46 @@ def toggle_subtask(role: str, subtask: str, person: str) -> bool:
         return True
 
 
+def get_holiday_people(week_key: str = None) -> set:
+    """Return the set of people on holiday this week (may be empty)."""
+    table = _get_table()
+    if week_key is None:
+        week_key = _current_week_key()
+
+    response = table.get_item(Key={"week_key": week_key})
+    item = response.get("Item", {})
+    return set(item.get("vacances", []))
+
+
+def is_on_holiday(person: str, week_key: str = None) -> bool:
+    """Check if `person` is marked on holiday this week."""
+    return person in get_holiday_people(week_key)
+
+
+def set_on_holiday(person: str) -> None:
+    """Mark `person` on holiday for this week."""
+    table = _get_table()
+    week_key = _current_week_key()
+    table.update_item(
+        Key={"week_key": week_key},
+        UpdateExpression="ADD vacances :person",
+        ExpressionAttributeValues={":person": {person}},
+    )
+    logger.info("%s marked on holiday for %s", person, week_key)
+
+
+def cancel_holiday(person: str) -> None:
+    """Clear `person`'s holiday mark for this week."""
+    table = _get_table()
+    week_key = _current_week_key()
+    table.update_item(
+        Key={"week_key": week_key},
+        UpdateExpression="DELETE vacances :person",
+        ExpressionAttributeValues={":person": {person}},
+    )
+    logger.info("%s no longer on holiday for %s", person, week_key)
+
+
 def is_role_complete(role: str, completed_map: dict) -> bool:
     """Check if a role is fully completed, handling both old and new formats."""
     from src.menage import get_subtasks_for_role
@@ -177,14 +217,16 @@ def get_thursday_reminder(role_assignments: dict) -> str:
         role_assignments: dict of {role: person} for the current week.
     """
     completed = get_week_status()
+    holiday_people = get_holiday_people()
     pending = []
     done = []
     for role, person in role_assignments.items():
+        label = f"{person}, en vacances" if person in holiday_people else person
         if is_role_complete(role, completed):
-            done.append(f"  {role} ({person})")
+            done.append(f"  {role} ({label})")
         else:
             detail = _pending_detail(role, completed)
-            pending.append(f"  {role} ({person}){detail}")
+            pending.append(f"  {role} ({label}){detail}")
 
     if not pending:
         return phrases.pick(phrases.THURSDAY_ALL_DONE)
@@ -235,17 +277,27 @@ def get_stats() -> str:
     return "\n".join(lines)
 
 
-def _helper_lines(person: str, role_data: dict) -> list:
-    """Return recap sub-lines for subtasks completed by someone other than the
-    assigned person, so help from another roommate is visible in the recap."""
+def _helper_lines(
+    role: str, person: str, role_data: dict, holiday_people: set, all_people: list,
+) -> list:
+    """Return recap sub-lines for subtasks completed by someone other than
+    whoever is actually expected to do them this week (the assigned person,
+    or their holiday substitute), so help from another roommate is visible
+    in the recap."""
+    from src.menage import get_effective_assignee
+
     subtasks = role_data.get("subtasks")
     if not subtasks:
         return []
-    return [
-        f"      \U0001f91d {subtask} fait par {sub_data['by']} (pas {person})"
-        for subtask, sub_data in subtasks.items()
-        if sub_data.get("by") and sub_data["by"] != person
-    ]
+    lines = []
+    for subtask, sub_data in subtasks.items():
+        by = sub_data.get("by")
+        if not by:
+            continue
+        expected = get_effective_assignee(role, subtask, person, holiday_people, all_people)
+        if by != expected:
+            lines.append(f"      \U0001f91d {subtask} fait par {by} (pas {expected})")
+    return lines
 
 
 def get_sunday_recap(role_assignments: dict) -> str:
@@ -255,13 +307,16 @@ def get_sunday_recap(role_assignments: dict) -> str:
         role_assignments: dict of {role: person} for the current week.
     """
     completed = get_week_status()
+    holiday_people = get_holiday_people()
+    all_people = list(role_assignments.values())
     lines = [phrases.pick(phrases.SUNDAY_RECAP_HEADER)]
     for role, person in role_assignments.items():
         role_data = completed.get(role, {})
+        label = f"{person}, en vacances" if person in holiday_people else person
         if is_role_complete(role, completed):
             who = _who_did_it(role_data)
-            lines.append(f"  \u2705 {role} ({person}) — fait par {who}")
+            lines.append(f"  \u2705 {role} ({label}) — fait par {who}")
         else:
-            lines.append(f"  \u274c {role} ({person}) — pas fait")
-        lines.extend(_helper_lines(person, role_data))
+            lines.append(f"  \u274c {role} ({label}) — pas fait")
+        lines.extend(_helper_lines(role, person, role_data, holiday_people, all_people))
     return "\n".join(lines)

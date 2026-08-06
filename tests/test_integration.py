@@ -170,3 +170,124 @@ async def test_frigo_write_path_round_trip(bot):
     recap_text = bot.bot.send_message.call_args[0][1]
     assert f"frigo fait par {helper}" in recap_text
     assert f"(pas {cuisine_person})" in recap_text
+
+
+@pytest.mark.asyncio
+async def test_vacances_round_trip(bot):
+    """/vacances redistributes the holidaying person's subtasks, /recap
+    reflects the holiday label without wrongly flagging the redistributed
+    person as a 'helper', and running /vacances again cancels it."""
+    assignments = menage.get_role_assignments(colocataires)
+    person = assignments["SOLs"]
+    person_id = next(uid for uid, name in TELEGRAM_USER_MAP.items() if name == person)
+
+    # 1. Declare holiday — announces the redistribution.
+    await main.handler(_webhook_event("/vacances", person_id), {})
+    announce_text = bot.bot.send_message.call_args[0][1]
+    assert person in announce_text
+    assert "SOLs" in announce_text
+    assert chores.is_on_holiday(person)
+
+    redistribution = menage.get_holiday_redistribution("SOLs", person, colocataires)
+    aspirateur_assignee = redistribution["aspirateur"]
+    assignee_id = next(
+        uid for uid, name in TELEGRAM_USER_MAP.items() if name == aspirateur_assignee
+    )
+    week_num = datetime.date.today().isocalendar()[1]
+
+    # 2. The redistributed person does their reassigned subtask.
+    await main.handler(_webhook_event("/aspirateur", assignee_id), {})
+    await main.handler(_callback_event(f"subtask:{week_num}:aspirateur", assignee_id), {})
+
+    # 3. /recap shows the holiday label, and does NOT flag the redistributed
+    # person as merely "helping" — they're the expected assignee now.
+    await main.handler(_eventbridge_event("/recap@DrahmstrasseBot"), {})
+    recap_text = bot.bot.send_message.call_args[0][1]
+    assert f"{person}, en vacances" in recap_text
+    assert f"aspirateur fait par {aspirateur_assignee}" not in recap_text
+
+    # 4. Calling /vacances again cancels the holiday.
+    await main.handler(_webhook_event("/vacances", person_id), {})
+    cancel_text = bot.bot.send_message.call_args[0][1]
+    assert person in cancel_text
+    assert not chores.is_on_holiday(person)
+
+
+@pytest.mark.asyncio
+async def test_vacances_two_people_simultaneously(bot):
+    """Two roommates on holiday at once: neither's redistributed subtasks
+    should land on the other. Exercises the real bug found during review —
+    get_holiday_redistribution used to only exclude the single absent
+    person, so a task could land on someone who was also away."""
+    assignments = menage.get_role_assignments(colocataires)
+    person_a = assignments["CUISINE"]
+    person_b = assignments["SOLs"]
+    a_id = next(uid for uid, name in TELEGRAM_USER_MAP.items() if name == person_a)
+    b_id = next(uid for uid, name in TELEGRAM_USER_MAP.items() if name == person_b)
+
+    await main.handler(_webhook_event("/vacances", a_id), {})
+    await main.handler(_webhook_event("/vacances", b_id), {})
+
+    assert chores.get_holiday_people() == {person_a, person_b}
+
+    holiday_people = chores.get_holiday_people()
+    cuisine_redistribution = menage.get_holiday_redistribution(
+        "CUISINE", person_a, colocataires, holiday_people,
+    )
+    sols_redistribution = menage.get_holiday_redistribution(
+        "SOLs", person_b, colocataires, holiday_people,
+    )
+    assert person_b not in cuisine_redistribution.values()
+    assert person_a not in sols_redistribution.values()
+
+    # /recap shows both as en vacances.
+    await main.handler(_eventbridge_event("/recap@DrahmstrasseBot"), {})
+    recap_text = bot.bot.send_message.call_args[0][1]
+    assert f"{person_a}, en vacances" in recap_text
+    assert f"{person_b}, en vacances" in recap_text
+
+
+@pytest.mark.asyncio
+async def test_done_reflects_holiday_redistribution(bot):
+    """The bug the user flagged: /done used to only ever show a person's own
+    nominal role, so a helper who inherited a subtask from a holidaying
+    roommate couldn't use /done for it (only the specific /frigo-style
+    command), and the holidaying person's /done kept showing their own role
+    as if nothing had changed. Both should now reflect reality."""
+    assignments = menage.get_role_assignments(colocataires)
+    cuisine_person = assignments["CUISINE"]
+    cuisine_id = next(
+        uid for uid, name in TELEGRAM_USER_MAP.items() if name == cuisine_person
+    )
+
+    # CUISINE person declares holiday.
+    await main.handler(_webhook_event("/vacances", cuisine_id), {})
+    holiday_people = chores.get_holiday_people()
+    redistribution = menage.get_holiday_redistribution(
+        "CUISINE", cuisine_person, colocataires, holiday_people,
+    )
+    frigo_helper = redistribution["frigo"]
+    helper_id = next(
+        uid for uid, name in TELEGRAM_USER_MAP.items() if name == frigo_helper
+    )
+    week_num = datetime.date.today().isocalendar()[1]
+
+    # 1. The helper's /done now includes the inherited "frigo" subtask.
+    await main.handler(_webhook_event("/done", helper_id), {})
+    done_call = bot.bot.send_message.call_args
+    keyboard = done_call[1]["reply_markup"]
+    button_data = [b[0].callback_data for b in keyboard.keyboard]
+    assert f"done:{week_num}:CUISINE:frigo" in button_data
+
+    # 2. The helper can toggle it via /done's own callback (not just /frigo).
+    await main.handler(
+        _callback_event(f"done:{week_num}:CUISINE:frigo", helper_id), {},
+    )
+    bot.bot.edit_message_text.assert_called_once()
+    role_data = chores.get_week_status().get("CUISINE", {})
+    assert role_data["subtasks"]["frigo"]["by"] == frigo_helper
+
+    # 3. The holidaying person's own /done no longer shows "frigo" as theirs.
+    await main.handler(_webhook_event("/done", cuisine_id), {})
+    holiday_done_text = bot.bot.send_message.call_args[0][1]
+    assert cuisine_person in holiday_done_text
