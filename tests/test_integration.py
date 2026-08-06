@@ -245,3 +245,49 @@ async def test_vacances_two_people_simultaneously(bot):
     recap_text = bot.bot.send_message.call_args[0][1]
     assert f"{person_a}, en vacances" in recap_text
     assert f"{person_b}, en vacances" in recap_text
+
+
+@pytest.mark.asyncio
+async def test_done_reflects_holiday_redistribution(bot):
+    """The bug the user flagged: /done used to only ever show a person's own
+    nominal role, so a helper who inherited a subtask from a holidaying
+    roommate couldn't use /done for it (only the specific /frigo-style
+    command), and the holidaying person's /done kept showing their own role
+    as if nothing had changed. Both should now reflect reality."""
+    assignments = menage.get_role_assignments(colocataires)
+    cuisine_person = assignments["CUISINE"]
+    cuisine_id = next(
+        uid for uid, name in TELEGRAM_USER_MAP.items() if name == cuisine_person
+    )
+
+    # CUISINE person declares holiday.
+    await main.handler(_webhook_event("/vacances", cuisine_id), {})
+    holiday_people = chores.get_holiday_people()
+    redistribution = menage.get_holiday_redistribution(
+        "CUISINE", cuisine_person, colocataires, holiday_people,
+    )
+    frigo_helper = redistribution["frigo"]
+    helper_id = next(
+        uid for uid, name in TELEGRAM_USER_MAP.items() if name == frigo_helper
+    )
+    week_num = datetime.date.today().isocalendar()[1]
+
+    # 1. The helper's /done now includes the inherited "frigo" subtask.
+    await main.handler(_webhook_event("/done", helper_id), {})
+    done_call = bot.bot.send_message.call_args
+    keyboard = done_call[1]["reply_markup"]
+    button_data = [b[0].callback_data for b in keyboard.keyboard]
+    assert f"done:{week_num}:CUISINE:frigo" in button_data
+
+    # 2. The helper can toggle it via /done's own callback (not just /frigo).
+    await main.handler(
+        _callback_event(f"done:{week_num}:CUISINE:frigo", helper_id), {},
+    )
+    bot.bot.edit_message_text.assert_called_once()
+    role_data = chores.get_week_status().get("CUISINE", {})
+    assert role_data["subtasks"]["frigo"]["by"] == frigo_helper
+
+    # 3. The holidaying person's own /done no longer shows "frigo" as theirs.
+    await main.handler(_webhook_event("/done", cuisine_id), {})
+    holiday_done_text = bot.bot.send_message.call_args[0][1]
+    assert cuisine_person in holiday_done_text

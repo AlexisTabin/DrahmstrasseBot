@@ -151,6 +151,32 @@ def get_effective_assignee(
     return redistribution.get(subtask, assigned_person)
 
 
+def get_effective_subtasks_for_person(
+    person: str, role_assignments: dict, holiday_people: set, colocataires: list,
+) -> list:
+    """Return [(role, subtask), ...] for every subtask `person` is actually
+    expected to do this week, across every role — not just their own
+    nominal one. Used by /done, which used to only ever show a person's own
+    role and so couldn't reflect holiday redistribution: a helper who
+    inherited a subtask from a holidaying roommate couldn't mark it done via
+    /done (only via the specific /frigo-style command), and someone on
+    holiday would still see their own now-reassigned role as if nothing had
+    changed.
+    """
+    pairs = []
+    for role, assigned_person in role_assignments.items():
+        subtasks = get_subtasks_for_role(role)
+        if not subtasks:
+            continue
+        for subtask in subtasks:
+            effective = get_effective_assignee(
+                role, subtask, assigned_person, holiday_people, colocataires,
+            )
+            if effective == person:
+                pairs.append((role, subtask))
+    return pairs
+
+
 '''
 Get functions
 '''

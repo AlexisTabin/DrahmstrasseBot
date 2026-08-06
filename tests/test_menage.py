@@ -358,6 +358,55 @@ def test_get_effective_assignee_falls_back_to_assigned_when_everyone_away():
     assert result == "Timon"
 
 
+# --- get_effective_subtasks_for_person (drives /done) ---
+
+
+SAMPLE_ROLE_ASSIGNMENTS = {
+    "CUISINE": "Timon", "SDBs": "Maël", "SOLs": "Léa", "DÉCHETS": "Alexis",
+}
+
+
+def test_get_effective_subtasks_for_person_no_holiday_is_just_own_role():
+    pairs = menage.get_effective_subtasks_for_person(
+        "Timon", SAMPLE_ROLE_ASSIGNMENTS, set(), ALL_COLOCATAIRES,
+    )
+    assert set(pairs) == {
+        ("CUISINE", "frigo"),
+        ("CUISINE", "plan de travail"),
+        ("CUISINE", "rangement"),
+        ("CUISINE", "balcon"),
+    }
+
+
+@patch("src.menage.datetime")
+def test_get_effective_subtasks_for_person_gains_redistributed_subtask(mock_datetime):
+    """The real bug being fixed: a helper who inherited a subtask from a
+    holidaying roommate can now find it via /done, not just via /frigo."""
+    mock_datetime.datetime.now.return_value = datetime.datetime(2026, 4, 1)
+    holiday_people = {"Timon"}
+    redistribution = menage.get_holiday_redistribution(
+        "CUISINE", "Timon", ALL_COLOCATAIRES, holiday_people,
+    )
+    helper = redistribution["frigo"]
+
+    pairs = menage.get_effective_subtasks_for_person(
+        helper, SAMPLE_ROLE_ASSIGNMENTS, holiday_people, ALL_COLOCATAIRES,
+    )
+    assert ("CUISINE", "frigo") in pairs
+
+
+@patch("src.menage.datetime")
+def test_get_effective_subtasks_for_person_loses_redistributed_subtask(mock_datetime):
+    """Timon, on holiday, no longer sees the CUISINE subtasks that got
+    redistributed away — they aren't his to do this week."""
+    mock_datetime.datetime.now.return_value = datetime.datetime(2026, 4, 1)
+    holiday_people = {"Timon"}
+    pairs = menage.get_effective_subtasks_for_person(
+        "Timon", SAMPLE_ROLE_ASSIGNMENTS, holiday_people, ALL_COLOCATAIRES,
+    )
+    assert pairs == []
+
+
 # --- papier/carton reminders respect holiday redistribution ---
 
 

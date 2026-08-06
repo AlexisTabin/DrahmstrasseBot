@@ -53,54 +53,43 @@ class ColocAccessMiddleware(BaseMiddleware):
         pass
 
 
-def _build_done_keyboard(role, week_num):
-    """Build an InlineKeyboardMarkup for a role's done status."""
-    subtasks = menage.get_subtasks_for_role(role)
+def _build_done_keyboard(pairs, week_num):
+    """Build an InlineKeyboardMarkup for a person's effective subtasks this
+    week (across every role, not just their own \u2014 see
+    menage.get_effective_subtasks_for_person)."""
     keyboard = telebot.types.InlineKeyboardMarkup()
-
     completed = chores.get_week_status()
-    role_data = completed.get(role, {})
 
-    if subtasks is None:
-        is_done = "by" in role_data
+    for role, subtask in pairs:
+        completed_subtasks = completed.get(role, {}).get("subtasks", {})
+        is_done = subtask in completed_subtasks
         icon = "\u2705" if is_done else "\u2b1c"
         button = telebot.types.InlineKeyboardButton(
-            text=f"{icon} {role}",
-            callback_data=f"done:{week_num}:{role}",
+            text=f"{icon} {role} \u2014 {subtask}",
+            callback_data=f"done:{week_num}:{role}:{subtask}",
         )
         keyboard.add(button)
-    else:
-        completed_subtasks = role_data.get("subtasks", {})
-        for subtask in subtasks:
-            is_done = subtask in completed_subtasks
-            icon = "\u2705" if is_done else "\u2b1c"
-            button = telebot.types.InlineKeyboardButton(
-                text=f"{icon} {subtask}",
-                callback_data=f"done:{week_num}:{role}:{subtask}",
-            )
-            keyboard.add(button)
 
     return keyboard
 
 
-def _build_done_text(role, person):
-    """Build status text for a role's done message."""
-    subtasks = menage.get_subtasks_for_role(role)
-    completed = chores.get_week_status()
-    role_data = completed.get(role, {})
+def _build_done_text(pairs, person):
+    """Build status text for a person's effective subtasks this week."""
+    if not pairs:
+        return (
+            f"{person} : tu es en vacances, aucune t\u00e2che ne t'est "
+            "attribu\u00e9e cette semaine \U0001f334."
+        )
 
-    if subtasks is None:
-        is_done = "by" in role_data
-        if is_done:
-            return f"{person} \u2014 {role} : fait \u2705"
-        return f"{person} \u2014 {role} : clique pour marquer comme fait."
-    else:
-        completed_subtasks = role_data.get("subtasks", {})
-        done_count = sum(1 for s in subtasks if s in completed_subtasks)
-        total = len(subtasks)
-        if done_count == total:
-            return f"{person} \u2014 {role} : {done_count}/{total} sous-t\u00e2ches faites \u2705"
-        return f"{person} \u2014 {role} : {done_count}/{total} sous-t\u00e2ches faites."
+    completed = chores.get_week_status()
+    done_count = sum(
+        1 for role, subtask in pairs
+        if subtask in completed.get(role, {}).get("subtasks", {})
+    )
+    total = len(pairs)
+    if done_count == total:
+        return f"{person} : {done_count}/{total} sous-t\u00e2ches faites \u2705"
+    return f"{person} : {done_count}/{total} sous-t\u00e2ches faites."
 
 
 def _build_plants_keyboard(date_iso, watered):
@@ -312,18 +301,25 @@ class Drahmbot:
                 )
                 return
 
-            role = menage.get_role_for_person(colocataires, person)
-            if not role:
+            assignments = menage.get_role_assignments(colocataires)
+            if person not in assignments.values():
                 await self.bot.send_message(
                     message.chat.id,
                     f"{person}, tu n'as pas de rôle attribué cette semaine.",
                 )
                 return
 
+            holiday_people = chores.get_holiday_people()
+            pairs = menage.get_effective_subtasks_for_person(
+                person, assignments, holiday_people, colocataires,
+            )
             week_num = datetime.date.today().isocalendar()[1]
-            keyboard = _build_done_keyboard(role, week_num)
-            text = _build_done_text(role, person)
-            await self.bot.send_message(message.chat.id, text, reply_markup=keyboard)
+            text = _build_done_text(pairs, person)
+            if pairs:
+                keyboard = _build_done_keyboard(pairs, week_num)
+                await self.bot.send_message(message.chat.id, text, reply_markup=keyboard)
+            else:
+                await self.bot.send_message(message.chat.id, text)
 
         @self.bot.callback_query_handler(func=lambda call: call.data.startswith("done:"))
         async def handle_done_callback(call):
@@ -351,8 +347,18 @@ class Drahmbot:
                 )
                 return
 
-            assigned_role = menage.get_role_for_person(colocataires, person)
-            if assigned_role != role:
+            assignments = menage.get_role_assignments(colocataires)
+            if role not in assignments:
+                await self.bot.answer_callback_query(
+                    call.id, "Rôle inconnu.", show_alert=True,
+                )
+                return
+
+            holiday_people = chores.get_holiday_people()
+            effective_assignee = menage.get_effective_assignee(
+                role, subtask, assignments[role], holiday_people, colocataires,
+            )
+            if effective_assignee != person:
                 await self.bot.answer_callback_query(
                     call.id, "Ce n'est pas ta tâche !", show_alert=True,
                 )
@@ -371,8 +377,11 @@ class Drahmbot:
                 now_done = chores.toggle_role(role, person)
                 toast = f"{role} fait !" if now_done else f"{role} annulé."
 
-            keyboard = _build_done_keyboard(role, week_num)
-            text = _build_done_text(role, person)
+            pairs = menage.get_effective_subtasks_for_person(
+                person, assignments, holiday_people, colocataires,
+            )
+            keyboard = _build_done_keyboard(pairs, week_num)
+            text = _build_done_text(pairs, person)
             await self.bot.edit_message_text(
                 text,
                 call.message.chat.id,
