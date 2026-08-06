@@ -1564,6 +1564,29 @@ async def test_subtask_callback_malformed_data(mock_group, mock_token, mock_dt, 
 @patch("src.drahmbot.datetime")
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_subtask_callback_non_numeric_week(mock_group, mock_token, mock_dt, mock_toggle):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "subtask:abc:frigo"  # week number isn't an int
+    call.from_user.id = 891406979
+    call.id = "cbs8"
+
+    await handlers["_callback_query"](call)
+    mock_toggle.assert_not_called()
+    toast = bot.bot.answer_callback_query.call_args[0][1]
+    assert "invalides" in toast.lower()
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.toggle_subtask")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
 async def test_subtask_callback_unknown_command(mock_group, mock_token, mock_dt, mock_toggle):
     mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
 
@@ -1809,6 +1832,29 @@ async def test_cendrier_callback_malformed_data(mock_group, mock_token, mock_dt,
     call.data = "cendrier:15:extra"  # too many parts
     call.from_user.id = 891406979
     call.id = "cbc5"
+
+    await handlers["_callback_query"](call)
+    mock_toggle.assert_not_called()
+    toast = bot.bot.answer_callback_query.call_args[0][1]
+    assert "invalides" in toast.lower()
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.cendrier.toggle_week_state")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_cendrier_callback_non_numeric_week(mock_group, mock_token, mock_dt, mock_toggle):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "cendrier:abc"  # week number isn't an int
+    call.from_user.id = 891406979
+    call.id = "cbc6"
 
     await handlers["_callback_query"](call)
     mock_toggle.assert_not_called()

@@ -1,8 +1,17 @@
 import datetime
 
+import pytest
 from unittest.mock import MagicMock, patch
 
 from src import cendrier
+
+
+@pytest.fixture(autouse=True)
+def reset_table_cache():
+    """Reset the cached table between tests."""
+    cendrier._table = None
+    yield
+    cendrier._table = None
 
 
 @patch("src.cendrier._current_week_key", return_value="cendrier:2026-W14")
@@ -65,3 +74,19 @@ def test_current_week_key_format(mock_dt):
     key = cendrier._current_week_key()
     iso = datetime.date(2026, 4, 1).isocalendar()
     assert key == f"cendrier:{iso[0]}-W{iso[1]:02d}"
+
+
+@patch("src.cendrier.boto3")
+def test_get_table_creates_and_caches(mock_boto3):
+    table = cendrier._get_table()
+
+    mock_boto3.resource.assert_called_once_with("dynamodb")
+    mock_boto3.resource.return_value.Table.assert_called_once_with(
+        "drahmstrassebot-chores"
+    )
+    assert table is mock_boto3.resource.return_value.Table.return_value
+
+    # A second call must reuse the cached table, not recreate it.
+    table2 = cendrier._get_table()
+    assert table2 is table
+    assert mock_boto3.resource.call_count == 1
