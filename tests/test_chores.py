@@ -349,6 +349,68 @@ def test_who_did_it_empty():
     assert chores._who_did_it({}) == "?"
 
 
+# --- _helper_lines tests ---
+
+
+def test_helper_lines_empty_when_no_subtasks():
+    assert chores._helper_lines("Timon", {}) == []
+
+
+def test_helper_lines_empty_when_only_assigned_person_did_it():
+    role_data = {"subtasks": {"frigo": {"by": "Timon", "at": "..."}}}
+    assert chores._helper_lines("Timon", role_data) == []
+
+
+def test_helper_lines_flags_someone_else():
+    role_data = {"subtasks": {"frigo": {"by": "Léa", "at": "..."}}}
+    lines = chores._helper_lines("Timon", role_data)
+    assert len(lines) == 1
+    assert "frigo" in lines[0]
+    assert "Léa" in lines[0]
+    assert "Timon" in lines[0]
+
+
+def test_helper_lines_only_flags_the_non_assigned_subtasks():
+    role_data = {"subtasks": {
+        "frigo": {"by": "Léa", "at": "..."},
+        "rangement": {"by": "Timon", "at": "..."},
+    }}
+    lines = chores._helper_lines("Timon", role_data)
+    assert len(lines) == 1
+    assert "frigo" in lines[0]
+
+
+# --- get_sunday_recap with helper credit ---
+
+
+@patch("src.chores.get_week_status", return_value={
+    "CUISINE": {"subtasks": {
+        "frigo": {"by": "Léa", "at": "..."},
+        "plan de travail": {"by": "Timon", "at": "..."},
+        "rangement": {"by": "Timon", "at": "..."},
+    }},
+})
+def test_get_sunday_recap_credits_helper_on_complete_role(mock_status):
+    """CUISINE is fully done, but Léa (not the assigned Timon) did the fridge."""
+    result = chores.get_sunday_recap(SAMPLE_ASSIGNMENTS)
+    assert "CUISINE" in result
+    assert "frigo fait par Léa" in result
+    assert "pas Timon" in result
+
+
+@patch("src.chores.get_week_status", return_value={
+    "SDBs": {"subtasks": {
+        "petit WC": {"by": "Alexis", "at": "..."},
+    }},
+})
+def test_get_sunday_recap_credits_helper_on_incomplete_role(mock_status):
+    """SDBs isn't fully done, but someone other than Maël already helped."""
+    result = chores.get_sunday_recap(SAMPLE_ASSIGNMENTS)
+    assert "SDBs" in result
+    assert "pas fait" in result
+    assert "petit WC fait par Alexis" in result
+
+
 # --- reminder/recap with subtask format ---
 
 

@@ -20,6 +20,27 @@ ROLE_SUBTASKS = {
 }
 DECHETS_OPTIONAL_SUBTASK = "papier"
 
+# Maps a Telegram command name to the (role, subtask) it marks as done, so
+# anyone can call e.g. /frigo to record a subtask even if it isn't their role
+# this week. papier/carton are excluded: they already have dedicated
+# commands (/papier, /carton) with their own reminder text.
+SUBTASK_COMMANDS = {
+    "frigo": ("CUISINE", "frigo"),
+    "plandetravail": ("CUISINE", "plan de travail"),
+    "rangement": ("CUISINE", "rangement"),
+    "petitwc": ("SDBs", "petit WC"),
+    "grandwc": ("SDBs", "grand WC"),
+    "lavabo": ("SDBs", "lavabo"),
+    "baignoire": ("SDBs", "baignoire"),
+    "poubelles": ("SDBs", "Vider les petites poubelles"),
+    "aspirateur": ("SOLs", "aspirateur"),
+    "panosse": ("SOLs", "panosse"),
+    "poubelle": ("DÉCHETS", "poubelle"),
+    "compost": ("DÉCHETS", "compost"),
+    "verre": ("DÉCHETS", "verre"),
+    "plastique": ("DÉCHETS", "plastique"),
+}
+
 
 def get_subtasks_for_role(role):
     """Return the list of active sub-tasks for a role, or None for unknown roles."""

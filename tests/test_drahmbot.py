@@ -7,6 +7,7 @@ from src.drahmbot import (
     _build_done_keyboard, _build_done_text,
     _build_plants_keyboard, _build_plants_text,
     _build_dechets_keyboard, _build_dechets_text,
+    _build_subtask_keyboard, _build_subtask_text,
 )
 
 @pytest.mark.asyncio
@@ -1316,3 +1317,302 @@ async def test_dechets_callback_invalid_subtask(
     mock_toggle.assert_not_called()
     toast = bot.bot.answer_callback_query.call_args[0][1]
     assert "inconnue" in toast.lower()
+
+
+# --- Generic per-subtask commands (e.g. /frigo) ---
+
+
+def test_build_subtask_keyboard_unchecked():
+    kb = _build_subtask_keyboard(15, "frigo", False)
+    assert len(kb.keyboard) == 1
+    assert "⬜" in kb.keyboard[0][0].text
+    assert kb.keyboard[0][0].callback_data == "subtask:15:frigo"
+
+
+def test_build_subtask_keyboard_checked():
+    kb = _build_subtask_keyboard(15, "frigo", True)
+    assert "✅" in kb.keyboard[0][0].text
+
+
+def test_build_subtask_text_not_done():
+    text = _build_subtask_text("CUISINE", "frigo", "Timon", None)
+    assert "frigo" in text
+    assert "Timon" in text
+    assert "clique pour marquer" in text
+
+
+def test_build_subtask_text_done_by_assigned_person():
+    text = _build_subtask_text(
+        "CUISINE", "frigo", "Timon", {"by": "Timon", "at": "..."},
+    )
+    assert "fait par Timon" in text
+    assert "✅" in text
+
+
+def test_build_subtask_text_done_by_someone_else():
+    """The whole point: another roommate did the fridge for Timon."""
+    text = _build_subtask_text(
+        "CUISINE", "frigo", "Timon", {"by": "Léa", "at": "..."},
+    )
+    assert "fait par Léa" in text
+    assert "Timon" in text  # names whose task it was
+    assert "✅" in text
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_week_status", return_value={})
+@patch("src.drahmbot.menage.get_role_assignments", return_value={"CUISINE": "Timon"})
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_subtask_command_sends_keyboard(
+    mock_group, mock_token, mock_dt, mock_assignments, mock_status,
+):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    bot = Drahmbot()
+    bot.bot.send_message = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    message = MagicMock()
+    message.chat.id = 999
+
+    await handlers["frigo"](message)
+    call_args = bot.bot.send_message.call_args
+    assert call_args[0][0] == 999
+    assert "frigo" in call_args[0][1]
+    assert "Timon" in call_args[0][1]
+    assert "reply_markup" in call_args[1]
+    assert call_args[1]["reply_markup"].keyboard[0][0].callback_data == "subtask:15:frigo"
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_week_status", return_value={
+    "CUISINE": {"subtasks": {"frigo": {"by": "Léa", "at": "..."}}},
+})
+@patch("src.drahmbot.menage.get_role_assignments", return_value={"CUISINE": "Timon"})
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_subtask_command_reflects_existing_done_state(
+    mock_group, mock_token, mock_dt, mock_assignments, mock_status,
+):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    bot = Drahmbot()
+    bot.bot.send_message = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    message = MagicMock()
+    message.chat.id = 999
+
+    await handlers["frigo"](message)
+    text = bot.bot.send_message.call_args[0][1]
+    assert "Léa" in text
+    kb = bot.bot.send_message.call_args[1]["reply_markup"]
+    assert "✅" in kb.keyboard[0][0].text
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_week_status", return_value={})
+@patch("src.drahmbot.menage.get_subtasks_for_role",
+       return_value=["frigo", "plan de travail", "rangement"])
+@patch("src.drahmbot.chores.toggle_subtask", return_value=True)
+@patch("src.drahmbot.menage.get_role_assignments", return_value={"CUISINE": "Timon"})
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_subtask_callback_anyone_can_mark(
+    mock_group, mock_token, mock_dt, mock_assignments, mock_toggle, mock_subtasks, mock_status,
+):
+    """Léa can mark /frigo done even though the CUISINE role is Timon's this week."""
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    import src.drahmbot as drahmbot_module
+    original_map = drahmbot_module.TELEGRAM_USER_MAP.copy()
+    drahmbot_module.TELEGRAM_USER_MAP[42] = "Léa"
+
+    try:
+        bot = Drahmbot()
+        bot.bot.edit_message_text = AsyncMock()
+        bot.bot.answer_callback_query = AsyncMock()
+        handlers = _capture_handlers(bot)
+
+        call = MagicMock()
+        call.data = "subtask:15:frigo"
+        call.from_user.id = 42
+        call.id = "cbs1"
+        call.message.chat.id = 999
+        call.message.message_id = 100
+
+        await handlers["_callback_query"](call)
+        mock_toggle.assert_called_once_with("CUISINE", "frigo", "Léa")
+        bot.bot.edit_message_text.assert_called_once()
+        toast = bot.bot.answer_callback_query.call_args[0][1]
+        assert "frigo fait" in toast
+    finally:
+        drahmbot_module.TELEGRAM_USER_MAP.clear()
+        drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_week_status", return_value={
+    "CUISINE": {"subtasks": {"frigo": {"by": "Léa", "at": "..."}}},
+})
+@patch("src.drahmbot.menage.get_subtasks_for_role",
+       return_value=["frigo", "plan de travail", "rangement"])
+@patch("src.drahmbot.chores.toggle_subtask")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_subtask_callback_non_doer_cannot_undo(
+    mock_group, mock_token, mock_dt, mock_toggle, mock_subtasks, mock_status,
+):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    import src.drahmbot as drahmbot_module
+    original_map = drahmbot_module.TELEGRAM_USER_MAP.copy()
+    drahmbot_module.TELEGRAM_USER_MAP[42] = "Timon"  # not Léa, who did it
+
+    try:
+        bot = Drahmbot()
+        bot.bot.answer_callback_query = AsyncMock()
+        handlers = _capture_handlers(bot)
+
+        call = MagicMock()
+        call.data = "subtask:15:frigo"
+        call.from_user.id = 42
+        call.id = "cbs2"
+
+        await handlers["_callback_query"](call)
+        mock_toggle.assert_not_called()
+        toast = bot.bot.answer_callback_query.call_args[0][1]
+        assert "Léa" in toast
+    finally:
+        drahmbot_module.TELEGRAM_USER_MAP.clear()
+        drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.toggle_subtask")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_subtask_callback_stale_week(mock_group, mock_token, mock_dt, mock_toggle):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 16, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "subtask:15:frigo"
+    call.from_user.id = 891406979
+    call.id = "cbs3"
+
+    await handlers["_callback_query"](call)
+    mock_toggle.assert_not_called()
+    toast = bot.bot.answer_callback_query.call_args[0][1]
+    assert "semaine" in toast.lower()
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.toggle_subtask")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_subtask_callback_unknown_user(mock_group, mock_token, mock_dt, mock_toggle):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "subtask:15:frigo"
+    call.from_user.id = 99999  # not in TELEGRAM_USER_MAP
+    call.id = "cbs4"
+
+    await handlers["_callback_query"](call)
+    mock_toggle.assert_not_called()
+    toast = bot.bot.answer_callback_query.call_args[0][1]
+    assert "reconnu" in toast.lower()
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.toggle_subtask")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_subtask_callback_malformed_data(mock_group, mock_token, mock_dt, mock_toggle):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "subtask:15"  # missing command part
+    call.from_user.id = 891406979
+    call.id = "cbs5"
+
+    await handlers["_callback_query"](call)
+    mock_toggle.assert_not_called()
+    toast = bot.bot.answer_callback_query.call_args[0][1]
+    assert "invalides" in toast.lower()
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.toggle_subtask")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_subtask_callback_unknown_command(mock_group, mock_token, mock_dt, mock_toggle):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "subtask:15:nope"  # not a real subtask command
+    call.from_user.id = 891406979
+    call.id = "cbs6"
+
+    await handlers["_callback_query"](call)
+    mock_toggle.assert_not_called()
+    toast = bot.bot.answer_callback_query.call_args[0][1]
+    assert "inconnue" in toast.lower()
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["plan de travail", "rangement"])
+@patch("src.drahmbot.chores.toggle_subtask")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_subtask_callback_invalid_subtask_for_role(
+    mock_group, mock_token, mock_dt, mock_toggle, mock_subtasks,
+):
+    """Defends against a stale config where the subtask was removed from the role."""
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "subtask:15:frigo"  # frigo no longer a valid CUISINE subtask
+    call.from_user.id = 891406979
+    call.id = "cbs7"
+
+    await handlers["_callback_query"](call)
+    mock_toggle.assert_not_called()
+    toast = bot.bot.answer_callback_query.call_args[0][1]
+    assert "inconnue" in toast.lower()
+
+
+def test_all_subtask_commands_are_registered():
+    """Every entry in menage.SUBTASK_COMMANDS gets a message handler."""
+    from src import menage
+    bot = Drahmbot()
+    handlers = _capture_handlers(bot)
+    for cmd in menage.SUBTASK_COMMANDS:
+        assert cmd in handlers, f"/{cmd} has no registered handler"
+

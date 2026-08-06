@@ -235,6 +235,19 @@ def get_stats() -> str:
     return "\n".join(lines)
 
 
+def _helper_lines(person: str, role_data: dict) -> list:
+    """Return recap sub-lines for subtasks completed by someone other than the
+    assigned person, so help from another roommate is visible in the recap."""
+    subtasks = role_data.get("subtasks")
+    if not subtasks:
+        return []
+    return [
+        f"      \U0001f91d {subtask} fait par {sub_data['by']} (pas {person})"
+        for subtask, sub_data in subtasks.items()
+        if sub_data.get("by") and sub_data["by"] != person
+    ]
+
+
 def get_sunday_recap(role_assignments: dict) -> str:
     """Build a Sunday recap of the week's chore status.
 
@@ -244,9 +257,11 @@ def get_sunday_recap(role_assignments: dict) -> str:
     completed = get_week_status()
     lines = [phrases.pick(phrases.SUNDAY_RECAP_HEADER)]
     for role, person in role_assignments.items():
+        role_data = completed.get(role, {})
         if is_role_complete(role, completed):
-            who = _who_did_it(completed[role])
+            who = _who_did_it(role_data)
             lines.append(f"  \u2705 {role} ({person}) — fait par {who}")
         else:
             lines.append(f"  \u274c {role} ({person}) — pas fait")
+        lines.extend(_helper_lines(person, role_data))
     return "\n".join(lines)
