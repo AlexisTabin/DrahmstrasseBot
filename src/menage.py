@@ -13,7 +13,7 @@ ROLES = ["CUISINE", "SDBs", "SOLs", "DÉCHETS"]
 CHAOS_KEEP_ROLES_PROBABILITY = 0.05
 
 ROLE_SUBTASKS = {
-    "CUISINE": ["frigo", "plan de travail", "rangement"],
+    "CUISINE": ["frigo", "plan de travail", "rangement", "balcon"],
     "SDBs": ["petit WC", "grand WC", "lavabo", "baignoire", "Vider les petites poubelles"],
     "SOLs": ["aspirateur", "panosse"],
     "DÉCHETS": ["poubelle", "carton", "compost", "verre", "plastique"],
@@ -28,6 +28,7 @@ SUBTASK_COMMANDS = {
     "frigo": ("CUISINE", "frigo"),
     "plandetravail": ("CUISINE", "plan de travail"),
     "rangement": ("CUISINE", "rangement"),
+    "balcon": ("CUISINE", "balcon"),
     "petitwc": ("SDBs", "petit WC"),
     "grandwc": ("SDBs", "grand WC"),
     "lavabo": ("SDBs", "lavabo"),

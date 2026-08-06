@@ -8,6 +8,7 @@ from src.drahmbot import (
     _build_plants_keyboard, _build_plants_text,
     _build_dechets_keyboard, _build_dechets_text,
     _build_subtask_keyboard, _build_subtask_text,
+    _build_cendrier_keyboard, _build_cendrier_text,
 )
 
 @pytest.mark.asyncio
@@ -1616,3 +1617,200 @@ def test_all_subtask_commands_are_registered():
     for cmd in menage.SUBTASK_COMMANDS:
         assert cmd in handlers, f"/{cmd} has no registered handler"
 
+# --- /cendrier: standalone, non-rotating task ---
+
+
+def test_build_cendrier_keyboard_unchecked():
+    kb = _build_cendrier_keyboard(15, False)
+    assert len(kb.keyboard) == 1
+    assert "⬜" in kb.keyboard[0][0].text
+    assert kb.keyboard[0][0].callback_data == "cendrier:15"
+
+
+def test_build_cendrier_keyboard_checked():
+    kb = _build_cendrier_keyboard(15, True)
+    assert "✅" in kb.keyboard[0][0].text
+
+
+def test_build_cendrier_text_not_done():
+    text = _build_cendrier_text({})
+    assert "Maël" in text
+    assert "clique pour marquer" in text
+
+
+def test_build_cendrier_text_done_by_mael():
+    text = _build_cendrier_text({"by": "Maël", "at": "..."})
+    assert "vidé par Maël" in text
+    assert "✅" in text
+
+
+def test_build_cendrier_text_done_by_someone_else():
+    """Anyone can empty it for him and get credit."""
+    text = _build_cendrier_text({"by": "Timon", "at": "..."})
+    assert "vidé par Timon" in text
+    assert "Maël" in text
+    assert "✅" in text
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.cendrier.get_week_state", return_value={})
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_cendrier_command_sends_keyboard(
+    mock_group, mock_token, mock_dt, mock_state,
+):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    bot = Drahmbot()
+    bot.bot.send_message = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    message = MagicMock()
+    message.chat.id = 999
+
+    await handlers["cendrier"](message)
+    call_args = bot.bot.send_message.call_args
+    assert call_args[0][0] == 999
+    assert "Maël" in call_args[0][1]
+    assert call_args[1]["reply_markup"].keyboard[0][0].callback_data == "cendrier:15"
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.cendrier.toggle_week_state",
+       return_value={"by": "Léa", "at": "..."})
+@patch("src.drahmbot.cendrier.get_week_state", return_value={})
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_cendrier_callback_anyone_can_mark(
+    mock_group, mock_token, mock_dt, mock_state, mock_toggle,
+):
+    """Léa can mark /cendrier done even though it's Maël's task."""
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    import src.drahmbot as drahmbot_module
+    original_map = drahmbot_module.TELEGRAM_USER_MAP.copy()
+    drahmbot_module.TELEGRAM_USER_MAP[42] = "Léa"
+
+    try:
+        bot = Drahmbot()
+        bot.bot.edit_message_text = AsyncMock()
+        bot.bot.answer_callback_query = AsyncMock()
+        handlers = _capture_handlers(bot)
+
+        call = MagicMock()
+        call.data = "cendrier:15"
+        call.from_user.id = 42
+        call.id = "cbc1"
+        call.message.chat.id = 999
+        call.message.message_id = 100
+
+        await handlers["_callback_query"](call)
+        mock_toggle.assert_called_once_with("Léa")
+        bot.bot.edit_message_text.assert_called_once()
+        toast = bot.bot.answer_callback_query.call_args[0][1]
+        assert "vidé" in toast.lower()
+    finally:
+        drahmbot_module.TELEGRAM_USER_MAP.clear()
+        drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.cendrier.toggle_week_state")
+@patch("src.drahmbot.cendrier.get_week_state", return_value={"by": "Maël", "at": "..."})
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_cendrier_callback_non_doer_cannot_undo(
+    mock_group, mock_token, mock_dt, mock_state, mock_toggle,
+):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    import src.drahmbot as drahmbot_module
+    original_map = drahmbot_module.TELEGRAM_USER_MAP.copy()
+    drahmbot_module.TELEGRAM_USER_MAP[42] = "Timon"  # not Maël, who did it
+
+    try:
+        bot = Drahmbot()
+        bot.bot.answer_callback_query = AsyncMock()
+        handlers = _capture_handlers(bot)
+
+        call = MagicMock()
+        call.data = "cendrier:15"
+        call.from_user.id = 42
+        call.id = "cbc2"
+
+        await handlers["_callback_query"](call)
+        mock_toggle.assert_not_called()
+        toast = bot.bot.answer_callback_query.call_args[0][1]
+        assert "Maël" in toast
+    finally:
+        drahmbot_module.TELEGRAM_USER_MAP.clear()
+        drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.cendrier.toggle_week_state")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_cendrier_callback_stale_week(mock_group, mock_token, mock_dt, mock_toggle):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 16, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "cendrier:15"
+    call.from_user.id = 891406979
+    call.id = "cbc3"
+
+    await handlers["_callback_query"](call)
+    mock_toggle.assert_not_called()
+    toast = bot.bot.answer_callback_query.call_args[0][1]
+    assert "semaine" in toast.lower()
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.cendrier.toggle_week_state")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_cendrier_callback_unknown_user(mock_group, mock_token, mock_dt, mock_toggle):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "cendrier:15"
+    call.from_user.id = 99999  # not in TELEGRAM_USER_MAP
+    call.id = "cbc4"
+
+    await handlers["_callback_query"](call)
+    mock_toggle.assert_not_called()
+    toast = bot.bot.answer_callback_query.call_args[0][1]
+    assert "reconnu" in toast.lower()
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.cendrier.toggle_week_state")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_cendrier_callback_malformed_data(mock_group, mock_token, mock_dt, mock_toggle):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "cendrier:15:extra"  # too many parts
+    call.from_user.id = 891406979
+    call.id = "cbc5"
+
+    await handlers["_callback_query"](call)
+    mock_toggle.assert_not_called()
+    toast = bot.bot.answer_callback_query.call_args[0][1]
+    assert "invalides" in toast.lower()

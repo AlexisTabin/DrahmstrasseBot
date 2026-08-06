@@ -134,7 +134,7 @@ def test_role_subtasks_keys_match_roles():
 
 def test_cuisine_subtasks():
     from src.menage import ROLE_SUBTASKS
-    assert ROLE_SUBTASKS["CUISINE"] == ["frigo", "plan de travail", "rangement"]
+    assert ROLE_SUBTASKS["CUISINE"] == ["frigo", "plan de travail", "rangement", "balcon"]
 
 
 def test_sdbs_subtasks():
@@ -176,7 +176,7 @@ def test_get_subtasks_dechets_odd_week_excludes_papier(mock_even):
 def test_get_subtasks_cuisine():
     from src.menage import get_subtasks_for_role
     result = get_subtasks_for_role("CUISINE")
-    assert result == ["frigo", "plan de travail", "rangement"]
+    assert result == ["frigo", "plan de travail", "rangement", "balcon"]
 
 
 def test_get_subtasks_sdbs():
