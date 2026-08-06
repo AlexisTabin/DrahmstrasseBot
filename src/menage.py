@@ -91,6 +91,54 @@ def get_role_for_person(colocataires: list, person: str):
 
 
 '''
+Holiday redistribution
+'''
+
+
+def get_holiday_redistribution(role: str, absent_person: str, colocataires: list) -> dict:
+    """Return {subtask: assignee} for `role`'s subtasks with `absent_person` away.
+
+    Deterministic per (ISO week, role, absent_person) — like
+    _should_keep_same_roles — so /vacances, /recap, and /reminder all agree
+    without needing to persist the distribution itself; only the fact that
+    `absent_person` is on holiday needs to be stored. Subtasks are shuffled
+    then dealt round-robin across the remaining colocataires, so counts stay
+    as equal as possible while which person gets which subtask is random.
+
+    `others` is sorted rather than left in `colocataires` order: different
+    callers derive their colocataires list differently (e.g. chores.py uses
+    role_assignments.values(), drahmbot.py uses its own fixed list) — same
+    people, potentially different order. Sorting makes the result depend
+    only on the *set* of remaining people, so every caller agrees.
+    """
+    subtasks = get_subtasks_for_role(role)
+    if not subtasks:
+        return {}
+    others = sorted(p for p in colocataires if p != absent_person)
+    if not others:
+        return {}
+    iso = datetime.datetime.now().isocalendar()
+    rng = random.Random(f"drahmbot-vacances-{iso[0]}-{iso[1]}-{role}-{absent_person}")
+    shuffled = list(subtasks)
+    rng.shuffle(shuffled)
+    return {subtask: others[i % len(others)] for i, subtask in enumerate(shuffled)}
+
+
+def get_effective_assignee(
+    role: str, subtask: str, assigned_person: str, holiday_people: set, colocataires: list,
+) -> str:
+    """Return who is actually expected to do `subtask` of `role` this week.
+
+    Falls back to `assigned_person` unchanged unless they're on holiday, in
+    which case the deterministic redistribution takes over.
+    """
+    if assigned_person not in holiday_people:
+        return assigned_person
+    redistribution = get_holiday_redistribution(role, assigned_person, colocataires)
+    return redistribution.get(subtask, assigned_person)
+
+
+'''
 Get functions
 '''
 
@@ -121,19 +169,25 @@ def getRoles(colocataires: list):
     return answer
 
 
-def get_papier_reminder(colocataires: list) -> str:
-    """Papier reminder naming the responsible DÉCHETS person."""
+def get_papier_reminder(colocataires: list, holiday_people: set = None) -> str:
+    """Papier reminder naming the responsible DÉCHETS person (or their
+    holiday substitute, if the assigned person is away this week)."""
     assignments = get_role_assignments(colocataires)
-    name = assignments["DÉCHETS"]
+    name = get_effective_assignee(
+        "DÉCHETS", "papier", assignments["DÉCHETS"], holiday_people or set(), colocataires,
+    )
     answer = f"{name} doit sortir le papier lundi"
     logger.info("Papier reminder: %s", answer)
     return answer
 
 
-def get_carton_reminder(colocataires: list) -> str:
-    """Carton reminder naming the responsible DÉCHETS person."""
+def get_carton_reminder(colocataires: list, holiday_people: set = None) -> str:
+    """Carton reminder naming the responsible DÉCHETS person (or their
+    holiday substitute, if the assigned person is away this week)."""
     assignments = get_role_assignments(colocataires)
-    name = assignments["DÉCHETS"]
+    name = get_effective_assignee(
+        "DÉCHETS", "carton", assignments["DÉCHETS"], holiday_people or set(), colocataires,
+    )
     answer = f"{name} doit sortir le carton mercredi"
     logger.info("Carton reminder: %s", answer)
     return answer

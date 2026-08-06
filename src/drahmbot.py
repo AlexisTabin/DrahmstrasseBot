@@ -234,7 +234,10 @@ class Drahmbot:
             if not utils.is_even_week():
                 logger.info("Odd week — skipping papier reminder")
                 return
-            base = menage.get_papier_reminder(colocataires=colocataires)
+            holiday_people = chores.get_holiday_people()
+            base = menage.get_papier_reminder(
+                colocataires=colocataires, holiday_people=holiday_people,
+            )
             week_num = datetime.date.today().isocalendar()[1]
             role_data = chores.get_week_status().get("DÉCHETS", {})
             text = _build_dechets_text(base, "papier", role_data)
@@ -245,7 +248,10 @@ class Drahmbot:
         @self.bot.message_handler(commands=['carton'])
         async def send_carton(message):
             logger.info("Command /carton received from %s", message.chat.id)
-            base = menage.get_carton_reminder(colocataires=colocataires)
+            holiday_people = chores.get_holiday_people()
+            base = menage.get_carton_reminder(
+                colocataires=colocataires, holiday_people=holiday_people,
+            )
             week_num = datetime.date.today().isocalendar()[1]
             role_data = chores.get_week_status().get("DÉCHETS", {})
             text = _build_dechets_text(base, "carton", role_data)
@@ -518,10 +524,15 @@ class Drahmbot:
             now_done = chores.toggle_subtask("DÉCHETS", subtask, person)
             toast = f"{subtask} fait !" if now_done else f"{subtask} annulé."
 
+            holiday_people = chores.get_holiday_people()
             if subtask == "papier":
-                base = menage.get_papier_reminder(colocataires=colocataires)
+                base = menage.get_papier_reminder(
+                    colocataires=colocataires, holiday_people=holiday_people,
+                )
             else:
-                base = menage.get_carton_reminder(colocataires=colocataires)
+                base = menage.get_carton_reminder(
+                    colocataires=colocataires, holiday_people=holiday_people,
+                )
             new_role_data = chores.get_week_status().get("DÉCHETS", {})
             text = _build_dechets_text(base, subtask, new_role_data)
             keyboard = _build_dechets_keyboard(week_num, subtask, new_role_data)
@@ -538,7 +549,10 @@ class Drahmbot:
                 logger.info("Command /%s received from %s", cmd, message.chat.id)
                 week_num = datetime.date.today().isocalendar()[1]
                 assignments = menage.get_role_assignments(colocataires)
-                assigned_person = assignments.get(role, "?")
+                holiday_people = chores.get_holiday_people()
+                assigned_person = menage.get_effective_assignee(
+                    role, subtask, assignments.get(role, "?"), holiday_people, colocataires,
+                )
                 role_data = chores.get_week_status().get(role, {})
                 sub_data = role_data.get("subtasks", {}).get(subtask)
                 text = _build_subtask_text(role, subtask, assigned_person, sub_data)
@@ -610,7 +624,10 @@ class Drahmbot:
             toast = f"{subtask} fait !" if now_done else f"{subtask} annulé."
 
             assignments = menage.get_role_assignments(colocataires)
-            assigned_person = assignments.get(role, "?")
+            holiday_people = chores.get_holiday_people()
+            assigned_person = menage.get_effective_assignee(
+                role, subtask, assignments.get(role, "?"), holiday_people, colocataires,
+            )
             new_role_data = chores.get_week_status().get(role, {})
             new_sub_data = new_role_data.get("subtasks", {}).get(subtask)
             text = _build_subtask_text(role, subtask, assigned_person, new_sub_data)
@@ -682,6 +699,41 @@ class Drahmbot:
                 reply_markup=keyboard,
             )
             await self.bot.answer_callback_query(call.id, toast)
+
+        @self.bot.message_handler(commands=['vacances'])
+        async def send_vacances(message):
+            logger.info("Command /vacances received from %s", message.chat.id)
+            user_id = message.from_user.id if message.from_user else None
+            person = TELEGRAM_USER_MAP.get(user_id)
+            if not person:
+                await self.bot.send_message(
+                    message.chat.id,
+                    "Je ne sais pas qui tu es ! Envoie /myid d'abord, "
+                    "puis demande à un admin d'ajouter ton ID.",
+                )
+                return
+
+            role = menage.get_role_for_person(colocataires, person)
+            if not role:
+                await self.bot.send_message(
+                    message.chat.id,
+                    f"{person}, tu n'as pas de rôle attribué cette semaine.",
+                )
+                return
+
+            if chores.is_on_holiday(person):
+                chores.cancel_holiday(person)
+                text = phrases.pick(phrases.VACANCES_CANCEL).format(person=person, role=role)
+                await self.bot.send_message(message.chat.id, text)
+                return
+
+            chores.set_on_holiday(person)
+            redistribution = menage.get_holiday_redistribution(role, person, colocataires)
+            header = phrases.pick(phrases.VACANCES_ANNOUNCE_HEADER).format(person=person, role=role)
+            lines = [header]
+            for subtask, assignee in redistribution.items():
+                lines.append(f"  {subtask} -> {assignee}")
+            await self.bot.send_message(message.chat.id, "\n".join(lines))
 
         @self.bot.message_handler(commands=['stats'])
         async def send_stats(message):

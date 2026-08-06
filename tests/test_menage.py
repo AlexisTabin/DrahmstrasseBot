@@ -238,3 +238,122 @@ def test_subtask_commands_are_valid_telegram_command_names():
     from src.menage import SUBTASK_COMMANDS
     for cmd in SUBTASK_COMMANDS:
         assert re.fullmatch(r"[a-z0-9_]{1,32}", cmd), f"invalid command name: {cmd}"
+
+
+# --- Holiday redistribution ---
+
+ALL_COLOCATAIRES = ["Timon", "Maël", "Léa", "Alexis"]
+
+
+@patch("src.menage.datetime")
+def test_get_holiday_redistribution_excludes_absent_person(mock_datetime):
+    mock_datetime.datetime.now.return_value = datetime.datetime(2026, 4, 1)
+    result = menage.get_holiday_redistribution("CUISINE", "Timon", ALL_COLOCATAIRES)
+    assert "Timon" not in result.values()
+    assert set(result.keys()) == set(menage.get_subtasks_for_role("CUISINE"))
+
+
+@patch("src.menage.datetime")
+def test_get_holiday_redistribution_deterministic_same_week(mock_datetime):
+    mock_datetime.datetime.now.return_value = datetime.datetime(2026, 4, 1)
+    a = menage.get_holiday_redistribution("CUISINE", "Timon", ALL_COLOCATAIRES)
+    b = menage.get_holiday_redistribution("CUISINE", "Timon", ALL_COLOCATAIRES)
+    assert a == b
+
+
+@patch("src.menage.datetime")
+def test_get_holiday_redistribution_independent_of_input_order(mock_datetime):
+    """chores.py derives its colocataires list from role_assignments.values()
+    (ordered by role), while drahmbot.py uses its own fixed list — same
+    people, different order. The result must agree regardless, or /recap and
+    /vacances would disagree about who's actually doing what."""
+    mock_datetime.datetime.now.return_value = datetime.datetime(2026, 4, 1)
+    reordered = list(reversed(ALL_COLOCATAIRES))
+    a = menage.get_holiday_redistribution("CUISINE", "Timon", ALL_COLOCATAIRES)
+    b = menage.get_holiday_redistribution("CUISINE", "Timon", reordered)
+    assert a == b
+
+
+@patch("src.menage.datetime")
+def test_get_holiday_redistribution_is_balanced(mock_datetime):
+    """5 SDBs subtasks over 3 remaining people should split as evenly as possible."""
+    mock_datetime.datetime.now.return_value = datetime.datetime(2026, 4, 1)
+    result = menage.get_holiday_redistribution("SDBs", "Maël", ALL_COLOCATAIRES)
+    counts = {}
+    for assignee in result.values():
+        counts[assignee] = counts.get(assignee, 0) + 1
+    assert set(counts.keys()) == {"Timon", "Léa", "Alexis"}
+    assert max(counts.values()) - min(counts.values()) <= 1
+
+
+def test_get_holiday_redistribution_unknown_role_returns_empty():
+    assert menage.get_holiday_redistribution("UNKNOWN", "Timon", ALL_COLOCATAIRES) == {}
+
+
+def test_get_holiday_redistribution_no_one_else_returns_empty():
+    assert menage.get_holiday_redistribution("CUISINE", "Timon", ["Timon"]) == {}
+
+
+# --- get_effective_assignee ---
+
+
+def test_get_effective_assignee_returns_assigned_when_not_on_holiday():
+    result = menage.get_effective_assignee(
+        "CUISINE", "frigo", "Timon", set(), ALL_COLOCATAIRES,
+    )
+    assert result == "Timon"
+
+
+@patch("src.menage.datetime")
+def test_get_effective_assignee_returns_redistributed_when_on_holiday(mock_datetime):
+    mock_datetime.datetime.now.return_value = datetime.datetime(2026, 4, 1)
+    redistribution = menage.get_holiday_redistribution("CUISINE", "Timon", ALL_COLOCATAIRES)
+    result = menage.get_effective_assignee(
+        "CUISINE", "frigo", "Timon", {"Timon"}, ALL_COLOCATAIRES,
+    )
+    assert result == redistribution["frigo"]
+    assert result != "Timon"
+
+
+def test_get_effective_assignee_ignores_unrelated_holiday_people():
+    """Someone else being on holiday shouldn't affect this role's assignee."""
+    result = menage.get_effective_assignee(
+        "CUISINE", "frigo", "Timon", {"Léa"}, ALL_COLOCATAIRES,
+    )
+    assert result == "Timon"
+
+
+# --- papier/carton reminders respect holiday redistribution ---
+
+
+@patch("src.menage.get_holiday_redistribution", return_value={"papier": "Alice"})
+@patch("src.menage.get_role_assignments", return_value={
+    "CUISINE": "Alice", "SDBs": "Bob", "SOLs": "Charlie", "DÉCHETS": "Diana"
+})
+def test_get_papier_reminder_respects_holiday(mock_assignments, mock_redistribution):
+    result = menage.get_papier_reminder(
+        ["Alice", "Bob", "Charlie", "Diana"], holiday_people={"Diana"},
+    )
+    assert "Alice" in result
+    assert "Diana" not in result
+
+
+@patch("src.menage.get_holiday_redistribution", return_value={"carton": "Bob"})
+@patch("src.menage.get_role_assignments", return_value={
+    "CUISINE": "Alice", "SDBs": "Bob", "SOLs": "Charlie", "DÉCHETS": "Diana"
+})
+def test_get_carton_reminder_respects_holiday(mock_assignments, mock_redistribution):
+    result = menage.get_carton_reminder(
+        ["Alice", "Bob", "Charlie", "Diana"], holiday_people={"Diana"},
+    )
+    assert "Bob" in result
+    assert "Diana" not in result
+
+
+@patch("src.menage.get_role_assignments", return_value={
+    "CUISINE": "Alice", "SDBs": "Bob", "SOLs": "Charlie", "DÉCHETS": "Diana"
+})
+def test_get_papier_reminder_no_holiday_people_arg_keeps_old_behavior(mock_assignments):
+    """Callers that don't pass holiday_people (e.g. old call sites) still work."""
+    result = menage.get_papier_reminder(["Alice", "Bob", "Charlie", "Diana"])
+    assert "Diana" in result

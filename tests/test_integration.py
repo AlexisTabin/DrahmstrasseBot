@@ -170,3 +170,44 @@ async def test_frigo_write_path_round_trip(bot):
     recap_text = bot.bot.send_message.call_args[0][1]
     assert f"frigo fait par {helper}" in recap_text
     assert f"(pas {cuisine_person})" in recap_text
+
+
+@pytest.mark.asyncio
+async def test_vacances_round_trip(bot):
+    """/vacances redistributes the holidaying person's subtasks, /recap
+    reflects the holiday label without wrongly flagging the redistributed
+    person as a 'helper', and running /vacances again cancels it."""
+    assignments = menage.get_role_assignments(colocataires)
+    person = assignments["SOLs"]
+    person_id = next(uid for uid, name in TELEGRAM_USER_MAP.items() if name == person)
+
+    # 1. Declare holiday — announces the redistribution.
+    await main.handler(_webhook_event("/vacances", person_id), {})
+    announce_text = bot.bot.send_message.call_args[0][1]
+    assert person in announce_text
+    assert "SOLs" in announce_text
+    assert chores.is_on_holiday(person)
+
+    redistribution = menage.get_holiday_redistribution("SOLs", person, colocataires)
+    aspirateur_assignee = redistribution["aspirateur"]
+    assignee_id = next(
+        uid for uid, name in TELEGRAM_USER_MAP.items() if name == aspirateur_assignee
+    )
+    week_num = datetime.date.today().isocalendar()[1]
+
+    # 2. The redistributed person does their reassigned subtask.
+    await main.handler(_webhook_event("/aspirateur", assignee_id), {})
+    await main.handler(_callback_event(f"subtask:{week_num}:aspirateur", assignee_id), {})
+
+    # 3. /recap shows the holiday label, and does NOT flag the redistributed
+    # person as merely "helping" — they're the expected assignee now.
+    await main.handler(_eventbridge_event("/recap@DrahmstrasseBot"), {})
+    recap_text = bot.bot.send_message.call_args[0][1]
+    assert f"{person}, en vacances" in recap_text
+    assert f"aspirateur fait par {aspirateur_assignee}" not in recap_text
+
+    # 4. Calling /vacances again cancels the holiday.
+    await main.handler(_webhook_event("/vacances", person_id), {})
+    cancel_text = bot.bot.send_message.call_args[0][1]
+    assert person in cancel_text
+    assert not chores.is_on_holiday(person)

@@ -127,6 +127,20 @@ ARROSAGE_HEADER = [
 
 ARROSAGE_LABEL_WATERED = "J'ai arrosé !"
 
+VACANCES_ANNOUNCE_HEADER = [
+    "🌴 {person} part en vacances cette semaine ! Voici comment {role} est redistribué :",
+    "🏖️ {person} lève le pied cette semaine. Redistribution de {role} :",
+    "✈️ {person} s'envole en vacances ! Qui récupère quoi sur {role} :",
+    "🌞 {person} est en vacances cette semaine, la coloc se répartit {role} :",
+    "🧳 {person} fait sa valise ! Voici la nouvelle répartition de {role} :",
+]
+
+VACANCES_CANCEL = [
+    "{person} n'est plus en vacances : {role} lui revient entièrement.",
+    "Retour de vacances pour {person} : {role} redevient sa responsabilité complète.",
+    "{person} est de retour ! {role} lui revient en entier.",
+]
+
 
 def pick(phrases):
     """Return a random phrase from the given list."""
