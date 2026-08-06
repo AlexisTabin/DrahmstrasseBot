@@ -13,6 +13,7 @@ import src.chores as chores
 import src.phrases as phrases
 import src.plants as plants
 import src.weather as weather
+import src.cendrier as cendrier
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -148,6 +149,48 @@ def _build_dechets_text(base_text, subtask, role_data):
         return base_text
     by = sub_data.get("by", "?")
     return f"{base_text}\n\n✅ {by} a sorti le {subtask}."
+
+
+def _build_subtask_keyboard(week_num, cmd, is_done):
+    """Single toggleable button for a generic per-subtask command (e.g. /frigo)."""
+    icon = "✅" if is_done else "⬜"
+    keyboard = telebot.types.InlineKeyboardMarkup()
+    keyboard.add(telebot.types.InlineKeyboardButton(
+        text=f"{icon} marquer comme fait",
+        callback_data=f"subtask:{week_num}:{cmd}",
+    ))
+    return keyboard
+
+
+def _build_subtask_text(role, subtask, assigned_person, sub_data):
+    """Status text for a generic per-subtask command, crediting whoever did it."""
+    if not sub_data:
+        return f"{subtask} ({role}, tâche de {assigned_person}) : clique pour marquer comme fait."
+    by = sub_data.get("by", "?")
+    if by == assigned_person:
+        return f"{subtask} ({role}) : fait par {by} ✅"
+    return f"{subtask} ({role}, tâche de {assigned_person}) : fait par {by} \U0001f91d ✅"
+
+
+def _build_cendrier_keyboard(week_num, is_done):
+    """Single toggleable button for the standalone /cendrier command."""
+    icon = "✅" if is_done else "⬜"
+    keyboard = telebot.types.InlineKeyboardMarkup()
+    keyboard.add(telebot.types.InlineKeyboardButton(
+        text=f"{icon} J'ai vidé le cendrier !",
+        callback_data=f"cendrier:{week_num}",
+    ))
+    return keyboard
+
+
+def _build_cendrier_text(state):
+    """Status text for the standalone /cendrier command, crediting whoever did it."""
+    if not state:
+        return f"Cendrier ({MAEL}) : clique pour marquer comme vidé cette semaine."
+    by = state.get("by", "?")
+    if by == MAEL:
+        return f"Cendrier vidé par {by} cette semaine ✅"
+    return f"Cendrier ({MAEL}) : vidé par {by} \U0001f91d ✅"
 
 
 class Drahmbot:
@@ -482,6 +525,156 @@ class Drahmbot:
             new_role_data = chores.get_week_status().get("DÉCHETS", {})
             text = _build_dechets_text(base, subtask, new_role_data)
             keyboard = _build_dechets_keyboard(week_num, subtask, new_role_data)
+            await self.bot.edit_message_text(
+                text,
+                call.message.chat.id,
+                call.message.message_id,
+                reply_markup=keyboard,
+            )
+            await self.bot.answer_callback_query(call.id, toast)
+
+        def _make_subtask_command_handler(cmd, role, subtask):
+            async def handler(message):
+                logger.info("Command /%s received from %s", cmd, message.chat.id)
+                week_num = datetime.date.today().isocalendar()[1]
+                assignments = menage.get_role_assignments(colocataires)
+                assigned_person = assignments.get(role, "?")
+                role_data = chores.get_week_status().get(role, {})
+                sub_data = role_data.get("subtasks", {}).get(subtask)
+                text = _build_subtask_text(role, subtask, assigned_person, sub_data)
+                keyboard = _build_subtask_keyboard(week_num, cmd, bool(sub_data))
+                await self.bot.send_message(message.chat.id, text, reply_markup=keyboard)
+            return handler
+
+        for cmd, (role, subtask) in menage.SUBTASK_COMMANDS.items():
+            self.bot.message_handler(commands=[cmd])(
+                _make_subtask_command_handler(cmd, role, subtask)
+            )
+
+        @self.bot.callback_query_handler(func=lambda call: call.data.startswith("subtask:"))
+        async def handle_subtask_callback(call):
+            parts = call.data.split(":")
+            if len(parts) != 3:
+                await self.bot.answer_callback_query(call.id, "Données invalides.")
+                return
+
+            try:
+                week_num = int(parts[1])
+            except ValueError:
+                await self.bot.answer_callback_query(call.id, "Données invalides.")
+                return
+            cmd = parts[2]
+
+            mapping = menage.SUBTASK_COMMANDS.get(cmd)
+            if mapping is None:
+                await self.bot.answer_callback_query(
+                    call.id, "Sous-tâche inconnue.", show_alert=True,
+                )
+                return
+            role, subtask = mapping
+
+            current_week = datetime.date.today().isocalendar()[1]
+            if week_num != current_week:
+                await self.bot.answer_callback_query(
+                    call.id, "Trop tard, c'est une autre semaine.", show_alert=True,
+                )
+                return
+
+            user_id = call.from_user.id
+            person = TELEGRAM_USER_MAP.get(user_id)
+            if not person:
+                await self.bot.answer_callback_query(
+                    call.id, "Tu n'es pas reconnu.", show_alert=True,
+                )
+                return
+
+            valid_subtasks = menage.get_subtasks_for_role(role)
+            if valid_subtasks is None or subtask not in valid_subtasks:
+                await self.bot.answer_callback_query(
+                    call.id, "Sous-tâche inconnue.", show_alert=True,
+                )
+                return
+
+            role_data = chores.get_week_status().get(role, {})
+            existing = role_data.get("subtasks", {}).get(subtask)
+            # Only the doer may untoggle. Open click to mark; restricted undo.
+            if existing and existing.get("by") != person:
+                await self.bot.answer_callback_query(
+                    call.id,
+                    f"Seul·e {existing['by']} peut annuler.",
+                    show_alert=True,
+                )
+                return
+
+            now_done = chores.toggle_subtask(role, subtask, person)
+            toast = f"{subtask} fait !" if now_done else f"{subtask} annulé."
+
+            assignments = menage.get_role_assignments(colocataires)
+            assigned_person = assignments.get(role, "?")
+            new_role_data = chores.get_week_status().get(role, {})
+            new_sub_data = new_role_data.get("subtasks", {}).get(subtask)
+            text = _build_subtask_text(role, subtask, assigned_person, new_sub_data)
+            keyboard = _build_subtask_keyboard(week_num, cmd, bool(new_sub_data))
+            await self.bot.edit_message_text(
+                text,
+                call.message.chat.id,
+                call.message.message_id,
+                reply_markup=keyboard,
+            )
+            await self.bot.answer_callback_query(call.id, toast)
+
+        @self.bot.message_handler(commands=['cendrier'])
+        async def send_cendrier(message):
+            logger.info("Command /cendrier received from %s", message.chat.id)
+            week_num = datetime.date.today().isocalendar()[1]
+            state = cendrier.get_week_state()
+            text = _build_cendrier_text(state)
+            keyboard = _build_cendrier_keyboard(week_num, bool(state))
+            await self.bot.send_message(message.chat.id, text, reply_markup=keyboard)
+
+        @self.bot.callback_query_handler(func=lambda call: call.data.startswith("cendrier:"))
+        async def handle_cendrier_callback(call):
+            parts = call.data.split(":")
+            if len(parts) != 2:
+                await self.bot.answer_callback_query(call.id, "Données invalides.")
+                return
+
+            try:
+                week_num = int(parts[1])
+            except ValueError:
+                await self.bot.answer_callback_query(call.id, "Données invalides.")
+                return
+
+            current_week = datetime.date.today().isocalendar()[1]
+            if week_num != current_week:
+                await self.bot.answer_callback_query(
+                    call.id, "Trop tard, c'est une autre semaine.", show_alert=True,
+                )
+                return
+
+            user_id = call.from_user.id
+            person = TELEGRAM_USER_MAP.get(user_id)
+            if not person:
+                await self.bot.answer_callback_query(
+                    call.id, "Tu n'es pas reconnu.", show_alert=True,
+                )
+                return
+
+            existing = cendrier.get_week_state()
+            # Only the doer may untoggle. Open click to mark; restricted undo.
+            if existing and existing.get("by") != person:
+                await self.bot.answer_callback_query(
+                    call.id,
+                    f"Seul·e {existing['by']} peut annuler.",
+                    show_alert=True,
+                )
+                return
+
+            new_state = cendrier.toggle_week_state(person)
+            toast = "Cendrier vidé !" if new_state else "Annulé."
+
+            text = _build_cendrier_text(new_state)
+            keyboard = _build_cendrier_keyboard(week_num, bool(new_state))
             await self.bot.edit_message_text(
                 text,
                 call.message.chat.id,

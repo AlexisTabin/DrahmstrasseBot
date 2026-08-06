@@ -134,7 +134,7 @@ def test_role_subtasks_keys_match_roles():
 
 def test_cuisine_subtasks():
     from src.menage import ROLE_SUBTASKS
-    assert ROLE_SUBTASKS["CUISINE"] == ["frigo", "plan de travail", "rangement"]
+    assert ROLE_SUBTASKS["CUISINE"] == ["frigo", "plan de travail", "rangement", "balcon"]
 
 
 def test_sdbs_subtasks():
@@ -176,7 +176,7 @@ def test_get_subtasks_dechets_odd_week_excludes_papier(mock_even):
 def test_get_subtasks_cuisine():
     from src.menage import get_subtasks_for_role
     result = get_subtasks_for_role("CUISINE")
-    assert result == ["frigo", "plan de travail", "rangement"]
+    assert result == ["frigo", "plan de travail", "rangement", "balcon"]
 
 
 def test_get_subtasks_sdbs():
@@ -204,3 +204,37 @@ def test_get_subtasks_returns_copy():
     result = get_subtasks_for_role("SOLs")
     result.append("extra")
     assert "extra" not in ROLE_SUBTASKS["SOLs"]
+
+
+# --- SUBTASK_COMMANDS tests ---
+
+
+def test_subtask_commands_map_to_known_roles_and_subtasks():
+    from src.menage import SUBTASK_COMMANDS, ROLE_SUBTASKS
+    for cmd, (role, subtask) in SUBTASK_COMMANDS.items():
+        assert role in ROLE_SUBTASKS, f"{cmd} maps to unknown role {role}"
+        assert subtask in ROLE_SUBTASKS[role], f"{cmd} maps to unknown subtask {subtask}"
+
+
+def test_subtask_commands_cover_every_subtask_except_papier_and_carton():
+    from src.menage import SUBTASK_COMMANDS, ROLE_SUBTASKS
+    mapped_subtasks = {(role, subtask) for role, subtask in SUBTASK_COMMANDS.values()}
+    for role, subtasks in ROLE_SUBTASKS.items():
+        for subtask in subtasks:
+            if subtask == "carton":
+                continue  # /carton already exists with its own reminder text
+            assert (role, subtask) in mapped_subtasks, f"{role}.{subtask} has no command"
+
+
+def test_subtask_commands_exclude_papier():
+    """papier already has its own dedicated /papier command."""
+    from src.menage import SUBTASK_COMMANDS
+    assert "papier" not in SUBTASK_COMMANDS
+
+
+def test_subtask_commands_are_valid_telegram_command_names():
+    """Telegram commands must be lowercase alphanumeric/underscore, <=32 chars."""
+    import re
+    from src.menage import SUBTASK_COMMANDS
+    for cmd in SUBTASK_COMMANDS:
+        assert re.fullmatch(r"[a-z0-9_]{1,32}", cmd), f"invalid command name: {cmd}"

@@ -47,6 +47,7 @@ Code and infrastructure are deployed separately via GitHub Actions:
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+pip install flake8 pytest pytest-cov "moto[dynamodb]"
 pytest
 ```
 

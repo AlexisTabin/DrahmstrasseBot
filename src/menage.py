@@ -13,12 +13,34 @@ ROLES = ["CUISINE", "SDBs", "SOLs", "DÉCHETS"]
 CHAOS_KEEP_ROLES_PROBABILITY = 0.05
 
 ROLE_SUBTASKS = {
-    "CUISINE": ["frigo", "plan de travail", "rangement"],
+    "CUISINE": ["frigo", "plan de travail", "rangement", "balcon"],
     "SDBs": ["petit WC", "grand WC", "lavabo", "baignoire", "Vider les petites poubelles"],
     "SOLs": ["aspirateur", "panosse"],
     "DÉCHETS": ["poubelle", "carton", "compost", "verre", "plastique"],
 }
 DECHETS_OPTIONAL_SUBTASK = "papier"
+
+# Maps a Telegram command name to the (role, subtask) it marks as done, so
+# anyone can call e.g. /frigo to record a subtask even if it isn't their role
+# this week. papier/carton are excluded: they already have dedicated
+# commands (/papier, /carton) with their own reminder text.
+SUBTASK_COMMANDS = {
+    "frigo": ("CUISINE", "frigo"),
+    "plandetravail": ("CUISINE", "plan de travail"),
+    "rangement": ("CUISINE", "rangement"),
+    "balcon": ("CUISINE", "balcon"),
+    "petitwc": ("SDBs", "petit WC"),
+    "grandwc": ("SDBs", "grand WC"),
+    "lavabo": ("SDBs", "lavabo"),
+    "baignoire": ("SDBs", "baignoire"),
+    "poubelles": ("SDBs", "Vider les petites poubelles"),
+    "aspirateur": ("SOLs", "aspirateur"),
+    "panosse": ("SOLs", "panosse"),
+    "poubelle": ("DÉCHETS", "poubelle"),
+    "compost": ("DÉCHETS", "compost"),
+    "verre": ("DÉCHETS", "verre"),
+    "plastique": ("DÉCHETS", "plastique"),
+}
 
 
 def get_subtasks_for_role(role):
