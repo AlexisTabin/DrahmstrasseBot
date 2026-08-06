@@ -294,6 +294,30 @@ def test_get_holiday_redistribution_no_one_else_returns_empty():
     assert menage.get_holiday_redistribution("CUISINE", "Timon", ["Timon"]) == {}
 
 
+@patch("src.menage.datetime")
+def test_get_holiday_redistribution_excludes_other_holiday_people(mock_datetime):
+    """Léa being on holiday too shouldn't make her eligible for Timon's
+    redistributed subtasks."""
+    mock_datetime.datetime.now.return_value = datetime.datetime(2026, 4, 1)
+    result = menage.get_holiday_redistribution(
+        "CUISINE", "Timon", ALL_COLOCATAIRES, holiday_people={"Timon", "Léa"},
+    )
+    assert "Léa" not in result.values()
+    assert "Timon" not in result.values()
+    assert set(result.values()) <= {"Maël", "Alexis"}
+
+
+@patch("src.menage.datetime")
+def test_get_holiday_redistribution_everyone_else_on_holiday_returns_empty(mock_datetime):
+    """If nobody's eligible, nothing gets redistributed — no task needs doing."""
+    mock_datetime.datetime.now.return_value = datetime.datetime(2026, 4, 1)
+    result = menage.get_holiday_redistribution(
+        "CUISINE", "Timon", ALL_COLOCATAIRES,
+        holiday_people={"Timon", "Maël", "Léa", "Alexis"},
+    )
+    assert result == {}
+
+
 # --- get_effective_assignee ---
 
 
@@ -319,6 +343,17 @@ def test_get_effective_assignee_ignores_unrelated_holiday_people():
     """Someone else being on holiday shouldn't affect this role's assignee."""
     result = menage.get_effective_assignee(
         "CUISINE", "frigo", "Timon", {"Léa"}, ALL_COLOCATAIRES,
+    )
+    assert result == "Timon"
+
+
+def test_get_effective_assignee_falls_back_to_assigned_when_everyone_away():
+    """If literally everyone is on holiday, there's no one to redistribute to
+    — the assigned person stays the (nominal, unreachable) assignee rather
+    than the call crashing or picking another holidaying person."""
+    result = menage.get_effective_assignee(
+        "CUISINE", "frigo", "Timon",
+        {"Timon", "Maël", "Léa", "Alexis"}, ALL_COLOCATAIRES,
     )
     assert result == "Timon"
 

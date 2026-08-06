@@ -211,3 +211,37 @@ async def test_vacances_round_trip(bot):
     cancel_text = bot.bot.send_message.call_args[0][1]
     assert person in cancel_text
     assert not chores.is_on_holiday(person)
+
+
+@pytest.mark.asyncio
+async def test_vacances_two_people_simultaneously(bot):
+    """Two roommates on holiday at once: neither's redistributed subtasks
+    should land on the other. Exercises the real bug found during review —
+    get_holiday_redistribution used to only exclude the single absent
+    person, so a task could land on someone who was also away."""
+    assignments = menage.get_role_assignments(colocataires)
+    person_a = assignments["CUISINE"]
+    person_b = assignments["SOLs"]
+    a_id = next(uid for uid, name in TELEGRAM_USER_MAP.items() if name == person_a)
+    b_id = next(uid for uid, name in TELEGRAM_USER_MAP.items() if name == person_b)
+
+    await main.handler(_webhook_event("/vacances", a_id), {})
+    await main.handler(_webhook_event("/vacances", b_id), {})
+
+    assert chores.get_holiday_people() == {person_a, person_b}
+
+    holiday_people = chores.get_holiday_people()
+    cuisine_redistribution = menage.get_holiday_redistribution(
+        "CUISINE", person_a, colocataires, holiday_people,
+    )
+    sols_redistribution = menage.get_holiday_redistribution(
+        "SOLs", person_b, colocataires, holiday_people,
+    )
+    assert person_b not in cuisine_redistribution.values()
+    assert person_a not in sols_redistribution.values()
+
+    # /recap shows both as en vacances.
+    await main.handler(_eventbridge_event("/recap@DrahmstrasseBot"), {})
+    recap_text = bot.bot.send_message.call_args[0][1]
+    assert f"{person_a}, en vacances" in recap_text
+    assert f"{person_b}, en vacances" in recap_text

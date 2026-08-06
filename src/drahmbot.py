@@ -728,7 +728,10 @@ class Drahmbot:
                 return
 
             chores.set_on_holiday(person)
-            redistribution = menage.get_holiday_redistribution(role, person, colocataires)
+            holiday_people = chores.get_holiday_people()
+            redistribution = menage.get_holiday_redistribution(
+                role, person, colocataires, holiday_people,
+            )
             header = phrases.pick(phrases.VACANCES_ANNOUNCE_HEADER).format(person=person, role=role)
             lines = [header]
             for subtask, assignee in redistribution.items():

@@ -95,7 +95,9 @@ Holiday redistribution
 '''
 
 
-def get_holiday_redistribution(role: str, absent_person: str, colocataires: list) -> dict:
+def get_holiday_redistribution(
+    role: str, absent_person: str, colocataires: list, holiday_people: set = None,
+) -> dict:
     """Return {subtask: assignee} for `role`'s subtasks with `absent_person` away.
 
     Deterministic per (ISO week, role, absent_person) — like
@@ -104,6 +106,11 @@ def get_holiday_redistribution(role: str, absent_person: str, colocataires: list
     `absent_person` is on holiday needs to be stored. Subtasks are shuffled
     then dealt round-robin across the remaining colocataires, so counts stay
     as equal as possible while which person gets which subtask is random.
+
+    Anyone else currently in `holiday_people` is excluded from the candidate
+    pool too — a subtask shouldn't land on someone who's also away. If that
+    leaves no one eligible (e.g. everyone's on holiday), this returns {}: no
+    one is expected to do it that week.
 
     `others` is sorted rather than left in `colocataires` order: different
     callers derive their colocataires list differently (e.g. chores.py uses
@@ -114,7 +121,10 @@ def get_holiday_redistribution(role: str, absent_person: str, colocataires: list
     subtasks = get_subtasks_for_role(role)
     if not subtasks:
         return {}
-    others = sorted(p for p in colocataires if p != absent_person)
+    holiday_people = holiday_people or set()
+    others = sorted(
+        p for p in colocataires if p != absent_person and p not in holiday_people
+    )
     if not others:
         return {}
     iso = datetime.datetime.now().isocalendar()
@@ -130,11 +140,14 @@ def get_effective_assignee(
     """Return who is actually expected to do `subtask` of `role` this week.
 
     Falls back to `assigned_person` unchanged unless they're on holiday, in
-    which case the deterministic redistribution takes over.
+    which case the deterministic redistribution takes over (or, if no one is
+    eligible, `assigned_person` again — nothing to redistribute to).
     """
     if assigned_person not in holiday_people:
         return assigned_person
-    redistribution = get_holiday_redistribution(role, assigned_person, colocataires)
+    redistribution = get_holiday_redistribution(
+        role, assigned_person, colocataires, holiday_people,
+    )
     return redistribution.get(subtask, assigned_person)
 
 

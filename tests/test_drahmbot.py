@@ -1914,6 +1914,7 @@ async def test_vacances_no_role(mock_group, mock_token, mock_role):
 
 
 @pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_holiday_people", return_value={"Timon"})
 @patch("src.drahmbot.menage.get_holiday_redistribution", return_value={
     "aspirateur": "Léa", "panosse": "Alexis",
 })
@@ -1924,6 +1925,7 @@ async def test_vacances_no_role(mock_group, mock_token, mock_role):
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
 async def test_vacances_announces_redistribution(
     mock_group, mock_token, mock_role, mock_is_holiday, mock_set, mock_redistribution,
+    mock_holiday_people,
 ):
     bot = Drahmbot()
     bot.bot.send_message = AsyncMock()
