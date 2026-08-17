@@ -184,12 +184,19 @@ def _build_subtask_text(role, subtask, assigned_person, sub_data):
 
 
 def _build_counter_keyboard(week_num, cmd, count):
-    """Single +1 button for a counter-style subtask (e.g. /plandetravail)."""
+    """+1 button for a counter-style subtask (e.g. /plandetravail), plus a
+    reset button once there's something to reset. No confirmation step:
+    resetting by mistake just means re-pressing +1 to recover the count."""
     keyboard = telebot.types.InlineKeyboardMarkup()
     keyboard.add(telebot.types.InlineKeyboardButton(
         text=f"➕ +1 (fait {count}x cette semaine)",
         callback_data=f"counter:{week_num}:{cmd}",
     ))
+    if count > 0:
+        keyboard.add(telebot.types.InlineKeyboardButton(
+            text="🔄 Remettre à 0",
+            callback_data=f"resetcounter:{week_num}:{cmd}",
+        ))
     return keyboard
 
 
@@ -717,6 +724,37 @@ class Drahmbot:
             assigned_person = assignments.get(role, "?")
             text = _build_counter_text(role, subtask, assigned_person, new_count)
             keyboard = _build_counter_keyboard(week_num, cmd, new_count)
+            await self.bot.edit_message_text(
+                text,
+                call.message.chat.id,
+                call.message.message_id,
+                reply_markup=keyboard,
+            )
+            await self.bot.answer_callback_query(call.id, toast)
+
+        @self.bot.callback_query_handler(func=lambda call: call.data.startswith("resetcounter:"))
+        async def handle_reset_counter_callback(call):
+            resolved = await _resolve_subtask_callback(call)
+            if resolved is None:
+                return
+            role, subtask, person, cmd, week_num = resolved
+
+            # Symmetric re-derivation to handle_counter_callback's: don't trust
+            # the "resetcounter:" prefix, in case a stale button from before a
+            # subtask left COUNTER_SUBTASKS is still clickable.
+            if not menage.is_counter_subtask(role, subtask):
+                await self.bot.answer_callback_query(
+                    call.id, "Cette tâche a changé, relance la commande.", show_alert=True,
+                )
+                return
+
+            chores.reset_subtask_counter(role, subtask)
+            toast = f"{subtask} remis à 0."
+
+            assignments = menage.get_role_assignments(colocataires)
+            assigned_person = assignments.get(role, "?")
+            text = _build_counter_text(role, subtask, assigned_person, 0)
+            keyboard = _build_counter_keyboard(week_num, cmd, 0)
             await self.bot.edit_message_text(
                 text,
                 call.message.chat.id,

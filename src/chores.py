@@ -155,6 +155,22 @@ def increment_subtask_counter(role: str, subtask: str, person: str) -> int:
     return new_count
 
 
+def reset_subtask_counter(role: str, subtask: str) -> None:
+    """Reset a counter-style sub-task's count back to 0 for everyone this
+    week. No confirmation needed: an accidental reset is trivially undone by
+    re-pressing +1 the same number of times."""
+    table = _get_table()
+    week_key = _current_week_key()
+
+    table.update_item(
+        Key={"week_key": week_key},
+        UpdateExpression="SET completed.#role.subtasks.#subtask = :empty_counter",
+        ExpressionAttributeNames={"#role": role, "#subtask": subtask},
+        ExpressionAttributeValues={":empty_counter": {"count": 0}},
+    )
+    logger.info("Reset %s.%s counter to 0 for %s", role, subtask, week_key)
+
+
 def is_subtask_satisfied(sub_data: dict) -> bool:
     """Whether a subtask entry counts as done: any entry for a toggle subtask,
     count >= 1 for a counter subtask (see menage.COUNTER_SUBTASKS)."""
