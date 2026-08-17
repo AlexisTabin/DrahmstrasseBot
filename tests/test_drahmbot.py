@@ -1431,9 +1431,19 @@ def test_build_subtask_text_done_by_someone_else():
 
 def test_build_counter_keyboard_shows_count_and_callback():
     kb = _build_counter_keyboard(15, "plandetravail", 2)
-    assert len(kb.keyboard) == 1
     assert "2" in kb.keyboard[0][0].text
     assert kb.keyboard[0][0].callback_data == "counter:15:plandetravail"
+
+
+def test_build_counter_keyboard_at_zero_has_no_reset_button():
+    kb = _build_counter_keyboard(15, "plandetravail", 0)
+    assert len(kb.keyboard) == 1
+
+
+def test_build_counter_keyboard_positive_count_adds_reset_button():
+    kb = _build_counter_keyboard(15, "plandetravail", 2)
+    assert len(kb.keyboard) == 2
+    assert kb.keyboard[1][0].callback_data == "resetcounter:15:plandetravail"
 
 
 def test_build_counter_text_zero():
@@ -1932,6 +1942,97 @@ async def test_counter_callback_invalid_subtask_for_role(
     mock_increment.assert_not_called()
     toast = bot.bot.answer_callback_query.call_args[0][1]
     assert "inconnue" in toast.lower()
+
+
+# --- resetcounter: callback ---
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.reset_subtask_counter")
+@patch("src.drahmbot.menage.get_role_assignments", return_value={"CUISINE": "Timon"})
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_reset_counter_callback_anyone_can_reset(
+    mock_group, mock_token, mock_dt, mock_assignments, mock_reset,
+):
+    """Léa can reset /plandetravail's count even though it's shared by everyone."""
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    import src.drahmbot as drahmbot_module
+    original_map = drahmbot_module.TELEGRAM_USER_MAP.copy()
+    drahmbot_module.TELEGRAM_USER_MAP[42] = "Léa"
+
+    try:
+        bot = Drahmbot()
+        bot.bot.edit_message_text = AsyncMock()
+        bot.bot.answer_callback_query = AsyncMock()
+        handlers = _capture_handlers(bot)
+
+        call = MagicMock()
+        call.data = "resetcounter:15:plandetravail"
+        call.from_user.id = 42
+        call.id = "cbr1"
+        call.message.chat.id = 999
+        call.message.message_id = 100
+
+        await handlers["_callback_query"](call)
+        mock_reset.assert_called_once_with("CUISINE", "plan de travail")
+        bot.bot.edit_message_text.assert_called_once()
+        toast = bot.bot.answer_callback_query.call_args[0][1]
+        assert "remis à 0" in toast
+    finally:
+        drahmbot_module.TELEGRAM_USER_MAP.clear()
+        drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.reset_subtask_counter")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_reset_counter_callback_stale_week(mock_group, mock_token, mock_dt, mock_reset):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 16, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "resetcounter:15:plandetravail"
+    call.from_user.id = 891406979
+    call.id = "cbr2"
+
+    await handlers["_callback_query"](call)
+    mock_reset.assert_not_called()
+    toast = bot.bot.answer_callback_query.call_args[0][1]
+    assert "semaine" in toast.lower()
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo"])
+@patch("src.drahmbot.chores.reset_subtask_counter")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_reset_counter_callback_rejects_subtask_no_longer_a_counter(
+    mock_group, mock_token, mock_dt, mock_reset, mock_subtasks,
+):
+    """A "resetcounter:...:frigo" callback must not reset frigo's (non-counter) data."""
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "resetcounter:15:frigo"
+    call.from_user.id = 891406979
+    call.id = "cbr3"
+
+    await handlers["_callback_query"](call)
+    mock_reset.assert_not_called()
+    toast = bot.bot.answer_callback_query.call_args[0][1]
+    assert "changé" in toast.lower()
 
 
 @pytest.mark.asyncio

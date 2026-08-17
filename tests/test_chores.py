@@ -537,6 +537,25 @@ def test_increment_subtask_counter_reads_back_new_count(mock_get_table, mock_wee
     assert last_call["ExpressionAttributeValues"][":person_set"] == {"Léa"}
 
 
+# --- reset_subtask_counter tests ---
+
+
+@patch("src.chores._current_week_key", return_value="2026-W14")
+@patch("src.chores._get_table")
+def test_reset_subtask_counter_writes_empty_counter(mock_get_table, mock_week):
+    mock_table = MagicMock()
+    mock_get_table.return_value = mock_table
+
+    chores.reset_subtask_counter("CUISINE", "plan de travail")
+
+    mock_table.update_item.assert_called_once()
+    call = mock_table.update_item.call_args[1]
+    assert call["Key"] == {"week_key": "2026-W14"}
+    assert call["ExpressionAttributeValues"][":empty_counter"] == {"count": 0}
+    assert call["ExpressionAttributeNames"]["#role"] == "CUISINE"
+    assert call["ExpressionAttributeNames"]["#subtask"] == "plan de travail"
+
+
 # --- is_role_complete / _pending_detail with counter subtasks ---
 
 
