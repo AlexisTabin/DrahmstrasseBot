@@ -101,6 +101,68 @@ def toggle_subtask(role: str, subtask: str, person: str) -> bool:
         return True
 
 
+def increment_subtask_counter(role: str, subtask: str, person: str) -> int:
+    """Increment a counter-style sub-task's per-week count. Returns the new count."""
+    table = _get_table()
+    week_key = _current_week_key()
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    table.update_item(
+        Key={"week_key": week_key},
+        UpdateExpression="SET completed = if_not_exists(completed, :empty_map)",
+        ExpressionAttributeValues={":empty_map": {}},
+    )
+    table.update_item(
+        Key={"week_key": week_key},
+        UpdateExpression="SET completed.#role = if_not_exists(completed.#role, :empty_subtasks)",
+        ExpressionAttributeNames={"#role": role},
+        ExpressionAttributeValues={":empty_subtasks": {"subtasks": {}}},
+    )
+    table.update_item(
+        Key={"week_key": week_key},
+        UpdateExpression=(
+            "SET completed.#role.subtasks.#subtask = "
+            "if_not_exists(completed.#role.subtasks.#subtask, :empty_counter)"
+        ),
+        ExpressionAttributeNames={"#role": role, "#subtask": subtask},
+        ExpressionAttributeValues={":empty_counter": {"count": 0}},
+    )
+    # ADD (not "SET count = count + :one") so this is robust even if #subtask
+    # was left in the pre-counter {by, at} shape by a stale toggle click:
+    # ADD auto-initializes a missing numeric attribute instead of erroring.
+    # "by"/"at" must be aliased — both are DynamoDB reserved words when used
+    # as a raw path segment (only safe as plain dict keys inside a value).
+    response = table.update_item(
+        Key={"week_key": week_key},
+        UpdateExpression=(
+            "SET completed.#role.subtasks.#subtask.#by = :person, "
+            "completed.#role.subtasks.#subtask.#at = :now "
+            "ADD completed.#role.subtasks.#subtask.#count :one, "
+            "completed.#role.subtasks.#subtask.#doers :person_set"
+        ),
+        ExpressionAttributeNames={
+            "#role": role, "#subtask": subtask,
+            "#count": "count", "#by": "by", "#at": "at", "#doers": "doers",
+        },
+        ExpressionAttributeValues={
+            ":one": 1, ":person": person, ":now": now, ":person_set": {person},
+        },
+        ReturnValues="UPDATED_NEW",
+    )
+
+    new_count = int(response["Attributes"]["completed"][role]["subtasks"][subtask]["count"])
+    logger.info("Incremented %s.%s to %d by %s for %s", role, subtask, new_count, person, week_key)
+    return new_count
+
+
+def is_subtask_satisfied(sub_data: dict) -> bool:
+    """Whether a subtask entry counts as done: any entry for a toggle subtask,
+    count >= 1 for a counter subtask (see menage.COUNTER_SUBTASKS)."""
+    if "count" in sub_data:
+        return sub_data["count"] >= 1
+    return True
+
+
 def is_role_complete(role: str, completed_map: dict) -> bool:
     """Check if a role is fully completed, handling both old and new formats."""
     from src.menage import get_subtasks_for_role
@@ -120,7 +182,10 @@ def is_role_complete(role: str, completed_map: dict) -> bool:
         if expected is None:
             return False
         completed_subtasks = role_data["subtasks"]
-        return all(s in completed_subtasks for s in expected)
+        return all(
+            s in completed_subtasks and is_subtask_satisfied(completed_subtasks[s])
+            for s in expected
+        )
 
     return False
 
@@ -140,7 +205,10 @@ def _pending_detail(role: str, completed: dict) -> str:
         return ""
 
     completed_subtasks = role_data.get("subtasks", {})
-    missing = [s for s in expected if s not in completed_subtasks]
+    missing = [
+        s for s in expected
+        if s not in completed_subtasks or not is_subtask_satisfied(completed_subtasks[s])
+    ]
     if missing:
         return f" [manque : {', '.join(missing)}]"
     return ""
@@ -153,7 +221,11 @@ def _who_did_it(role_data: dict) -> str:
     if "subtasks" in role_data:
         names = set()
         for sub_data in role_data["subtasks"].values():
-            if "by" in sub_data:
+            # Counter subtasks (menage.COUNTER_SUBTASKS) track every distinct
+            # incrementer in "doers"; "by" alone would only be the last one.
+            if "doers" in sub_data:
+                names.update(sub_data["doers"])
+            elif "by" in sub_data:
                 names.add(sub_data["by"])
         return ", ".join(sorted(names)) if names else "?"
     return "?"
@@ -218,7 +290,9 @@ def get_stats() -> str:
                 if is_role_complete(role, completed):
                     names = set()
                     for sub_data in role_data["subtasks"].values():
-                        if "by" in sub_data:
+                        if "doers" in sub_data:
+                            names.update(sub_data["doers"])
+                        elif "by" in sub_data:
                             names.add(sub_data["by"])
                     for person in names:
                         counts[person] = counts.get(person, 0) + 1
@@ -241,11 +315,15 @@ def _helper_lines(person: str, role_data: dict) -> list:
     subtasks = role_data.get("subtasks")
     if not subtasks:
         return []
-    return [
-        f"      \U0001f91d {subtask} fait par {sub_data['by']} (pas {person})"
-        for subtask, sub_data in subtasks.items()
-        if sub_data.get("by") and sub_data["by"] != person
-    ]
+    lines = []
+    for subtask, sub_data in subtasks.items():
+        doers = sub_data.get("doers")
+        if doers is None:
+            doers = {sub_data["by"]} if sub_data.get("by") else set()
+        others = sorted(doer for doer in doers if doer != person)
+        if others:
+            lines.append(f"      \U0001f91d {subtask} fait par {', '.join(others)} (pas {person})")
+    return lines
 
 
 def get_sunday_recap(role_assignments: dict) -> str:

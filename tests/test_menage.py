@@ -238,3 +238,26 @@ def test_subtask_commands_are_valid_telegram_command_names():
     from src.menage import SUBTASK_COMMANDS
     for cmd in SUBTASK_COMMANDS:
         assert re.fullmatch(r"[a-z0-9_]{1,32}", cmd), f"invalid command name: {cmd}"
+
+
+# --- COUNTER_SUBTASKS / is_counter_subtask tests ---
+
+
+def test_plan_de_travail_is_a_counter_subtask():
+    assert menage.is_counter_subtask("CUISINE", "plan de travail") is True
+
+
+def test_frigo_is_not_a_counter_subtask():
+    assert menage.is_counter_subtask("CUISINE", "frigo") is False
+
+
+def test_is_counter_subtask_unknown_role_or_subtask():
+    assert menage.is_counter_subtask("UNKNOWN", "plan de travail") is False
+    assert menage.is_counter_subtask("CUISINE", "nope") is False
+
+
+def test_counter_subtasks_map_to_known_roles_and_subtasks():
+    from src.menage import COUNTER_SUBTASKS, ROLE_SUBTASKS
+    for role, subtask in COUNTER_SUBTASKS:
+        assert role in ROLE_SUBTASKS, f"counter subtask maps to unknown role {role}"
+        assert subtask in ROLE_SUBTASKS[role], f"counter subtask maps to unknown subtask {subtask}"

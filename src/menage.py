@@ -20,6 +20,14 @@ ROLE_SUBTASKS = {
 }
 DECHETS_OPTIONAL_SUBTASK = "papier"
 
+# Sub-tasks that can legitimately be done more than once in the same week
+# (e.g. wiping the counter after every use) get a per-week counter instead of
+# a done/not-done toggle. Counting as the role's completion requirement is
+# still satisfied as soon as the counter is >= 1, same as any other subtask.
+COUNTER_SUBTASKS = {
+    ("CUISINE", "plan de travail"),
+}
+
 # Maps a Telegram command name to the (role, subtask) it marks as done, so
 # anyone can call e.g. /frigo to record a subtask even if it isn't their role
 # this week. papier/carton are excluded: they already have dedicated
@@ -41,6 +49,11 @@ SUBTASK_COMMANDS = {
     "verre": ("DÉCHETS", "verre"),
     "plastique": ("DÉCHETS", "plastique"),
 }
+
+
+def is_counter_subtask(role, subtask) -> bool:
+    """Whether a (role, subtask) pair uses a repeat counter instead of a toggle."""
+    return (role, subtask) in COUNTER_SUBTASKS
 
 
 def get_subtasks_for_role(role):

@@ -170,3 +170,46 @@ async def test_frigo_write_path_round_trip(bot):
     recap_text = bot.bot.send_message.call_args[0][1]
     assert f"frigo fait par {helper}" in recap_text
     assert f"(pas {cuisine_person})" in recap_text
+
+
+@pytest.mark.asyncio
+async def test_plandetravail_counter_write_path_round_trip(bot):
+    """Exercises increment_subtask_counter's real DynamoDB UpdateExpression
+    (via moto) end to end, including the ReturnValues read-back and the "by"/
+    "at" attribute-name aliasing — unit tests mock table.update_item entirely
+    and can't catch a DynamoDB-rejected expression (e.g. an unaliased
+    reserved word), only a real update against moto's DynamoDB emulation
+    can. Two different people press "+1" so /recap must credit both."""
+    week_num = datetime.date.today().isocalendar()[1]
+    timon_id = next(uid for uid, name in TELEGRAM_USER_MAP.items() if name == "Timon")
+    lea_id = next(uid for uid, name in TELEGRAM_USER_MAP.items() if name == "Léa")
+
+    # 1. Timon runs /plandetravail and presses "+1" once.
+    await main.handler(_webhook_event("/plandetravail", timon_id), {})
+    assert bot.bot.send_message.called
+    await main.handler(_callback_event(f"counter:{week_num}:plandetravail", timon_id), {})
+    bot.bot.edit_message_text.assert_called_once()
+    assert "1x" in bot.bot.edit_message_text.call_args[0][0]
+
+    # 2. Léa presses "+1" too (via the same open message's button).
+    await main.handler(_callback_event(f"counter:{week_num}:plandetravail", lea_id), {})
+    assert "2x" in bot.bot.edit_message_text.call_args_list[1][0][0]
+
+    # 3. DynamoDB actually persisted the count and both doers.
+    role_data = chores.get_week_status().get("CUISINE", {})
+    sub_data = role_data["subtasks"]["plan de travail"]
+    assert sub_data["count"] == 2
+    assert sub_data["doers"] == {"Timon", "Léa"}
+
+    # 4. /recap credits both Timon and Léa for "plan de travail", not just
+    # whoever pressed "+1" last.
+    assignments = menage.get_role_assignments(colocataires)
+    cuisine_person = assignments["CUISINE"]
+    await main.handler(_eventbridge_event("/recap@DrahmstrasseBot"), {})
+    recap_text = bot.bot.send_message.call_args[0][1]
+    if cuisine_person == "Timon":
+        assert "plan de travail fait par Léa" in recap_text
+    elif cuisine_person == "Léa":
+        assert "plan de travail fait par Timon" in recap_text
+    else:
+        assert "plan de travail fait par Léa, Timon" in recap_text

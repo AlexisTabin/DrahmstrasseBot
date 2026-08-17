@@ -72,10 +72,18 @@ def _build_done_keyboard(role, week_num):
     else:
         completed_subtasks = role_data.get("subtasks", {})
         for subtask in subtasks:
-            is_done = subtask in completed_subtasks
-            icon = "\u2705" if is_done else "\u2b1c"
+            if menage.is_counter_subtask(role, subtask):
+                sub_data = completed_subtasks.get(subtask, {})
+                count = sub_data.get("count", 0)
+                is_done = subtask in completed_subtasks and chores.is_subtask_satisfied(sub_data)
+                icon = "\u2705" if is_done else "\u2b1c"
+                text = f"{icon} {subtask} ({count}x)"
+            else:
+                is_done = subtask in completed_subtasks
+                icon = "\u2705" if is_done else "\u2b1c"
+                text = f"{icon} {subtask}"
             button = telebot.types.InlineKeyboardButton(
-                text=f"{icon} {subtask}",
+                text=text,
                 callback_data=f"done:{week_num}:{role}:{subtask}",
             )
             keyboard.add(button)
@@ -96,7 +104,10 @@ def _build_done_text(role, person):
         return f"{person} \u2014 {role} : clique pour marquer comme fait."
     else:
         completed_subtasks = role_data.get("subtasks", {})
-        done_count = sum(1 for s in subtasks if s in completed_subtasks)
+        done_count = sum(
+            1 for s in subtasks
+            if s in completed_subtasks and chores.is_subtask_satisfied(completed_subtasks[s])
+        )
         total = len(subtasks)
         if done_count == total:
             return f"{person} \u2014 {role} : {done_count}/{total} sous-t\u00e2ches faites \u2705"
@@ -170,6 +181,23 @@ def _build_subtask_text(role, subtask, assigned_person, sub_data):
     if by == assigned_person:
         return f"{subtask} ({role}) : fait par {by} ✅"
     return f"{subtask} ({role}, tâche de {assigned_person}) : fait par {by} \U0001f91d ✅"
+
+
+def _build_counter_keyboard(week_num, cmd, count):
+    """Single +1 button for a counter-style subtask (e.g. /plandetravail)."""
+    keyboard = telebot.types.InlineKeyboardMarkup()
+    keyboard.add(telebot.types.InlineKeyboardButton(
+        text=f"➕ +1 (fait {count}x cette semaine)",
+        callback_data=f"counter:{week_num}:{cmd}",
+    ))
+    return keyboard
+
+
+def _build_counter_text(role, subtask, assigned_person, count):
+    """Status text for a counter-style subtask, showing how many times it's been done."""
+    if count == 0:
+        return f"{subtask} ({role}, tâche de {assigned_person}) : clique à chaque fois."
+    return f"{subtask} ({role}) : fait {count}x cette semaine ✅"
 
 
 def _build_cendrier_keyboard(week_num, is_done):
@@ -359,8 +387,12 @@ class Drahmbot:
                         call.id, "Sous-tâche inconnue.", show_alert=True,
                     )
                     return
-                now_done = chores.toggle_subtask(role, subtask, person)
-                toast = f"{subtask} fait !" if now_done else f"{subtask} annulé."
+                if menage.is_counter_subtask(role, subtask):
+                    new_count = chores.increment_subtask_counter(role, subtask, person)
+                    toast = f"{subtask} : {new_count}x !"
+                else:
+                    now_done = chores.toggle_subtask(role, subtask, person)
+                    toast = f"{subtask} fait !" if now_done else f"{subtask} annulé."
             else:
                 now_done = chores.toggle_role(role, person)
                 toast = f"{role} fait !" if now_done else f"{role} annulé."
@@ -541,8 +573,13 @@ class Drahmbot:
                 assigned_person = assignments.get(role, "?")
                 role_data = chores.get_week_status().get(role, {})
                 sub_data = role_data.get("subtasks", {}).get(subtask)
-                text = _build_subtask_text(role, subtask, assigned_person, sub_data)
-                keyboard = _build_subtask_keyboard(week_num, cmd, bool(sub_data))
+                if menage.is_counter_subtask(role, subtask):
+                    count = sub_data.get("count", 0) if sub_data else 0
+                    text = _build_counter_text(role, subtask, assigned_person, count)
+                    keyboard = _build_counter_keyboard(week_num, cmd, count)
+                else:
+                    text = _build_subtask_text(role, subtask, assigned_person, sub_data)
+                    keyboard = _build_subtask_keyboard(week_num, cmd, bool(sub_data))
                 await self.bot.send_message(message.chat.id, text, reply_markup=keyboard)
             return handler
 
@@ -551,18 +588,22 @@ class Drahmbot:
                 _make_subtask_command_handler(cmd, role, subtask)
             )
 
-        @self.bot.callback_query_handler(func=lambda call: call.data.startswith("subtask:"))
-        async def handle_subtask_callback(call):
+        async def _resolve_subtask_callback(call):
+            """Shared parsing/validation for subtask:/counter: callbacks.
+
+            Returns (role, subtask, person, cmd, week_num), or None after
+            already answering the callback query with an error.
+            """
             parts = call.data.split(":")
             if len(parts) != 3:
                 await self.bot.answer_callback_query(call.id, "Données invalides.")
-                return
+                return None
 
             try:
                 week_num = int(parts[1])
             except ValueError:
                 await self.bot.answer_callback_query(call.id, "Données invalides.")
-                return
+                return None
             cmd = parts[2]
 
             mapping = menage.SUBTASK_COMMANDS.get(cmd)
@@ -570,7 +611,7 @@ class Drahmbot:
                 await self.bot.answer_callback_query(
                     call.id, "Sous-tâche inconnue.", show_alert=True,
                 )
-                return
+                return None
             role, subtask = mapping
 
             current_week = datetime.date.today().isocalendar()[1]
@@ -578,7 +619,7 @@ class Drahmbot:
                 await self.bot.answer_callback_query(
                     call.id, "Trop tard, c'est une autre semaine.", show_alert=True,
                 )
-                return
+                return None
 
             user_id = call.from_user.id
             person = TELEGRAM_USER_MAP.get(user_id)
@@ -586,13 +627,43 @@ class Drahmbot:
                 await self.bot.answer_callback_query(
                     call.id, "Tu n'es pas reconnu.", show_alert=True,
                 )
-                return
+                return None
 
             valid_subtasks = menage.get_subtasks_for_role(role)
             if valid_subtasks is None or subtask not in valid_subtasks:
                 await self.bot.answer_callback_query(
                     call.id, "Sous-tâche inconnue.", show_alert=True,
                 )
+                return None
+
+            return role, subtask, person, cmd, week_num
+
+        @self.bot.callback_query_handler(func=lambda call: call.data.startswith("subtask:"))
+        async def handle_subtask_callback(call):
+            resolved = await _resolve_subtask_callback(call)
+            if resolved is None:
+                return
+            role, subtask, person, cmd, week_num = resolved
+
+            # A subtask's kind (toggle vs counter) is re-derived here rather
+            # than trusted from the callback prefix, so a button rendered
+            # before "subtask" was added to menage.COUNTER_SUBTASKS (still
+            # clickable — Telegram messages don't expire) increments instead
+            # of toggling a shape it no longer matches.
+            if menage.is_counter_subtask(role, subtask):
+                new_count = chores.increment_subtask_counter(role, subtask, person)
+                toast = f"{subtask} : {new_count}x !"
+                assignments = menage.get_role_assignments(colocataires)
+                assigned_person = assignments.get(role, "?")
+                text = _build_counter_text(role, subtask, assigned_person, new_count)
+                keyboard = _build_counter_keyboard(week_num, cmd, new_count)
+                await self.bot.edit_message_text(
+                    text,
+                    call.message.chat.id,
+                    call.message.message_id,
+                    reply_markup=keyboard,
+                )
+                await self.bot.answer_callback_query(call.id, toast)
                 return
 
             role_data = chores.get_week_status().get(role, {})
@@ -615,6 +686,37 @@ class Drahmbot:
             new_sub_data = new_role_data.get("subtasks", {}).get(subtask)
             text = _build_subtask_text(role, subtask, assigned_person, new_sub_data)
             keyboard = _build_subtask_keyboard(week_num, cmd, bool(new_sub_data))
+            await self.bot.edit_message_text(
+                text,
+                call.message.chat.id,
+                call.message.message_id,
+                reply_markup=keyboard,
+            )
+            await self.bot.answer_callback_query(call.id, toast)
+
+        @self.bot.callback_query_handler(func=lambda call: call.data.startswith("counter:"))
+        async def handle_counter_callback(call):
+            resolved = await _resolve_subtask_callback(call)
+            if resolved is None:
+                return
+            role, subtask, person, cmd, week_num = resolved
+
+            # Symmetric re-derivation to handle_subtask_callback's: don't
+            # trust the "counter:" prefix either, in case a subtask is ever
+            # removed from COUNTER_SUBTASKS while an old button is still live.
+            if not menage.is_counter_subtask(role, subtask):
+                await self.bot.answer_callback_query(
+                    call.id, "Cette tâche a changé, relance la commande.", show_alert=True,
+                )
+                return
+
+            new_count = chores.increment_subtask_counter(role, subtask, person)
+            toast = f"{subtask} : {new_count}x !"
+
+            assignments = menage.get_role_assignments(colocataires)
+            assigned_person = assignments.get(role, "?")
+            text = _build_counter_text(role, subtask, assigned_person, new_count)
+            keyboard = _build_counter_keyboard(week_num, cmd, new_count)
             await self.bot.edit_message_text(
                 text,
                 call.message.chat.id,
