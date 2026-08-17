@@ -488,3 +488,107 @@ def test_get_stats_with_subtask_format(mock_get_table, mock_even):
     assert "Léa : 1 tâches" in result
     # Alexis: 0 (DÉCHETS not fully complete — only 1 of 5 subtasks)
     assert "Alexis" not in result
+
+
+# --- increment_subtask_counter tests ---
+
+
+@patch("src.chores.get_week_status", return_value={})
+@patch("src.chores._current_week_key", return_value="2026-W14")
+@patch("src.chores._get_table")
+def test_increment_subtask_counter_from_zero(mock_get_table, mock_week, mock_status):
+    mock_table = MagicMock()
+    mock_get_table.return_value = mock_table
+
+    result = chores.increment_subtask_counter("CUISINE", "plan de travail", "Timon")
+    assert result == 0  # get_week_status is mocked to always return {}
+    # 1 ensure map + 1 ensure role subtasks + 1 ensure counter + 1 increment
+    assert mock_table.update_item.call_count == 4
+    last_call = mock_table.update_item.call_args_list[3][1]
+    assert "+ :one" in last_call["UpdateExpression"]
+    assert last_call["ExpressionAttributeValues"][":person"] == "Timon"
+
+
+@patch("src.chores.get_week_status", return_value={
+    "CUISINE": {"subtasks": {"plan de travail": {"count": 2, "by": "Timon", "at": "..."}}},
+})
+@patch("src.chores._current_week_key", return_value="2026-W14")
+@patch("src.chores._get_table")
+def test_increment_subtask_counter_reads_back_new_count(mock_get_table, mock_week, mock_status):
+    mock_table = MagicMock()
+    mock_get_table.return_value = mock_table
+
+    result = chores.increment_subtask_counter("CUISINE", "plan de travail", "Léa")
+    assert result == 2  # reflects the (mocked) post-increment status read
+
+
+# --- is_role_complete / _pending_detail with counter subtasks ---
+
+
+def test_is_role_complete_counter_subtask_satisfied_by_any_count():
+    completed = {
+        "CUISINE": {
+            "subtasks": {
+                "frigo": {"by": "Timon", "at": "..."},
+                "plan de travail": {"count": 1, "by": "Timon", "at": "..."},
+                "rangement": {"by": "Timon", "at": "..."},
+                "balcon": {"by": "Timon", "at": "..."},
+            }
+        }
+    }
+    assert chores.is_role_complete("CUISINE", completed) is True
+
+
+def test_is_role_complete_missing_counter_subtask():
+    completed = {
+        "CUISINE": {
+            "subtasks": {
+                "frigo": {"by": "Timon", "at": "..."},
+                "rangement": {"by": "Timon", "at": "..."},
+                "balcon": {"by": "Timon", "at": "..."},
+            }
+        }
+    }
+    assert chores.is_role_complete("CUISINE", completed) is False
+
+
+def test_pending_detail_lists_missing_counter_subtask():
+    completed = {
+        "CUISINE": {
+            "subtasks": {
+                "frigo": {"by": "Timon", "at": "..."},
+                "rangement": {"by": "Timon", "at": "..."},
+                "balcon": {"by": "Timon", "at": "..."},
+            }
+        }
+    }
+    result = chores._pending_detail("CUISINE", completed)
+    assert "plan de travail" in result
+
+
+# --- stats: counter subtask only ever contributes once per week ---
+
+
+@patch("src.chores._get_table")
+def test_get_stats_counter_subtask_counts_once_regardless_of_count_value(mock_get_table):
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {
+        "Items": [
+            {
+                "week_key": "2026-W14",
+                "completed": {
+                    "CUISINE": {"subtasks": {
+                        "frigo": {"by": "Timon", "at": "..."},
+                        "plan de travail": {"count": 5, "by": "Timon", "at": "..."},
+                        "rangement": {"by": "Timon", "at": "..."},
+                        "balcon": {"by": "Timon", "at": "..."},
+                    }},
+                },
+            },
+        ]
+    }
+    mock_get_table.return_value = mock_table
+
+    result = chores.get_stats()
+    # Timon gets 1 point for the complete CUISINE role, not 5 for the counter.
+    assert "Timon : 1 tâches" in result

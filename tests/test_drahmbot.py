@@ -9,6 +9,7 @@ from src.drahmbot import (
     _build_dechets_keyboard, _build_dechets_text,
     _build_subtask_keyboard, _build_subtask_text,
     _build_cendrier_keyboard, _build_cendrier_text,
+    _build_counter_keyboard, _build_counter_text,
 )
 
 @pytest.mark.asyncio
@@ -444,6 +445,27 @@ def test_build_done_keyboard_subtask_role(mock_subtasks, mock_status):
 
 
 @patch("src.drahmbot.chores.get_week_status", return_value={})
+@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail"])
+def test_build_done_keyboard_counter_subtask_shows_count_zero(mock_subtasks, mock_status):
+    keyboard = _build_done_keyboard("CUISINE", 15)
+    assert "plan de travail" in keyboard.keyboard[1][0].text
+    assert "(0x)" in keyboard.keyboard[1][0].text
+    assert "⬜" in keyboard.keyboard[1][0].text
+    # Same "done:" callback prefix as any other subtask, just branched on server-side
+    assert keyboard.keyboard[1][0].callback_data == "done:15:CUISINE:plan de travail"
+
+
+@patch("src.drahmbot.chores.get_week_status", return_value={
+    "CUISINE": {"subtasks": {"plan de travail": {"count": 3, "by": "Timon", "at": "..."}}},
+})
+@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail"])
+def test_build_done_keyboard_counter_subtask_shows_positive_count(mock_subtasks, mock_status):
+    keyboard = _build_done_keyboard("CUISINE", 15)
+    assert "(3x)" in keyboard.keyboard[1][0].text
+    assert "✅" in keyboard.keyboard[1][0].text
+
+
+@patch("src.drahmbot.chores.get_week_status", return_value={})
 @patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail", "rangement"])
 def test_build_done_text_cuisine_not_done(mock_subtasks, mock_status):
     text = _build_done_text("CUISINE", "Timon")
@@ -516,6 +538,50 @@ async def test_callback_toggle_cuisine_subtask(
         bot.bot.answer_callback_query.assert_called_once()
         toast = bot.bot.answer_callback_query.call_args[0][1]
         assert "frigo annulé" in toast
+    finally:
+        drahmbot_module.TELEGRAM_USER_MAP.clear()
+        drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_week_status", return_value={
+    "CUISINE": {"subtasks": {"plan de travail": {"count": 2, "by": "Timon", "at": "..."}}},
+})
+@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail"])
+@patch("src.drahmbot.chores.increment_subtask_counter", return_value=3)
+@patch("src.drahmbot.chores.toggle_subtask")
+@patch("src.drahmbot.menage.get_role_for_person", return_value="CUISINE")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_callback_done_increments_counter_subtask(
+    mock_group, mock_token, mock_dt, mock_role, mock_toggle, mock_increment,
+    mock_subtasks, mock_status,
+):
+    """Pressing a counter subtask's button from /done increments instead of toggling."""
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    import src.drahmbot as drahmbot_module
+    original_map = drahmbot_module.TELEGRAM_USER_MAP.copy()
+    drahmbot_module.TELEGRAM_USER_MAP[42] = "Timon"
+
+    try:
+        bot = Drahmbot()
+        bot.bot.edit_message_text = AsyncMock()
+        bot.bot.answer_callback_query = AsyncMock()
+        handlers = _capture_handlers(bot)
+
+        call = MagicMock()
+        call.data = "done:15:CUISINE:plan de travail"
+        call.from_user.id = 42
+        call.id = "cb-counter-1"
+        call.message.chat.id = 999
+        call.message.message_id = 100
+
+        await handlers["_callback_query"](call)
+        mock_increment.assert_called_once_with("CUISINE", "plan de travail", "Timon")
+        mock_toggle.assert_not_called()
+        toast = bot.bot.answer_callback_query.call_args[0][1]
+        assert "3x" in toast
     finally:
         drahmbot_module.TELEGRAM_USER_MAP.clear()
         drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
@@ -1360,6 +1426,29 @@ def test_build_subtask_text_done_by_someone_else():
     assert "✅" in text
 
 
+# --- Counter subtask builder tests (/plandetravail) ---
+
+
+def test_build_counter_keyboard_shows_count_and_callback():
+    kb = _build_counter_keyboard(15, "plandetravail", 2)
+    assert len(kb.keyboard) == 1
+    assert "2" in kb.keyboard[0][0].text
+    assert kb.keyboard[0][0].callback_data == "counter:15:plandetravail"
+
+
+def test_build_counter_text_zero():
+    text = _build_counter_text("CUISINE", "plan de travail", "Timon", 0)
+    assert "plan de travail" in text
+    assert "Timon" in text
+    assert "clique" in text
+
+
+def test_build_counter_text_positive():
+    text = _build_counter_text("CUISINE", "plan de travail", "Timon", 4)
+    assert "4x" in text
+    assert "✅" in text
+
+
 @pytest.mark.asyncio
 @patch("src.drahmbot.chores.get_week_status", return_value={})
 @patch("src.drahmbot.menage.get_role_assignments", return_value={"CUISINE": "Timon"})
@@ -1628,6 +1717,219 @@ async def test_subtask_callback_invalid_subtask_for_role(
 
     await handlers["_callback_query"](call)
     mock_toggle.assert_not_called()
+    toast = bot.bot.answer_callback_query.call_args[0][1]
+    assert "inconnue" in toast.lower()
+
+
+# --- /plandetravail: counter subtask command + callback ---
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_week_status", return_value={
+    "CUISINE": {"subtasks": {"plan de travail": {"count": 2, "by": "Léa", "at": "..."}}},
+})
+@patch("src.drahmbot.menage.get_role_assignments", return_value={"CUISINE": "Timon"})
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_plandetravail_command_sends_counter_keyboard(
+    mock_group, mock_token, mock_dt, mock_assignments, mock_status,
+):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    bot = Drahmbot()
+    bot.bot.send_message = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    message = MagicMock()
+    message.chat.id = 999
+
+    await handlers["plandetravail"](message)
+    call_args = bot.bot.send_message.call_args
+    text = call_args[0][1]
+    assert "2x" in text
+    keyboard = call_args[1]["reply_markup"]
+    assert keyboard.keyboard[0][0].callback_data == "counter:15:plandetravail"
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_week_status", return_value={})
+@patch("src.drahmbot.menage.get_subtasks_for_role",
+       return_value=["frigo", "plan de travail", "rangement"])
+@patch("src.drahmbot.chores.increment_subtask_counter", return_value=1)
+@patch("src.drahmbot.menage.get_role_assignments", return_value={"CUISINE": "Timon"})
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_counter_callback_anyone_can_increment(
+    mock_group, mock_token, mock_dt, mock_assignments, mock_increment, mock_subtasks, mock_status,
+):
+    """Léa can increment /plandetravail even though CUISINE is Timon's this week."""
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    import src.drahmbot as drahmbot_module
+    original_map = drahmbot_module.TELEGRAM_USER_MAP.copy()
+    drahmbot_module.TELEGRAM_USER_MAP[42] = "Léa"
+
+    try:
+        bot = Drahmbot()
+        bot.bot.edit_message_text = AsyncMock()
+        bot.bot.answer_callback_query = AsyncMock()
+        handlers = _capture_handlers(bot)
+
+        call = MagicMock()
+        call.data = "counter:15:plandetravail"
+        call.from_user.id = 42
+        call.id = "cbc1"
+        call.message.chat.id = 999
+        call.message.message_id = 100
+
+        await handlers["_callback_query"](call)
+        mock_increment.assert_called_once_with("CUISINE", "plan de travail", "Léa")
+        bot.bot.edit_message_text.assert_called_once()
+        toast = bot.bot.answer_callback_query.call_args[0][1]
+        assert "1x" in toast
+    finally:
+        drahmbot_module.TELEGRAM_USER_MAP.clear()
+        drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.increment_subtask_counter")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_counter_callback_stale_week(mock_group, mock_token, mock_dt, mock_increment):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 16, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "counter:15:plandetravail"
+    call.from_user.id = 891406979
+    call.id = "cbc2"
+
+    await handlers["_callback_query"](call)
+    mock_increment.assert_not_called()
+    toast = bot.bot.answer_callback_query.call_args[0][1]
+    assert "semaine" in toast.lower()
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.increment_subtask_counter")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_counter_callback_unknown_user(mock_group, mock_token, mock_dt, mock_increment):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "counter:15:plandetravail"
+    call.from_user.id = 99999  # not in TELEGRAM_USER_MAP
+    call.id = "cbc3"
+
+    await handlers["_callback_query"](call)
+    mock_increment.assert_not_called()
+    toast = bot.bot.answer_callback_query.call_args[0][1]
+    assert "reconnu" in toast.lower()
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.increment_subtask_counter")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_counter_callback_malformed_data(mock_group, mock_token, mock_dt, mock_increment):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "counter:15"  # missing command part
+    call.from_user.id = 891406979
+    call.id = "cbc4"
+
+    await handlers["_callback_query"](call)
+    mock_increment.assert_not_called()
+    toast = bot.bot.answer_callback_query.call_args[0][1]
+    assert "invalides" in toast.lower()
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.increment_subtask_counter")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_counter_callback_non_numeric_week(mock_group, mock_token, mock_dt, mock_increment):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "counter:abc:plandetravail"  # week number isn't an int
+    call.from_user.id = 891406979
+    call.id = "cbc5"
+
+    await handlers["_callback_query"](call)
+    mock_increment.assert_not_called()
+    toast = bot.bot.answer_callback_query.call_args[0][1]
+    assert "invalides" in toast.lower()
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.increment_subtask_counter")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_counter_callback_unknown_command(mock_group, mock_token, mock_dt, mock_increment):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "counter:15:nope"  # not a real subtask command
+    call.from_user.id = 891406979
+    call.id = "cbc6"
+
+    await handlers["_callback_query"](call)
+    mock_increment.assert_not_called()
+    toast = bot.bot.answer_callback_query.call_args[0][1]
+    assert "inconnue" in toast.lower()
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["rangement"])
+@patch("src.drahmbot.chores.increment_subtask_counter")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_counter_callback_invalid_subtask_for_role(
+    mock_group, mock_token, mock_dt, mock_increment, mock_subtasks,
+):
+    """Defends against a stale config where the subtask was removed from the role."""
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "counter:15:plandetravail"  # plan de travail no longer a valid CUISINE subtask
+    call.from_user.id = 891406979
+    call.id = "cbc7"
+
+    await handlers["_callback_query"](call)
+    mock_increment.assert_not_called()
     toast = bot.bot.answer_callback_query.call_args[0][1]
     assert "inconnue" in toast.lower()
 

@@ -101,6 +101,49 @@ def toggle_subtask(role: str, subtask: str, person: str) -> bool:
         return True
 
 
+def increment_subtask_counter(role: str, subtask: str, person: str) -> int:
+    """Increment a counter-style sub-task's per-week count. Returns the new count."""
+    table = _get_table()
+    week_key = _current_week_key()
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    table.update_item(
+        Key={"week_key": week_key},
+        UpdateExpression="SET completed = if_not_exists(completed, :empty_map)",
+        ExpressionAttributeValues={":empty_map": {}},
+    )
+    table.update_item(
+        Key={"week_key": week_key},
+        UpdateExpression="SET completed.#role = if_not_exists(completed.#role, :empty_subtasks)",
+        ExpressionAttributeNames={"#role": role},
+        ExpressionAttributeValues={":empty_subtasks": {"subtasks": {}}},
+    )
+    table.update_item(
+        Key={"week_key": week_key},
+        UpdateExpression=(
+            "SET completed.#role.subtasks.#subtask = "
+            "if_not_exists(completed.#role.subtasks.#subtask, :empty_counter)"
+        ),
+        ExpressionAttributeNames={"#role": role, "#subtask": subtask},
+        ExpressionAttributeValues={":empty_counter": {"count": 0}},
+    )
+    table.update_item(
+        Key={"week_key": week_key},
+        UpdateExpression=(
+            "SET completed.#role.subtasks.#subtask.#count = "
+            "completed.#role.subtasks.#subtask.#count + :one, "
+            "completed.#role.subtasks.#subtask.by = :person, "
+            "completed.#role.subtasks.#subtask.at = :now"
+        ),
+        ExpressionAttributeNames={"#role": role, "#subtask": subtask, "#count": "count"},
+        ExpressionAttributeValues={":one": 1, ":person": person, ":now": now},
+    )
+
+    new_count = get_week_status().get(role, {}).get("subtasks", {}).get(subtask, {}).get("count", 0)
+    logger.info("Incremented %s.%s to %d by %s for %s", role, subtask, new_count, person, week_key)
+    return new_count
+
+
 def is_role_complete(role: str, completed_map: dict) -> bool:
     """Check if a role is fully completed, handling both old and new formats."""
     from src.menage import get_subtasks_for_role
