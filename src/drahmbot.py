@@ -73,8 +73,10 @@ def _build_done_keyboard(role, week_num):
         completed_subtasks = role_data.get("subtasks", {})
         for subtask in subtasks:
             if menage.is_counter_subtask(role, subtask):
-                count = completed_subtasks.get(subtask, {}).get("count", 0)
-                icon = "\u2705" if count > 0 else "\u2b1c"
+                sub_data = completed_subtasks.get(subtask, {})
+                count = sub_data.get("count", 0)
+                is_done = subtask in completed_subtasks and chores.is_subtask_satisfied(sub_data)
+                icon = "\u2705" if is_done else "\u2b1c"
                 text = f"{icon} {subtask} ({count}x)"
             else:
                 is_done = subtask in completed_subtasks
@@ -102,7 +104,10 @@ def _build_done_text(role, person):
         return f"{person} \u2014 {role} : clique pour marquer comme fait."
     else:
         completed_subtasks = role_data.get("subtasks", {})
-        done_count = sum(1 for s in subtasks if s in completed_subtasks)
+        done_count = sum(
+            1 for s in subtasks
+            if s in completed_subtasks and chores.is_subtask_satisfied(completed_subtasks[s])
+        )
         total = len(subtasks)
         if done_count == total:
             return f"{person} \u2014 {role} : {done_count}/{total} sous-t\u00e2ches faites \u2705"
@@ -583,18 +588,22 @@ class Drahmbot:
                 _make_subtask_command_handler(cmd, role, subtask)
             )
 
-        @self.bot.callback_query_handler(func=lambda call: call.data.startswith("subtask:"))
-        async def handle_subtask_callback(call):
+        async def _resolve_subtask_callback(call):
+            """Shared parsing/validation for subtask:/counter: callbacks.
+
+            Returns (role, subtask, person, cmd, week_num), or None after
+            already answering the callback query with an error.
+            """
             parts = call.data.split(":")
             if len(parts) != 3:
                 await self.bot.answer_callback_query(call.id, "Données invalides.")
-                return
+                return None
 
             try:
                 week_num = int(parts[1])
             except ValueError:
                 await self.bot.answer_callback_query(call.id, "Données invalides.")
-                return
+                return None
             cmd = parts[2]
 
             mapping = menage.SUBTASK_COMMANDS.get(cmd)
@@ -602,7 +611,7 @@ class Drahmbot:
                 await self.bot.answer_callback_query(
                     call.id, "Sous-tâche inconnue.", show_alert=True,
                 )
-                return
+                return None
             role, subtask = mapping
 
             current_week = datetime.date.today().isocalendar()[1]
@@ -610,7 +619,7 @@ class Drahmbot:
                 await self.bot.answer_callback_query(
                     call.id, "Trop tard, c'est une autre semaine.", show_alert=True,
                 )
-                return
+                return None
 
             user_id = call.from_user.id
             person = TELEGRAM_USER_MAP.get(user_id)
@@ -618,13 +627,43 @@ class Drahmbot:
                 await self.bot.answer_callback_query(
                     call.id, "Tu n'es pas reconnu.", show_alert=True,
                 )
-                return
+                return None
 
             valid_subtasks = menage.get_subtasks_for_role(role)
             if valid_subtasks is None or subtask not in valid_subtasks:
                 await self.bot.answer_callback_query(
                     call.id, "Sous-tâche inconnue.", show_alert=True,
                 )
+                return None
+
+            return role, subtask, person, cmd, week_num
+
+        @self.bot.callback_query_handler(func=lambda call: call.data.startswith("subtask:"))
+        async def handle_subtask_callback(call):
+            resolved = await _resolve_subtask_callback(call)
+            if resolved is None:
+                return
+            role, subtask, person, cmd, week_num = resolved
+
+            # A subtask's kind (toggle vs counter) is re-derived here rather
+            # than trusted from the callback prefix, so a button rendered
+            # before "subtask" was added to menage.COUNTER_SUBTASKS (still
+            # clickable — Telegram messages don't expire) increments instead
+            # of toggling a shape it no longer matches.
+            if menage.is_counter_subtask(role, subtask):
+                new_count = chores.increment_subtask_counter(role, subtask, person)
+                toast = f"{subtask} : {new_count}x !"
+                assignments = menage.get_role_assignments(colocataires)
+                assigned_person = assignments.get(role, "?")
+                text = _build_counter_text(role, subtask, assigned_person, new_count)
+                keyboard = _build_counter_keyboard(week_num, cmd, new_count)
+                await self.bot.edit_message_text(
+                    text,
+                    call.message.chat.id,
+                    call.message.message_id,
+                    reply_markup=keyboard,
+                )
+                await self.bot.answer_callback_query(call.id, toast)
                 return
 
             role_data = chores.get_week_status().get(role, {})
@@ -657,45 +696,17 @@ class Drahmbot:
 
         @self.bot.callback_query_handler(func=lambda call: call.data.startswith("counter:"))
         async def handle_counter_callback(call):
-            parts = call.data.split(":")
-            if len(parts) != 3:
-                await self.bot.answer_callback_query(call.id, "Données invalides.")
+            resolved = await _resolve_subtask_callback(call)
+            if resolved is None:
                 return
+            role, subtask, person, cmd, week_num = resolved
 
-            try:
-                week_num = int(parts[1])
-            except ValueError:
-                await self.bot.answer_callback_query(call.id, "Données invalides.")
-                return
-            cmd = parts[2]
-
-            mapping = menage.SUBTASK_COMMANDS.get(cmd)
-            if mapping is None:
+            # Symmetric re-derivation to handle_subtask_callback's: don't
+            # trust the "counter:" prefix either, in case a subtask is ever
+            # removed from COUNTER_SUBTASKS while an old button is still live.
+            if not menage.is_counter_subtask(role, subtask):
                 await self.bot.answer_callback_query(
-                    call.id, "Sous-tâche inconnue.", show_alert=True,
-                )
-                return
-            role, subtask = mapping
-
-            current_week = datetime.date.today().isocalendar()[1]
-            if week_num != current_week:
-                await self.bot.answer_callback_query(
-                    call.id, "Trop tard, c'est une autre semaine.", show_alert=True,
-                )
-                return
-
-            user_id = call.from_user.id
-            person = TELEGRAM_USER_MAP.get(user_id)
-            if not person:
-                await self.bot.answer_callback_query(
-                    call.id, "Tu n'es pas reconnu.", show_alert=True,
-                )
-                return
-
-            valid_subtasks = menage.get_subtasks_for_role(role)
-            if valid_subtasks is None or subtask not in valid_subtasks:
-                await self.bot.answer_callback_query(
-                    call.id, "Sous-tâche inconnue.", show_alert=True,
+                    call.id, "Cette tâche a changé, relance la commande.", show_alert=True,
                 )
                 return
 

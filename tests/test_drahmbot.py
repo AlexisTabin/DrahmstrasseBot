@@ -1934,6 +1934,68 @@ async def test_counter_callback_invalid_subtask_for_role(
     assert "inconnue" in toast.lower()
 
 
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.increment_subtask_counter", return_value=1)
+@patch("src.drahmbot.chores.toggle_subtask")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_stale_subtask_callback_for_counter_subtask_increments_instead_of_toggling(
+    mock_group, mock_token, mock_dt, mock_toggle, mock_increment,
+):
+    """Regression: a /plandetravail button rendered before "plan de travail"
+    became a counter subtask still carries "subtask:...:plandetravail"
+    callback_data (Telegram messages don't expire). Clicking it must not
+    call toggle_subtask against what's now counter-shaped data."""
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+
+    bot = Drahmbot()
+    bot.bot.edit_message_text = AsyncMock()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "subtask:15:plandetravail"  # stale prefix for a now-counter subtask
+    call.from_user.id = 891406979
+    call.id = "cb-stale-1"
+    call.message.chat.id = 999
+    call.message.message_id = 100
+
+    await handlers["_callback_query"](call)
+    mock_toggle.assert_not_called()
+    mock_increment.assert_called_once_with("CUISINE", "plan de travail", "Alexis")
+    toast = bot.bot.answer_callback_query.call_args[0][1]
+    assert "1x" in toast
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo"])
+@patch("src.drahmbot.chores.increment_subtask_counter")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_counter_callback_rejects_subtask_no_longer_a_counter(
+    mock_group, mock_token, mock_dt, mock_increment, mock_subtasks,
+):
+    """Symmetric defense: a "counter:...:frigo" callback (frigo isn't in
+    COUNTER_SUBTASKS) must not be allowed to increment frigo's data."""
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "counter:15:frigo"
+    call.from_user.id = 891406979
+    call.id = "cb-stale-2"
+
+    await handlers["_callback_query"](call)
+    mock_increment.assert_not_called()
+    toast = bot.bot.answer_callback_query.call_args[0][1]
+    assert "changé" in toast.lower()
+
+
 def test_all_subtask_commands_are_registered():
     """Every entry in menage.SUBTASK_COMMANDS gets a message handler."""
     from src import menage
