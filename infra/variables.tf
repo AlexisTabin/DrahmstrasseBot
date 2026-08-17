@@ -30,4 +30,5 @@ variable "telegram_webhook_secret" {
 variable "alert_email" {
   description = "Email address that receives AWS Budget and CloudWatch alarm notifications"
   type        = string
+  sensitive   = true
 }

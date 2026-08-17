@@ -8,11 +8,11 @@ resource "aws_sns_topic_subscription" "alerts_email" {
   endpoint  = var.alert_email
 }
 
-# Fires when Lambda is invoked more than 50 times in 5 minutes — abuse signal.
+# Fires when Lambda is invoked more than 50 times in 5 minutes, an abuse signal.
 # Normal traffic is a handful of invocations per window (EventBridge schedules + coloc messages).
 resource "aws_cloudwatch_metric_alarm" "lambda_invocations_spike" {
   alarm_name          = "drahmstrassebot-invocations-spike"
-  alarm_description   = "Lambda invoked >50 times in 5 minutes — possible abuse"
+  alarm_description   = "Lambda invoked >50 times in 5 minutes, possible abuse"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
   metric_name         = "Invocations"
