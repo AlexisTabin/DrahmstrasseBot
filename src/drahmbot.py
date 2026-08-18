@@ -53,12 +53,21 @@ class ColocAccessMiddleware(BaseMiddleware):
         pass
 
 
-def _build_done_keyboard(role, week_num):
-    """Build an InlineKeyboardMarkup for a role's done status."""
+def _build_done_keyboard(role, week_num, person, completed=None, cendrier_state=None):
+    """Build an InlineKeyboardMarkup for a role's done status, plus a
+    cendrier row for smokers (it isn't part of role rotation, see
+    CLAUDE.md, so it wouldn't otherwise show up here).
+
+    `completed`/`cendrier_state` let a caller that already has fresh data
+    (e.g. right after a toggle) pass it in instead of this function
+    re-fetching it, avoiding both a redundant DynamoDB read and, for
+    cendrier, a stale eventually-consistent read right after a write.
+    """
     subtasks = menage.get_subtasks_for_role(role)
     keyboard = telebot.types.InlineKeyboardMarkup()
 
-    completed = chores.get_week_status()
+    if completed is None:
+        completed = chores.get_week_status()
     role_data = completed.get(role, {})
 
     if subtasks is None:
@@ -88,20 +97,33 @@ def _build_done_keyboard(role, week_num):
             )
             keyboard.add(button)
 
+    if cendrier.is_smoker(person):
+        if cendrier_state is None:
+            cendrier_state = cendrier.get_week_state()
+        icon = "\u2705" if cendrier_state else "\u2b1c"
+        keyboard.add(telebot.types.InlineKeyboardButton(
+            text=f"{icon} Cendrier",
+            callback_data=f"donecendrier:{week_num}:{role}",
+        ))
+
     return keyboard
 
 
-def _build_done_text(role, person):
-    """Build status text for a role's done message."""
+def _build_done_text(role, person, completed=None, cendrier_state=None):
+    """Build status text for a role's done message, plus a cendrier line
+    for smokers. See _build_done_keyboard for why completed/cendrier_state
+    can be passed in instead of re-fetched."""
     subtasks = menage.get_subtasks_for_role(role)
-    completed = chores.get_week_status()
+    if completed is None:
+        completed = chores.get_week_status()
     role_data = completed.get(role, {})
 
     if subtasks is None:
         is_done = "by" in role_data
         if is_done:
-            return f"{person} \u2014 {role} : fait \u2705"
-        return f"{person} \u2014 {role} : clique pour marquer comme fait."
+            text = f"{person} \u2014 {role} : fait \u2705"
+        else:
+            text = f"{person} \u2014 {role} : clique pour marquer comme fait."
     else:
         completed_subtasks = role_data.get("subtasks", {})
         done_count = sum(
@@ -110,8 +132,16 @@ def _build_done_text(role, person):
         )
         total = len(subtasks)
         if done_count == total:
-            return f"{person} \u2014 {role} : {done_count}/{total} sous-t\u00e2ches faites \u2705"
-        return f"{person} \u2014 {role} : {done_count}/{total} sous-t\u00e2ches faites."
+            text = f"{person} \u2014 {role} : {done_count}/{total} sous-t\u00e2ches faites \u2705"
+        else:
+            text = f"{person} \u2014 {role} : {done_count}/{total} sous-t\u00e2ches faites."
+
+    if cendrier.is_smoker(person):
+        if cendrier_state is None:
+            cendrier_state = cendrier.get_week_state()
+        text += "\n\n" + _build_cendrier_text(cendrier_state)
+
+    return text
 
 
 def _build_plants_keyboard(date_iso, watered):
@@ -350,8 +380,10 @@ class Drahmbot:
                 return
 
             week_num = datetime.date.today().isocalendar()[1]
-            keyboard = _build_done_keyboard(role, week_num)
-            text = _build_done_text(role, person)
+            completed = chores.get_week_status()
+            cendrier_state = cendrier.get_week_state() if cendrier.is_smoker(person) else None
+            keyboard = _build_done_keyboard(role, week_num, person, completed, cendrier_state)
+            text = _build_done_text(role, person, completed, cendrier_state)
             await self.bot.send_message(message.chat.id, text, reply_markup=keyboard)
 
         @self.bot.callback_query_handler(func=lambda call: call.data.startswith("done:"))
@@ -404,8 +436,10 @@ class Drahmbot:
                 now_done = chores.toggle_role(role, person)
                 toast = f"{role} fait !" if now_done else f"{role} annulé."
 
-            keyboard = _build_done_keyboard(role, week_num)
-            text = _build_done_text(role, person)
+            completed = chores.get_week_status()
+            cendrier_state = cendrier.get_week_state() if cendrier.is_smoker(person) else None
+            keyboard = _build_done_keyboard(role, week_num, person, completed, cendrier_state)
+            text = _build_done_text(role, person, completed, cendrier_state)
             await self.bot.edit_message_text(
                 text,
                 call.message.chat.id,
@@ -426,6 +460,13 @@ class Drahmbot:
             logger.info("Command /recap received from %s", message.chat.id)
             assignments = menage.get_role_assignments(colocataires)
             answer = chores.get_sunday_recap(assignments)
+            await self.bot.send_message(message.chat.id, answer)
+            await self.bot.send_message(message.chat.id, chores.get_leaderboard())
+
+        @self.bot.message_handler(commands=['leaderboard'])
+        async def send_leaderboard(message):
+            logger.info("Command /leaderboard received from %s", message.chat.id)
+            answer = chores.get_leaderboard()
             await self.bot.send_message(message.chat.id, answer)
 
         @self.bot.message_handler(commands=['arrosage'])
@@ -772,25 +813,24 @@ class Drahmbot:
             keyboard = _build_cendrier_keyboard(week_num, bool(state))
             await self.bot.send_message(message.chat.id, text, reply_markup=keyboard)
 
-        @self.bot.callback_query_handler(func=lambda call: call.data.startswith("cendrier:"))
-        async def handle_cendrier_callback(call):
-            parts = call.data.split(":")
-            if len(parts) != 2:
-                await self.bot.answer_callback_query(call.id, "Données invalides.")
-                return
+        async def _resolve_and_toggle_cendrier(call, week_num):
+            """Shared week-check/person-resolution/permission-check/toggle
+            for the standalone cendrier: button and the /done-embedded
+            donecendrier: row. Anyone can mark it done (same open-help model
+            as any other subtask), but only the doer can undo it. Each
+            caller parses its own callback_data shape and passes in the
+            already-extracted week_num, since cendrier: and donecendrier:
+            carry different payloads (donecendrier: also embeds a role).
 
-            try:
-                week_num = int(parts[1])
-            except ValueError:
-                await self.bot.answer_callback_query(call.id, "Données invalides.")
-                return
-
+            Returns (person, new_state, toast), or None after already
+            answering the callback query with an error.
+            """
             current_week = datetime.date.today().isocalendar()[1]
             if week_num != current_week:
                 await self.bot.answer_callback_query(
                     call.id, "Trop tard, c'est une autre semaine.", show_alert=True,
                 )
-                return
+                return None
 
             user_id = call.from_user.id
             person = TELEGRAM_USER_MAP.get(user_id)
@@ -798,7 +838,7 @@ class Drahmbot:
                 await self.bot.answer_callback_query(
                     call.id, "Tu n'es pas reconnu.", show_alert=True,
                 )
-                return
+                return None
 
             existing = cendrier.get_week_state()
             # Only the doer may untoggle. Open click to mark; restricted undo.
@@ -808,13 +848,72 @@ class Drahmbot:
                     f"Seul·e {existing['by']} peut annuler.",
                     show_alert=True,
                 )
-                return
+                return None
 
             new_state = cendrier.toggle_week_state(person)
             toast = "Cendrier vidé !" if new_state else "Annulé."
+            return person, new_state, toast
+
+        @self.bot.callback_query_handler(func=lambda call: call.data.startswith("cendrier:"))
+        async def handle_cendrier_callback(call):
+            parts = call.data.split(":")
+            if len(parts) != 2:
+                await self.bot.answer_callback_query(call.id, "Données invalides.")
+                return
+            try:
+                week_num = int(parts[1])
+            except ValueError:
+                await self.bot.answer_callback_query(call.id, "Données invalides.")
+                return
+
+            resolved = await _resolve_and_toggle_cendrier(call, week_num)
+            if resolved is None:
+                return
+            _person, new_state, toast = resolved
 
             text = _build_cendrier_text(new_state)
             keyboard = _build_cendrier_keyboard(week_num, bool(new_state))
+            await self.bot.edit_message_text(
+                text,
+                call.message.chat.id,
+                call.message.message_id,
+                reply_markup=keyboard,
+            )
+            await self.bot.answer_callback_query(call.id, toast)
+
+        @self.bot.callback_query_handler(func=lambda call: call.data.startswith("donecendrier:"))
+        async def handle_done_cendrier_callback(call):
+            """Cendrier row embedded in /done's keyboard (see
+            _build_done_keyboard): toggles the same cendrier state as the
+            standalone /cendrier button (anyone can help), but always
+            re-renders the combined role+cendrier view for the message's
+            original owner (the role embedded in callback_data), not
+            whoever tapped the button, since /done messages are posted to
+            the shared group chat and visible/tappable by everyone."""
+            parts = call.data.split(":")
+            if len(parts) != 3:
+                await self.bot.answer_callback_query(call.id, "Données invalides.")
+                return
+            try:
+                week_num = int(parts[1])
+            except ValueError:
+                await self.bot.answer_callback_query(call.id, "Données invalides.")
+                return
+            role = parts[2]
+
+            owner = menage.get_role_assignments(colocataires).get(role)
+            if owner is None:
+                await self.bot.answer_callback_query(call.id, "Données invalides.")
+                return
+
+            resolved = await _resolve_and_toggle_cendrier(call, week_num)
+            if resolved is None:
+                return
+            _person, new_state, toast = resolved
+
+            completed = chores.get_week_status()
+            keyboard = _build_done_keyboard(role, week_num, owner, completed, new_state)
+            text = _build_done_text(role, owner, completed, new_state)
             await self.bot.edit_message_text(
                 text,
                 call.message.chat.id,

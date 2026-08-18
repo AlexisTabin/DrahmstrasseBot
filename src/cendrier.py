@@ -7,10 +7,13 @@ import boto3
 logger = logging.getLogger(__name__)
 
 # Reuses the chores table under a distinct row per week ("cendrier:2026-W14")
-# so it doesn't interfere with chores.get_stats scanning plain chore rows
-# ("2026-W14"). Standalone: unlike CUISINE/SDBs/SOLs/DÉCHETS this task never
-# rotates and isn't part of /recap, /reminder, or /stats.
+# so it doesn't interfere with chores._aggregate_completions scanning plain
+# chore rows ("2026-W14"). Standalone: unlike CUISINE/SDBs/SOLs/DÉCHETS this
+# task never rotates and isn't part of /recap, /reminder, or /leaderboard.
 CENDRIER_KEY_PREFIX = "cendrier:"
+
+# Whoever is on the hook for /cendrier, regardless of chore-role rotation.
+SMOKERS = {"Maël"}
 
 _table = None
 
@@ -28,6 +31,11 @@ def _get_table():
 def _current_week_key() -> str:
     iso = datetime.date.today().isocalendar()
     return f"{CENDRIER_KEY_PREFIX}{iso[0]}-W{iso[1]:02d}"
+
+
+def is_smoker(person: str) -> bool:
+    """Whether this person is on the hook for the standalone cendrier task."""
+    return person in SMOKERS
 
 
 def get_week_state() -> dict:

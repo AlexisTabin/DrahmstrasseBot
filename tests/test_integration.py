@@ -165,9 +165,9 @@ async def test_frigo_write_path_round_trip(bot):
     role_data = chores.get_week_status().get("CUISINE", {})
     assert role_data["subtasks"]["frigo"]["by"] == helper
 
-    # 4. /recap credits the helper, not the assigned CUISINE person.
+    # 4. /recap credits the helper (recap text is the 2nd-to-last call; /recap also sends a leaderboard message).
     await main.handler(_eventbridge_event("/recap@DrahmstrasseBot"), {})
-    recap_text = bot.bot.send_message.call_args[0][1]
+    recap_text = bot.bot.send_message.call_args_list[-2][0][1]
     assert f"frigo fait par {helper}" in recap_text
     assert f"(pas {cuisine_person})" in recap_text
 
@@ -201,12 +201,11 @@ async def test_plandetravail_counter_write_path_round_trip(bot):
     assert sub_data["count"] == 2
     assert sub_data["doers"] == {"Timon", "Léa"}
 
-    # 4. /recap credits both Timon and Léa for "plan de travail", not just
-    # whoever pressed "+1" last.
+    # 4. /recap credits both Timon and Léa, not just whoever pressed "+1" last (recap text is the 2nd-to-last call; /recap also sends a leaderboard message).
     assignments = menage.get_role_assignments(colocataires)
     cuisine_person = assignments["CUISINE"]
     await main.handler(_eventbridge_event("/recap@DrahmstrasseBot"), {})
-    recap_text = bot.bot.send_message.call_args[0][1]
+    recap_text = bot.bot.send_message.call_args_list[-2][0][1]
     if cuisine_person == "Timon":
         assert "plan de travail fait par Léa" in recap_text
     elif cuisine_person == "Léa":

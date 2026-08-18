@@ -158,8 +158,8 @@ def test_get_stats_multiple_weeks(mock_get_table):
     # Timon should be first (gold medal)
     assert "🥇" in result
     lines = result.split("\n")
-    # First person line (index 1) should be Timon
-    assert "Timon" in lines[1]
+    medal_line = next(l for l in lines if "🥇" in l)
+    assert "Timon" in medal_line
 
 
 @patch("src.chores._get_table")
@@ -482,12 +482,11 @@ def test_get_stats_with_subtask_format(mock_get_table, mock_even):
     mock_get_table.return_value = mock_table
 
     result = chores.get_stats()
-    # Timon: 1 (CUISINE old format)
-    assert "Timon : 1 tâches" in result
-    # Léa: 1 (SOLs fully complete)
-    assert "Léa : 1 tâches" in result
-    # Alexis: 0 (DÉCHETS not fully complete — only 1 of 5 subtasks)
-    assert "Alexis" not in result
+    # Léa: 2 (SOLs: aspirateur + panosse, each subtask counts on its own)
+    assert "Léa : 2 tâches" in result
+    # Timon: 1 (CUISINE old format), Alexis: 1 (DÉCHETS poubelle) - tied, so
+    # they're grouped on one line rather than each getting their own rank.
+    assert "Alexis, Timon : 1 tâches" in result
 
 
 # --- increment_subtask_counter tests ---
@@ -702,11 +701,13 @@ def test_get_stats_counter_credits_every_doer_not_just_last(mock_get_table, mock
     mock_get_table.return_value = mock_table
 
     result = chores.get_stats()
-    assert "Timon : 1 tâches" in result
+    # Timon: frigo + plan de travail + rangement + balcon = 4
+    assert "Timon : 4 tâches" in result
+    # Léa: credited once for pitching in on the counter subtask
     assert "Léa : 1 tâches" in result
 
 
-# --- stats: counter subtask only ever contributes once per week ---
+# --- stats: counter subtask only ever contributes once per week per doer ---
 
 
 @patch("src.chores._get_table")
@@ -730,5 +731,147 @@ def test_get_stats_counter_subtask_counts_once_regardless_of_count_value(mock_ge
     mock_get_table.return_value = mock_table
 
     result = chores.get_stats()
-    # Timon gets 1 point for the complete CUISINE role, not 5 for the counter.
-    assert "Timon : 1 tâches" in result
+    # Timon gets 1 point per subtask, not 5 for the counter's raw count.
+    assert "Timon : 4 tâches" in result
+    assert "plan de travail (participations, pas le nombre de fois) : Timon 1" in result
+
+
+# --- _aggregate_completions ---
+
+
+@patch("src.menage.is_even_week", return_value=False)
+@patch("src.chores._get_table")
+def test_aggregate_completions_mixed_formats(mock_get_table, mock_even):
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {
+        "Items": [
+            {
+                "week_key": "2026-W10",
+                "completed": {"CUISINE": {"by": "Timon", "at": "..."}},
+            },
+            {
+                "week_key": "2026-W11",
+                "completed": {
+                    "SOLs": {"subtasks": {
+                        "aspirateur": {"by": "Léa", "at": "..."},
+                        "panosse": {
+                            "by": "Léa", "at": "...", "doers": {"Léa", "Maël"},
+                        },
+                    }},
+                },
+            },
+        ]
+    }
+    mock_get_table.return_value = mock_table
+
+    agg = chores._aggregate_completions()
+    assert agg["weeks_tracked"] == 2
+    assert agg["cendrier_weeks"] == 0
+    assert agg["person_totals"] == {"Timon": 1, "Léa": 2, "Maël": 1}
+    assert agg["role_totals"] == {"CUISINE": {"Timon": 1}, "SOLs": {"Léa": 2, "Maël": 1}}
+    assert agg["subtask_totals"] == {
+        ("SOLs", "aspirateur"): {"Léa": 1},
+        ("SOLs", "panosse"): {"Léa": 1, "Maël": 1},
+    }
+
+
+@patch("src.chores._get_table")
+def test_aggregate_completions_counts_cendrier_and_ignores_plant_rows(mock_get_table):
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {
+        "Items": [
+            {"week_key": "cendrier:2026-W10", "cendrier": {"by": "Maël", "at": "..."}},
+            {"week_key": "plant:2026-05-01", "watering": {"state": "watered", "by": "Alexis"}},
+            {"week_key": "2026-W10"},  # a week row with nothing done yet
+        ]
+    }
+    mock_get_table.return_value = mock_table
+
+    agg = chores._aggregate_completions()
+    assert agg["cendrier_weeks"] == 1
+    assert agg["weeks_tracked"] == 0
+    assert agg["person_totals"] == {}
+
+
+# --- get_leaderboard ---
+
+
+@patch("src.chores._get_table")
+def test_get_leaderboard_empty(mock_get_table):
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {"Items": []}
+    mock_get_table.return_value = mock_table
+
+    from src.phrases import LEADERBOARD_EMPTY
+    result = chores.get_leaderboard()
+    assert result in LEADERBOARD_EMPTY
+
+
+@patch("src.chores._get_table")
+def test_get_leaderboard_top3_medals_and_role_champion(mock_get_table):
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {
+        "Items": [
+            {
+                "week_key": "2026-W10",
+                "completed": {
+                    "CUISINE": {"by": "Timon", "at": "..."},
+                    "SDBs": {"by": "Maël", "at": "..."},
+                },
+            },
+            {
+                "week_key": "2026-W11",
+                "completed": {"CUISINE": {"by": "Timon", "at": "..."}},
+            },
+        ]
+    }
+    mock_get_table.return_value = mock_table
+
+    from src.phrases import LEADERBOARD_HEADER
+    result = chores.get_leaderboard()
+    assert any(h in result for h in LEADERBOARD_HEADER)
+    assert "🥇 Timon : 2 tâches" in result
+    assert "🥈 Maël : 1 tâches" in result
+    assert "CUISINE : Timon (2 fois)" in result
+    assert "SDBs : Maël (1 fois)" in result
+    # No bottom-ranking / least-active line: this view is positive-only.
+    assert "actif" not in result
+
+
+@patch("src.chores._get_table")
+def test_get_leaderboard_ties_shown_together(mock_get_table):
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {
+        "Items": [
+            {
+                "week_key": "2026-W10",
+                "completed": {"CUISINE": {"by": "Timon", "at": "..."}},
+            },
+            {
+                "week_key": "2026-W11",
+                "completed": {"CUISINE": {"by": "Léa", "at": "..."}},
+            },
+        ]
+    }
+    mock_get_table.return_value = mock_table
+
+    result = chores.get_leaderboard()
+    assert "CUISINE : Léa, Timon (1 fois)" in result
+
+
+@patch("src.chores._get_table")
+def test_get_leaderboard_includes_best_plant_friend(mock_get_table):
+    """Plant totals now come from the same table.scan() chores.py already
+    does (via plants.compute_watering_totals), not a second scan."""
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {
+        "Items": [
+            {"week_key": "plant:2026-05-01", "watering": {"state": "watered", "by": "Alexis"}},
+            {"week_key": "plant:2026-05-02", "watering": {"state": "watered", "by": "Alexis"}},
+            {"week_key": "plant:2026-05-03", "watering": {"state": "watered", "by": "Léa"}},
+        ]
+    }
+    mock_get_table.return_value = mock_table
+
+    result = chores.get_leaderboard()
+    assert "🌱 Best Plant Friend : Alexis (2 arrosages)" in result

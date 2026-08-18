@@ -235,6 +235,83 @@ async def test_done_handler_subtask_role(
 
 
 @pytest.mark.asyncio
+@patch("src.drahmbot.cendrier.get_week_state", return_value={})
+@patch("src.drahmbot.chores.get_week_status", return_value={})
+@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail", "rangement"])
+@patch("src.drahmbot.menage.get_role_for_person", return_value="CUISINE")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_done_handler_mael_gets_cendrier_in_same_message(
+    mock_group, mock_token, mock_dt, mock_role, mock_subtasks, mock_status, mock_cendrier_state,
+):
+    """Cendrier is standalone (never part of role rotation), but /done still
+    folds it into Maël's single message rather than a second one."""
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    import src.drahmbot as drahmbot_module
+    original_map = drahmbot_module.TELEGRAM_USER_MAP.copy()
+    drahmbot_module.TELEGRAM_USER_MAP[42] = "Maël"
+
+    try:
+        bot = Drahmbot()
+        bot.bot.send_message = AsyncMock()
+        handlers = _capture_handlers(bot)
+
+        message = MagicMock()
+        message.chat.id = 999
+        message.from_user.id = 42
+
+        await handlers["done"](message)
+        assert bot.bot.send_message.call_count == 1
+        call_args = bot.bot.send_message.call_args
+        assert "Cendrier" in call_args[0][1]
+        keyboard = call_args[1]["reply_markup"]
+        assert keyboard.keyboard[-1][0].callback_data == "donecendrier:15:CUISINE"
+    finally:
+        drahmbot_module.TELEGRAM_USER_MAP.clear()
+        drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_week_status", return_value={})
+@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail", "rangement"])
+@patch("src.drahmbot.menage.get_role_for_person", return_value="CUISINE")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_done_handler_non_smoker_no_cendrier(
+    mock_group, mock_token, mock_dt, mock_role, mock_subtasks, mock_status,
+):
+    """Only smokers (currently just Maël) get the extra cendrier row/line."""
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    import src.drahmbot as drahmbot_module
+    original_map = drahmbot_module.TELEGRAM_USER_MAP.copy()
+    drahmbot_module.TELEGRAM_USER_MAP[42] = "Timon"
+
+    try:
+        bot = Drahmbot()
+        bot.bot.send_message = AsyncMock()
+        handlers = _capture_handlers(bot)
+
+        message = MagicMock()
+        message.chat.id = 999
+        message.from_user.id = 42
+
+        await handlers["done"](message)
+        assert bot.bot.send_message.call_count == 1
+        call_args = bot.bot.send_message.call_args
+        assert "Cendrier" not in call_args[0][1]
+        keyboard = call_args[1]["reply_markup"]
+        assert not any(
+            btn.callback_data.startswith("donecendrier:")
+            for row in keyboard.keyboard for btn in row
+        )
+    finally:
+        drahmbot_module.TELEGRAM_USER_MAP.clear()
+        drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
+
+
+@pytest.mark.asyncio
 @patch("src.drahmbot.chores.get_thursday_reminder", return_value="Rappel du jeudi : tout ok")
 @patch("src.drahmbot.menage.get_role_assignments", return_value={"CUISINE": "Timon"})
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
@@ -252,11 +329,13 @@ async def test_reminder_handler(mock_group, mock_token, mock_assignments, mock_r
 
 
 @pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_leaderboard", return_value="Palmarès de la coloc")
 @patch("src.drahmbot.chores.get_sunday_recap", return_value="Récap de la semaine")
 @patch("src.drahmbot.menage.get_role_assignments", return_value={"CUISINE": "Timon"})
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
-async def test_recap_handler(mock_group, mock_token, mock_assignments, mock_recap):
+async def test_recap_handler(mock_group, mock_token, mock_assignments, mock_recap, mock_leaderboard):
+    """/recap also sends the all-time leaderboard as a second message."""
     bot = Drahmbot()
     bot.bot.send_message = AsyncMock()
     handlers = _capture_handlers(bot)
@@ -265,7 +344,28 @@ async def test_recap_handler(mock_group, mock_token, mock_assignments, mock_reca
     message.chat.id = 999
 
     await handlers["recap"](message)
-    bot.bot.send_message.assert_called_with(999, "Récap de la semaine")
+    assert bot.bot.send_message.call_args_list == [
+        ((999, "Récap de la semaine"),),
+        ((999, "Palmarès de la coloc"),),
+    ]
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_leaderboard", return_value="Palmarès de la coloc")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_leaderboard_handler_any_chat(mock_group, mock_token, mock_leaderboard):
+    """/leaderboard is public: unlike /stats it's not gated to the dev chat."""
+    bot = Drahmbot()
+    bot.dev_chat_id = "-4867763410"
+    bot.bot.send_message = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    message = MagicMock()
+    message.chat.id = -9999999999  # not the dev chat
+
+    await handlers["leaderboard"](message)
+    bot.bot.send_message.assert_called_once_with(-9999999999, "Palmarès de la coloc")
 
 
 @pytest.mark.asyncio
@@ -411,7 +511,7 @@ async def test_middleware_blocks_unknown_user_callback():
 @patch("src.drahmbot.chores.get_week_status", return_value={})
 @patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail", "rangement"])
 def test_build_done_keyboard_cuisine_not_done(mock_subtasks, mock_status):
-    keyboard = _build_done_keyboard("CUISINE", 15)
+    keyboard = _build_done_keyboard("CUISINE", 15, "Timon")
     assert len(keyboard.keyboard) == 3
     assert "frigo" in keyboard.keyboard[0][0].text
     assert "plan de travail" in keyboard.keyboard[1][0].text
@@ -429,7 +529,7 @@ def test_build_done_keyboard_cuisine_not_done(mock_subtasks, mock_status):
 })
 @patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail", "rangement"])
 def test_build_done_keyboard_cuisine_done(mock_subtasks, mock_status):
-    keyboard = _build_done_keyboard("CUISINE", 15)
+    keyboard = _build_done_keyboard("CUISINE", 15, "Timon")
     assert len(keyboard.keyboard) == 3
     assert "\u2705" in keyboard.keyboard[0][0].text
 
@@ -437,7 +537,7 @@ def test_build_done_keyboard_cuisine_done(mock_subtasks, mock_status):
 @patch("src.drahmbot.chores.get_week_status", return_value={})
 @patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["aspirateur", "panosse"])
 def test_build_done_keyboard_subtask_role(mock_subtasks, mock_status):
-    keyboard = _build_done_keyboard("SOLs", 15)
+    keyboard = _build_done_keyboard("SOLs", 15, "Léa")
     assert len(keyboard.keyboard) == 2
     assert "aspirateur" in keyboard.keyboard[0][0].text
     assert "panosse" in keyboard.keyboard[1][0].text
@@ -447,7 +547,7 @@ def test_build_done_keyboard_subtask_role(mock_subtasks, mock_status):
 @patch("src.drahmbot.chores.get_week_status", return_value={})
 @patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail"])
 def test_build_done_keyboard_counter_subtask_shows_count_zero(mock_subtasks, mock_status):
-    keyboard = _build_done_keyboard("CUISINE", 15)
+    keyboard = _build_done_keyboard("CUISINE", 15, "Timon")
     assert "plan de travail" in keyboard.keyboard[1][0].text
     assert "(0x)" in keyboard.keyboard[1][0].text
     assert "⬜" in keyboard.keyboard[1][0].text
@@ -460,9 +560,41 @@ def test_build_done_keyboard_counter_subtask_shows_count_zero(mock_subtasks, moc
 })
 @patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail"])
 def test_build_done_keyboard_counter_subtask_shows_positive_count(mock_subtasks, mock_status):
-    keyboard = _build_done_keyboard("CUISINE", 15)
+    keyboard = _build_done_keyboard("CUISINE", 15, "Timon")
     assert "(3x)" in keyboard.keyboard[1][0].text
     assert "✅" in keyboard.keyboard[1][0].text
+
+
+@patch("src.drahmbot.cendrier.get_week_state", return_value={})
+@patch("src.drahmbot.chores.get_week_status", return_value={})
+@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail", "rangement"])
+def test_build_done_keyboard_smoker_gets_cendrier_row(mock_subtasks, mock_status, mock_cendrier_state):
+    keyboard = _build_done_keyboard("CUISINE", 15, "Maël")
+    assert len(keyboard.keyboard) == 4  # 3 subtasks + cendrier
+    assert keyboard.keyboard[3][0].callback_data == "donecendrier:15:CUISINE"
+    assert "Cendrier" in keyboard.keyboard[3][0].text
+    assert "⬜" in keyboard.keyboard[3][0].text
+
+
+@patch("src.drahmbot.cendrier.get_week_state", return_value={"by": "Maël", "at": "..."})
+@patch("src.drahmbot.chores.get_week_status", return_value={})
+@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail", "rangement"])
+def test_build_done_keyboard_smoker_cendrier_row_reflects_done(
+    mock_subtasks, mock_status, mock_cendrier_state,
+):
+    keyboard = _build_done_keyboard("CUISINE", 15, "Maël")
+    assert "✅" in keyboard.keyboard[3][0].text
+
+
+@patch("src.drahmbot.chores.get_week_status", return_value={})
+@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail", "rangement"])
+def test_build_done_keyboard_non_smoker_has_no_cendrier_row(mock_subtasks, mock_status):
+    keyboard = _build_done_keyboard("CUISINE", 15, "Timon")
+    assert len(keyboard.keyboard) == 3
+    assert not any(
+        btn.callback_data.startswith("donecendrier:")
+        for row in keyboard.keyboard for btn in row
+    )
 
 
 @patch("src.drahmbot.chores.get_week_status", return_value={})
@@ -495,6 +627,22 @@ def test_build_done_text_cuisine_done(mock_subtasks, mock_status):
 def test_build_done_text_subtask_partial(mock_subtasks, mock_status):
     text = _build_done_text("SOLs", "Léa")
     assert "1/2" in text
+
+
+@patch("src.drahmbot.cendrier.get_week_state", return_value={})
+@patch("src.drahmbot.chores.get_week_status", return_value={})
+@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail", "rangement"])
+def test_build_done_text_smoker_appends_cendrier_line(mock_subtasks, mock_status, mock_cendrier_state):
+    text = _build_done_text("CUISINE", "Maël")
+    assert "0/3" in text
+    assert "Cendrier" in text
+
+
+@patch("src.drahmbot.chores.get_week_status", return_value={})
+@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail", "rangement"])
+def test_build_done_text_non_smoker_has_no_cendrier_line(mock_subtasks, mock_status):
+    text = _build_done_text("CUISINE", "Timon")
+    assert "Cendrier" not in text
 
 
 # --- Callback handler tests ---
@@ -2325,3 +2473,96 @@ async def test_cendrier_callback_non_numeric_week(mock_group, mock_token, mock_d
     mock_toggle.assert_not_called()
     toast = bot.bot.answer_callback_query.call_args[0][1]
     assert "invalides" in toast.lower()
+
+
+# --- /done-embedded cendrier callback ---
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.cendrier.toggle_week_state",
+       return_value={"by": "Timon", "at": "..."})
+@patch("src.drahmbot.cendrier.get_week_state", return_value={})
+@patch("src.drahmbot.chores.get_week_status", return_value={})
+@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail", "rangement"])
+@patch("src.drahmbot.menage.get_role_assignments", return_value={"CUISINE": "Maël"})
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_done_cendrier_callback_rerenders_original_owners_card(
+    mock_group, mock_token, mock_dt, mock_assignments, mock_subtasks, mock_status,
+    mock_state, mock_toggle,
+):
+    """Clicking the cendrier row inside someone else's /done message still
+    toggles cendrier (anyone can help) but must redraw the ORIGINAL card
+    owner's combined view (Maël's), not the clicker's own (Timon's) - the
+    row's callback_data embeds the card's role precisely to prevent this."""
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    import src.drahmbot as drahmbot_module
+    original_map = drahmbot_module.TELEGRAM_USER_MAP.copy()
+    drahmbot_module.TELEGRAM_USER_MAP[42] = "Timon"  # the clicker, not the card owner
+
+    try:
+        bot = Drahmbot()
+        bot.bot.edit_message_text = AsyncMock()
+        bot.bot.answer_callback_query = AsyncMock()
+        handlers = _capture_handlers(bot)
+
+        call = MagicMock()
+        call.data = "donecendrier:15:CUISINE"
+        call.from_user.id = 42
+        call.id = "cbc7"
+        call.message.chat.id = 999
+        call.message.message_id = 100
+
+        await handlers["_callback_query"](call)
+        mock_toggle.assert_called_once_with("Timon")
+        bot.bot.edit_message_text.assert_called_once()
+        edited_text = bot.bot.edit_message_text.call_args[0][0]
+        assert "Maël — CUISINE" in edited_text
+        assert "Timon — CUISINE" not in edited_text
+        # Timon is still rightfully credited as the one who emptied it.
+        assert "vidé par Timon" in edited_text
+        keyboard = bot.bot.edit_message_text.call_args[1]["reply_markup"]
+        assert any(
+            btn.callback_data == "donecendrier:15:CUISINE"
+            for row in keyboard.keyboard for btn in row
+        )
+        toast = bot.bot.answer_callback_query.call_args[0][1]
+        assert "vidé" in toast.lower()
+    finally:
+        drahmbot_module.TELEGRAM_USER_MAP.clear()
+        drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.cendrier.toggle_week_state")
+@patch("src.drahmbot.cendrier.get_week_state", return_value={"by": "Maël", "at": "..."})
+@patch("src.drahmbot.menage.get_role_assignments", return_value={"CUISINE": "Maël"})
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_done_cendrier_callback_non_doer_cannot_undo(
+    mock_group, mock_token, mock_dt, mock_assignments, mock_state, mock_toggle,
+):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    import src.drahmbot as drahmbot_module
+    original_map = drahmbot_module.TELEGRAM_USER_MAP.copy()
+    drahmbot_module.TELEGRAM_USER_MAP[42] = "Timon"  # not Maël, who did it
+
+    try:
+        bot = Drahmbot()
+        bot.bot.answer_callback_query = AsyncMock()
+        handlers = _capture_handlers(bot)
+
+        call = MagicMock()
+        call.data = "donecendrier:15:CUISINE"
+        call.from_user.id = 42
+        call.id = "cbc8"
+
+        await handlers["_callback_query"](call)
+        mock_toggle.assert_not_called()
+        toast = bot.bot.answer_callback_query.call_args[0][1]
+        assert "Maël" in toast
+    finally:
+        drahmbot_module.TELEGRAM_USER_MAP.clear()
+        drahmbot_module.TELEGRAM_USER_MAP.update(original_map)

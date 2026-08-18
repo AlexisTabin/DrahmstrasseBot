@@ -116,6 +116,22 @@ STATS_EMPTY = [
     "C'est le désert niveau stats, bougez-vous ehehe",
 ]
 
+LEADERBOARD_HEADER = [
+    "🏆 Palmarès de la coloc :",
+    "Le classement des champions :",
+    "Qui claque le plus la coloc :",
+    "Le mur de la gloire :",
+    "Highlights de la coloc :",
+    "Petit hommage aux champions de la coloc :",
+]
+
+LEADERBOARD_EMPTY = [
+    "Pas encore de champion, personne n'a rien fait !",
+    "Le podium est vide, à vous de jouer",
+    "Aucun exploit à célébrer pour l'instant",
+    "Le mur de la gloire est encore vide ehehe",
+]
+
 ARROSAGE_HEADER = [
     "🌡️ {temp}°C aujourd'hui à Zürich. Les plantes vous regardent.",
     "Yo, il va faire {temp}°C aujourd'hui. Pensez aux plantes.",
