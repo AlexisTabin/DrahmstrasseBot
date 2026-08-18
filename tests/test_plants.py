@@ -211,6 +211,45 @@ def test_get_last_watered_date_picks_most_recent(mock_dt, mock_get_table):
 
 
 @patch("src.plants._get_table")
+def test_get_watering_totals_counts_watered_days_per_person(mock_get_table):
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {
+        "Items": [
+            {"week_key": "plant:2026-06-01", "watering": {"state": "watered", "by": "Léa"}},
+            {"week_key": "plant:2026-06-02", "watering": {"state": "watered", "by": "Alexis"}},
+            {"week_key": "plant:2026-06-03", "watering": {"state": "watered", "by": "Léa"}},
+        ]
+    }
+    mock_get_table.return_value = mock_table
+
+    assert plants.get_watering_totals() == {"Léa": 2, "Alexis": 1}
+
+
+@patch("src.plants._get_table")
+def test_get_watering_totals_ignores_unwatered_and_non_plant_rows(mock_get_table):
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {
+        "Items": [
+            {"week_key": "plant:2026-06-01", "watering": {"state": "ok", "by": "Timon"}},
+            {"week_key": "plant:2026-06-02", "watering": {}},
+            {"week_key": "2026-W14", "completed": {"CUISINE": {"by": "Timon", "at": "..."}}},
+        ]
+    }
+    mock_get_table.return_value = mock_table
+
+    assert plants.get_watering_totals() == {}
+
+
+@patch("src.plants._get_table")
+def test_get_watering_totals_empty_table(mock_get_table):
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {"Items": []}
+    mock_get_table.return_value = mock_table
+
+    assert plants.get_watering_totals() == {}
+
+
+@patch("src.plants._get_table")
 @patch("src.plants.datetime")
 def test_get_last_watered_date_respects_lookback(mock_dt, mock_get_table):
     """Rows older than lookback_days are ignored."""

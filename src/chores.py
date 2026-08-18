@@ -3,7 +3,10 @@ import logging
 import datetime
 import boto3
 
+from src import menage
 from src import phrases
+from src import plants
+
 
 logger = logging.getLogger(__name__)
 
@@ -181,8 +184,6 @@ def is_subtask_satisfied(sub_data: dict) -> bool:
 
 def is_role_complete(role: str, completed_map: dict) -> bool:
     """Check if a role is fully completed, handling both old and new formats."""
-    from src.menage import get_subtasks_for_role
-
     if role not in completed_map:
         return False
 
@@ -194,7 +195,7 @@ def is_role_complete(role: str, completed_map: dict) -> bool:
 
     # New format: {subtasks: {name: {by, at}, ...}}
     if "subtasks" in role_data:
-        expected = get_subtasks_for_role(role)
+        expected = menage.get_subtasks_for_role(role)
         if expected is None:
             return False
         completed_subtasks = role_data["subtasks"]
@@ -208,9 +209,7 @@ def is_role_complete(role: str, completed_map: dict) -> bool:
 
 def _pending_detail(role: str, completed: dict) -> str:
     """Return detail string for sub-task roles with missing items."""
-    from src.menage import get_subtasks_for_role
-
-    expected = get_subtasks_for_role(role)
+    expected = menage.get_subtasks_for_role(role)
     if expected is None:
         return ""
 
@@ -287,41 +286,186 @@ def get_thursday_reminder(role_assignments: dict) -> str:
     return "\n".join(lines)
 
 
-def get_stats() -> str:
-    """Aggregate chore completions across all weeks and return a formatted leaderboard."""
-    table = _get_table()
-    response = table.scan()
-    items = response.get("Items", [])
+def _bump(counts: dict, key) -> None:
+    counts[key] = counts.get(key, 0) + 1
 
-    counts: dict[str, int] = {}
+
+def _grouped_by_score(totals: dict) -> list:
+    """Group people by score, descending, ties combined into one entry so a
+    medal/rank never implies a false ordering between people who are tied.
+    Returns [(score, [people sorted alphabetically]), ...].
+    """
+    scores = sorted(set(totals.values()), reverse=True)
+    return [(score, sorted(p for p, c in totals.items() if c == score)) for score in scores]
+
+
+def _aggregate_completions() -> dict:
+    """Scan every row once and bucket chore completions by person, role, and
+    (role, subtask), plus a cendrier trivia count. Every subtask completion
+    counts on its own: unlike the older role-only counting still used
+    elsewhere, a role doesn't need to be fully finished for its subtask
+    credits to show up here.
+
+    Old-format {by, at} role entries only contribute to the person/role
+    totals: there's no subtask breakdown to attribute for them.
+    """
+    table = _get_table()
+    items = table.scan().get("Items", [])
+
+    person_totals: dict[str, int] = {}
+    role_totals: dict[str, dict[str, int]] = {}
+    subtask_totals: dict[tuple, dict[str, int]] = {}
+    weeks_tracked = 0
+    cendrier_weeks = 0
+
     for item in items:
-        completed = item.get("completed", {})
+        if "cendrier" in item:
+            cendrier_weeks += 1
+            continue
+        completed = item.get("completed")
+        if completed is None:
+            continue
+        weeks_tracked += 1
         for role, role_data in completed.items():
-            # Old format: {by, at}
             if "by" in role_data:
                 person = role_data["by"]
-                counts[person] = counts.get(person, 0) + 1
-            # New format: {subtasks: {name: {by, at}, ...}}
+                _bump(person_totals, person)
+                _bump(role_totals.setdefault(role, {}), person)
             elif "subtasks" in role_data:
-                if is_role_complete(role, completed):
-                    names = set()
-                    for sub_data in role_data["subtasks"].values():
-                        if "doers" in sub_data:
-                            names.update(sub_data["doers"])
-                        elif "by" in sub_data:
-                            names.add(sub_data["by"])
-                    for person in names:
-                        counts[person] = counts.get(person, 0) + 1
+                for subtask, sub_data in role_data["subtasks"].items():
+                    doers = sub_data.get("doers")
+                    if doers is None:
+                        doers = {sub_data["by"]} if sub_data.get("by") else set()
+                    for person in doers:
+                        _bump(person_totals, person)
+                        _bump(role_totals.setdefault(role, {}), person)
+                        _bump(subtask_totals.setdefault((role, subtask), {}), person)
 
-    if not counts:
+    return {
+        "person_totals": person_totals,
+        "role_totals": role_totals,
+        "subtask_totals": subtask_totals,
+        "weeks_tracked": weeks_tracked,
+        "cendrier_weeks": cendrier_weeks,
+        # Folded into this same scan so get_stats/get_leaderboard don't pay
+        # for a second full table.scan() via plants.get_watering_totals().
+        "plant_totals": plants.compute_watering_totals(items),
+    }
+
+
+def get_stats() -> str:
+    """Exhaustive, dev-chat-only breakdown: every person's total, a per-role
+    and per-subtask breakdown, averages, and the most/least active people.
+    See get_leaderboard() for the positive-only, public equivalent.
+    """
+    agg = _aggregate_completions()
+    person_totals = agg["person_totals"]
+    plant_totals = agg["plant_totals"]
+
+    if not person_totals and not plant_totals and not agg["cendrier_weeks"]:
         return phrases.pick(phrases.STATS_EMPTY)
 
-    medals = ["🥇", "🥈", "🥉"]
-    sorted_people = sorted(counts.items(), key=lambda x: x[1], reverse=True)
     lines = [phrases.pick(phrases.STATS_HEADER)]
-    for i, (person, count) in enumerate(sorted_people):
-        prefix = f"  {medals[i]} " if i < len(medals) else "  "
-        lines.append(f"{prefix}{person} : {count} tâches")
+
+    if person_totals:
+        grouped = _grouped_by_score(person_totals)
+        medals = ["🥇", "🥈", "🥉"]
+        lines.append("")
+        lines.append("🏆 Classement général")
+        for i, (count, people) in enumerate(grouped):
+            prefix = f"  {medals[i]} " if i < len(medals) else "     "
+            lines.append(f"{prefix}{', '.join(people)} : {count} tâches")
+
+        total = sum(person_totals.values())
+        avg = total / len(person_totals)
+        lines.append("")
+        lines.append(
+            f"📈 {agg['weeks_tracked']} semaine(s) suivie(s) · "
+            f"moyenne {avg:.1f} tâches/personne"
+        )
+        top_count, top_people = grouped[0]
+        bottom_count, bottom_people = grouped[-1]
+        lines.append(f"🔥 Plus actif·ve : {', '.join(top_people)}")
+        if bottom_count != top_count:
+            lines.append(f"🥶 Moins actif·ve : {', '.join(bottom_people)}")
+
+    for role in menage.ROLES:
+        role_counts = agg["role_totals"].get(role)
+        if not role_counts:
+            continue
+        lines.append("")
+        lines.append(f"{menage.ROLE_EMOJIS.get(role, '')} {role}")
+        for person, count in sorted(role_counts.items(), key=lambda x: x[1], reverse=True):
+            lines.append(f"  {person} : {count}")
+
+    if agg["subtask_totals"]:
+        lines.append("")
+        lines.append("🔍 Détail par tâche")
+        sorted_subtasks = sorted(
+            agg["subtask_totals"].items(), key=lambda x: (x[0][0], x[0][1].lower())
+        )
+        for (role, subtask), counts in sorted_subtasks:
+            label = subtask
+            if menage.is_counter_subtask(role, subtask):
+                label = f"{subtask} (participations, pas le nombre de fois)"
+            parts = ", ".join(
+                f"{person} {count}"
+                for person, count in sorted(counts.items(), key=lambda x: x[1], reverse=True)
+            )
+            lines.append(f"  {label} : {parts}")
+
+    if plant_totals:
+        lines.append("")
+        lines.append("🌱 Arrosage des plantes")
+        for person, count in sorted(plant_totals.items(), key=lambda x: x[1], reverse=True):
+            lines.append(f"  {person} : {count}")
+
+    if agg["cendrier_weeks"]:
+        lines.append("")
+        lines.append(f"🚬 Cendrier sorti {agg['cendrier_weeks']} fois (toujours par Maël)")
+
+    return "\n".join(lines)
+
+
+def get_leaderboard() -> str:
+    """Positive-only, all-time highlights for everyone to see: the top
+    scorer(s), a champion per role, and the plant-watering MVP. No bottom
+    rankings: see get_stats() for the exhaustive, dev-chat-only breakdown.
+    """
+    agg = _aggregate_completions()
+    person_totals = agg["person_totals"]
+    plant_totals = agg["plant_totals"]
+
+    if not person_totals and not plant_totals:
+        return phrases.pick(phrases.LEADERBOARD_EMPTY)
+
+    lines = [phrases.pick(phrases.LEADERBOARD_HEADER)]
+
+    if person_totals:
+        grouped = _grouped_by_score(person_totals)[:3]
+        medals = ["🥇", "🥈", "🥉"]
+        lines.append("")
+        lines.append("🏆 Classement général")
+        for i, (count, people) in enumerate(grouped):
+            lines.append(f"  {medals[i]} {', '.join(people)} : {count} tâches")
+
+    if agg["role_totals"]:
+        lines.append("")
+        for role in menage.ROLES:
+            role_counts = agg["role_totals"].get(role)
+            if not role_counts:
+                continue
+            top_count, champions = _grouped_by_score(role_counts)[0]
+            lines.append(
+                f"{menage.ROLE_EMOJIS.get(role, '')} {role} : {', '.join(champions)} "
+                f"({top_count} fois)"
+            )
+
+    if plant_totals:
+        top_count, friends = _grouped_by_score(plant_totals)[0]
+        lines.append("")
+        lines.append(f"🌱 Best Plant Friend : {', '.join(friends)} ({top_count} arrosages)")
+
     return "\n".join(lines)
 
 

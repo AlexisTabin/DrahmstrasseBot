@@ -15,7 +15,8 @@ _WATERED_STATES = frozenset({STATE_WATERED, _LEGACY_WATERED_STATE})
 
 # Reuses the chores table. The key field is named `week_key` but DynamoDB
 # treats it as an opaque string. Prefix `plant:` keeps these rows distinct
-# from chore rows (`2026-W14`) so `chores.get_stats` ignores them naturally.
+# from chore rows (`2026-W14`) so `chores._aggregate_completions` ignores
+# them naturally when bucketing chore completions.
 PLANT_KEY_PREFIX = "plant:"
 
 _table = None
@@ -67,6 +68,31 @@ def get_last_watered_date(lookback_days: int = 5):
         if is_watered(watering):
             return date
     return None
+
+
+def compute_watering_totals(items) -> dict:
+    """Count watered days per person from already-fetched table items.
+
+    Lets a caller that already ran its own table.scan() over the shared
+    table (e.g. chores._aggregate_completions) fold in plant totals without
+    paying for a second full scan.
+    """
+    totals: dict[str, int] = {}
+    for item in items:
+        if not item.get("week_key", "").startswith(PLANT_KEY_PREFIX):
+            continue
+        watering = item.get("watering", {})
+        person = watering.get("by")
+        if person and is_watered(watering):
+            totals[person] = totals.get(person, 0) + 1
+    return totals
+
+
+def get_watering_totals() -> dict:
+    """All-time count of watered days per person, across every day ever recorded."""
+    table = _get_table()
+    items = table.scan().get("Items", [])
+    return compute_watering_totals(items)
 
 
 def toggle_today_state(person: str) -> dict:

@@ -9,6 +9,13 @@ logger = logging.getLogger(__name__)
 
 ROLES = ["CUISINE", "SDBs", "SOLs", "DÉCHETS"]
 
+ROLE_EMOJIS = {
+    "CUISINE": "\U0001F373",
+    "SDBs": "\U0001F6BF",
+    "SOLs": "\U0001F9F9",
+    "DÉCHETS": "\U0001F5D1️",
+}
+
 # Chance that roles don't rotate this week — pure chaos/joke
 CHAOS_KEEP_ROLES_PROBABILITY = 0.05
 
@@ -113,15 +120,15 @@ def getRoles(colocataires: list):
 
     body = """
         ROLES DU MENAGES ATTRIBUÉS ALEATOIREMENT PAR LE DRAHMBOT    :
-        - \U0001F373 CUISINE    : {}
-        - \U0001F6BF SDBs       : {}
-        - \U0001F9F9 SOLs       : {}
-        - \U0001F5D1\uFE0F DÉCHETs     : {}
+        - {cuisine_emoji} CUISINE    : {cuisine}
+        - {sdbs_emoji} SDBs       : {sdbs}
+        - {sols_emoji} SOLs       : {sols}
+        - {dechets_emoji} DÉCHETs     : {dechets}
     """.format(
-        assignments["CUISINE"],
-        assignments["SDBs"],
-        assignments["SOLs"],
-        assignments["DÉCHETS"],
+        cuisine_emoji=ROLE_EMOJIS["CUISINE"], cuisine=assignments["CUISINE"],
+        sdbs_emoji=ROLE_EMOJIS["SDBs"], sdbs=assignments["SDBs"],
+        sols_emoji=ROLE_EMOJIS["SOLs"], sols=assignments["SOLs"],
+        dechets_emoji=ROLE_EMOJIS["DÉCHETS"], dechets=assignments["DÉCHETS"],
     )
 
     if _should_keep_same_roles():
