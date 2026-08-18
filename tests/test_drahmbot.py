@@ -167,27 +167,24 @@ async def test_commands_handler_sends_commands_list(mock_group, mock_token):
 
 def test_build_commands_text_lists_every_documented_command_and_subtask():
     result = _build_commands_text()
+    lines = result.split("\n")
     for cmd, _description in COMMANDS:
-        assert f"/{cmd} :" in result
+        assert any(line.startswith(f"/{cmd} :") for line in lines)
+    # Exact-line membership, not `in result`: a couple of subtask names are
+    # prefixes of each other (e.g. "poubelle" of "poubelles"), so a plain
+    # substring check wouldn't notice one going missing while the other stays.
     for cmd in menage.SUBTASK_COMMANDS:
-        assert f"/{cmd}" in result
+        assert f"/{cmd}" in lines
 
 
-def test_commands_list_matches_registered_handlers():
-    """Guards against drift: any command registered via
-    @self.bot.message_handler(commands=[...]) must either be listed in
-    COMMANDS, be one of the auto-derived subtask shortcuts, or be
-    explicitly excluded (only /stats: dev-chat only, deliberately not
-    advertised in the group-facing /commands). Add a new command without
-    updating COMMANDS and this test fails instead of /commands silently
-    going stale.
-    """
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+def test_commands_list_matches_registered_handlers(mock_group, mock_token):
+    """Guards against drift: any command registered via @self.bot.message_handler(commands=[...]) must either be listed in COMMANDS, be one of the auto-derived subtask shortcuts, or be explicitly excluded (only /stats: dev-chat only, deliberately not advertised in the group-facing /commands). Add a new command without updating COMMANDS and this test fails instead of /commands silently going stale. Uses _capture_handlers (the same public commands=[...] kwarg every other test in this file relies on) instead of reaching into telebot's private message_handlers/filters internals, and mocks the token/chat_id so it doesn't depend on some other test having already constructed the Drahmbot singleton first."""
     bot = Drahmbot()
-    registered = set()
-    for handler in bot.bot.message_handlers:
-        cmds = handler.get("filters", {}).get("commands")
-        if cmds:
-            registered.update(cmds)
+    handlers = _capture_handlers(bot)
+    non_commands = {"_callback_pairs", "_callback_query", "jeremie?"}
+    registered = set(handlers.keys()) - non_commands
 
     documented = {cmd for cmd, _description in COMMANDS}
     subtask_commands = set(menage.SUBTASK_COMMANDS.keys())
@@ -533,6 +530,18 @@ async def test_middleware_allows_myid():
     message = MagicMock()
     message.from_user.id = 99999999  # Unknown user
     message.text = "/myid"
+    result = await mw.pre_process(message, {})
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_middleware_allows_commands_for_unonboarded_users():
+    """A not-yet-onboarded roommate must be able to run /commands to
+    discover /myid exists in the first place."""
+    mw = ColocAccessMiddleware(TELEGRAM_USER_MAP)
+    message = MagicMock()
+    message.from_user.id = 99999999  # Unknown user
+    message.text = "/commands"
     result = await mw.pre_process(message, {})
     assert result is None
 
