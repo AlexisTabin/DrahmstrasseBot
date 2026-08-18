@@ -34,6 +34,30 @@ TELEGRAM_USER_MAP = {
     1645783874: TIMON,
 }
 
+# Every group-chat-facing command and a one-line description, rendered by
+# /commands. Deliberately excludes /stats (dev-chat only, would be
+# misleading to advertise in the group) and the per-subtask shortcuts
+# (/frigo, /aspirateur, etc., derived straight from menage.SUBTASK_COMMANDS
+# so they never need a separate entry here). Add a line here whenever you
+# register a new @self.bot.message_handler(commands=[...]) below:
+# tests/test_drahmbot.py::test_commands_list_matches_registered_handlers
+# fails loudly if this list drifts from what's actually registered.
+COMMANDS = [
+    ("roles", "Voir l'attribution des rôles de ménage (auto : lundi 08h00 UTC)"),
+    ("done", "Voir et cocher tes tâches de la semaine"),
+    ("recap", "Récap + palmarès du dimanche soir (auto : dimanche 19h00 UTC)"),
+    ("reminder", "Rappel des tâches pas encore faites (auto : jeudi 08h00 UTC)"),
+    ("papier", "Rappel papier, semaines paires (auto : lundi 19h00 UTC)"),
+    ("carton", "Rappel carton (auto : mercredi 19h00 UTC)"),
+    ("cendrier", "Tâche du cendrier, toujours Maël, indépendante des rôles"),
+    ("arrosage", "Vote pour arroser les plantes (auto : tous les jours 07h00 UTC)"),
+    ("whoishere", "Sondage pour savoir qui mange à la maison (auto : jours de semaine 15h00 UTC)"),
+    ("leaderboard", "Palmarès positif de la coloc (envoyé aussi après /recap)"),
+    ("lessive", "Infos pour commander une carte/badge de lessive"),
+    ("myid", "Affiche ton ID Telegram (pour l'admin)"),
+    ("commands", "Affiche cette liste"),
+]
+
 class ColocAccessMiddleware(BaseMiddleware):
     def __init__(self, user_map):
         super().__init__()
@@ -258,6 +282,19 @@ def _build_cendrier_text(state):
     return f"Cendrier ({MAEL}) : vidé par {by} \U0001f91d ✅"
 
 
+def _build_commands_text() -> str:
+    """Render the maintained COMMANDS list, plus the per-subtask shortcuts
+    read straight from menage.SUBTASK_COMMANDS so they never go stale."""
+    lines = ["Commandes disponibles :", ""]
+    for cmd, description in COMMANDS:
+        lines.append(f"/{cmd} : {description}")
+    lines.append("")
+    lines.append("Sous-tâches individuelles (marquer une tâche précise comme faite) :")
+    for cmd in menage.SUBTASK_COMMANDS:
+        lines.append(f"/{cmd}")
+    return "\n".join(lines)
+
+
 class Drahmbot:
     _instance = None  # Singleton instance
 
@@ -355,6 +392,12 @@ class Drahmbot:
                 answer = f"Ton ID Telegram : {user_id} ({name})"
             else:
                 answer = "Impossible de récupérer ton ID."
+            await self.bot.send_message(message.chat.id, answer)
+
+        @self.bot.message_handler(commands=['commands'])
+        async def send_commands(message):
+            logger.info("Command /commands received from %s", message.chat.id)
+            answer = _build_commands_text()
             await self.bot.send_message(message.chat.id, answer)
 
         @self.bot.message_handler(commands=['done'])

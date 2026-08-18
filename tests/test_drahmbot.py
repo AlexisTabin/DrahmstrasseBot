@@ -3,14 +3,16 @@ import pytest
 import asyncio
 from unittest.mock import AsyncMock, patch, MagicMock
 from src.drahmbot import (
-    Drahmbot, ColocAccessMiddleware, TELEGRAM_USER_MAP, colocataires,
+    Drahmbot, ColocAccessMiddleware, TELEGRAM_USER_MAP, colocataires, COMMANDS,
     _build_done_keyboard, _build_done_text,
     _build_plants_keyboard, _build_plants_text,
     _build_dechets_keyboard, _build_dechets_text,
     _build_subtask_keyboard, _build_subtask_text,
     _build_cendrier_keyboard, _build_cendrier_text,
     _build_counter_keyboard, _build_counter_text,
+    _build_commands_text,
 )
+from src import menage
 
 @pytest.mark.asyncio
 async def test_singleton_behavior():
@@ -143,6 +145,58 @@ async def test_myid_handler(mock_group, mock_token):
     call_args = bot.bot.send_message.call_args
     assert "42" in call_args[0][1]
     assert "Test User" in call_args[0][1]
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_commands_handler_sends_commands_list(mock_group, mock_token):
+    bot = Drahmbot()
+    bot.bot.send_message = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    message = MagicMock()
+    message.chat.id = 999
+
+    await handlers["commands"](message)
+    call_args = bot.bot.send_message.call_args
+    assert call_args[0][0] == 999
+    assert "/recap" in call_args[0][1]
+    assert "/frigo" in call_args[0][1]
+
+
+def test_build_commands_text_lists_every_documented_command_and_subtask():
+    result = _build_commands_text()
+    for cmd, _description in COMMANDS:
+        assert f"/{cmd} :" in result
+    for cmd in menage.SUBTASK_COMMANDS:
+        assert f"/{cmd}" in result
+
+
+def test_commands_list_matches_registered_handlers():
+    """Guards against drift: any command registered via
+    @self.bot.message_handler(commands=[...]) must either be listed in
+    COMMANDS, be one of the auto-derived subtask shortcuts, or be
+    explicitly excluded (only /stats: dev-chat only, deliberately not
+    advertised in the group-facing /commands). Add a new command without
+    updating COMMANDS and this test fails instead of /commands silently
+    going stale.
+    """
+    bot = Drahmbot()
+    registered = set()
+    for handler in bot.bot.message_handlers:
+        cmds = handler.get("filters", {}).get("commands")
+        if cmds:
+            registered.update(cmds)
+
+    documented = {cmd for cmd, _description in COMMANDS}
+    subtask_commands = set(menage.SUBTASK_COMMANDS.keys())
+    deliberately_excluded = {"stats"}
+
+    undocumented = registered - documented - subtask_commands - deliberately_excluded
+    assert undocumented == set(), (
+        f"{undocumented} registered but missing from drahmbot.COMMANDS"
+    )
 
 
 @pytest.mark.asyncio
