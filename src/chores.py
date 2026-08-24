@@ -528,6 +528,7 @@ def _aggregate_completions() -> dict:
     subtask_totals: dict[tuple, dict[str, int]] = {}
     calendar: dict[str, dict] = {}
     week_totals: dict[str, int] = {}
+    chiffons_totals: dict[str, int] = {}
     weeks_tracked = 0
     cendrier_weeks = 0
 
@@ -535,6 +536,16 @@ def _aggregate_completions() -> dict:
         if "cendrier" in item:
             cendrier_weeks += 1
             _record_days(calendar, week_totals, _completion_days(item["cendrier"]))
+            continue
+        if "chiffons" in item:
+            # Unlike cendrier (always the same person, so no ranking makes
+            # sense) this one is up for grabs, so whoever does it gets a
+            # normal task point on top of its own tally.
+            washer = item["chiffons"].get("by")
+            if washer:
+                _bump(person_totals, washer)
+                _bump(chiffons_totals, washer)
+            _record_days(calendar, week_totals, _completion_days(item["chiffons"]))
             continue
         if str(item.get("week_key", "")).startswith(plants.PLANT_KEY_PREFIX):
             watering = item.get("watering", {})
@@ -569,6 +580,7 @@ def _aggregate_completions() -> dict:
         # every streak/gap/busiest-day highlight (see src/activity.py).
         "calendar": calendar,
         "week_totals": week_totals,
+        "chiffons_totals": chiffons_totals,
         "weeks_tracked": weeks_tracked,
         "cendrier_weeks": cendrier_weeks,
         # Folded into this same scan so get_stats/get_leaderboard don't pay
@@ -760,6 +772,13 @@ def get_stats() -> str:
         for person, count in sorted(plant_totals.items(), key=lambda x: x[1], reverse=True):
             lines.append(f"  {person} : {count}")
 
+    chiffons_totals = agg["chiffons_totals"]
+    if chiffons_totals:
+        lines.append("")
+        lines.append(f"🧺 Chiffons lavés {sum(chiffons_totals.values())} fois")
+        for person, count in sorted(chiffons_totals.items(), key=lambda x: x[1], reverse=True):
+            lines.append(f"  {person} : {count}")
+
     lines.extend(_rhythm_lines(agg))
 
     if agg["cendrier_weeks"]:
@@ -807,6 +826,15 @@ def get_leaderboard() -> str:
         top_count, friends = _grouped_by_score(plant_totals)[0]
         lines.append("")
         lines.append(f"🌱 Best Plant Friend : {', '.join(friends)} ({top_count} arrosages)")
+
+    chiffons_totals = agg["chiffons_totals"]
+    if chiffons_totals:
+        top_count, washers = _grouped_by_score(chiffons_totals)[0]
+        lines.append("")
+        lines.append(
+            f"🧺 Roi·ne des chiffons : {', '.join(washers)} "
+            f"({activity.plural(top_count, 'lessive')})"
+        )
 
     highlights = _highlight_lines(agg)
     if highlights:

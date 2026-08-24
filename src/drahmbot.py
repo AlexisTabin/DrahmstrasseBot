@@ -14,6 +14,7 @@ import src.phrases as phrases
 import src.plants as plants
 import src.weather as weather
 import src.cendrier as cendrier
+import src.chiffons as chiffons
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -43,6 +44,7 @@ COMMANDS = [
     ("papier", "Rappel papier, semaines paires (auto : lundi 19h00 UTC ; silence si semaine impaire, même en manuel)"),
     ("carton", "Rappel carton (auto : mercredi 19h00 UTC)"),
     ("cendrier", "Tâche du cendrier, toujours Maël, indépendante des rôles"),
+    ("chiffons", "Laver les chiffons et linges à la machine : à personne, optionnel, de temps en temps"),
     ("arrosage", "Vote pour arroser les plantes (auto : tous les jours 07h00 UTC ; silencieux si frais)"),
     ("whoishere", "Sondage pour savoir qui mange à la maison (auto : jours de semaine 15h00 UTC)"),
     ("leaderboard", "Palmarès positif de la coloc (envoyé aussi après /recap)"),
@@ -325,6 +327,37 @@ def _build_cendrier_text(state):
     if by == MAEL:
         return f"Cendrier vidé par {by} cette semaine ✅"
     return f"Cendrier ({MAEL}) : vidé par {by} \U0001f91d ✅"
+
+
+def _build_chiffons_keyboard(week_num, is_done):
+    """Single toggleable button for the standalone /chiffons command."""
+    icon = "✅" if is_done else "⬜"
+    keyboard = telebot.types.InlineKeyboardMarkup()
+    keyboard.add(telebot.types.InlineKeyboardButton(
+        text=f"{icon} J'ai lavé les chiffons !",
+        callback_data=f"chiffons:{week_num}",
+    ))
+    return keyboard
+
+
+def _build_chiffons_text(state, last_done=None):
+    """Status text for /chiffons: who did it this week if anyone, otherwise
+    how long it's been, since "de temps en temps" is only actionable if you
+    know when it last happened (chiffons.get_last_done, may be None)."""
+    if state:
+        return f"🧺 Chiffons et linges lavés cette semaine par {state.get('by', '?')} ✅"
+
+    lines = ["🧺 Chiffons et linges : personne ne les a lavés cette semaine."]
+    if last_done is None:
+        lines.append(
+            f"Rien depuis au moins {chiffons.LOOKBACK_WEEKS} semaines, ça sent le vécu."
+        )
+    else:
+        weeks_ago, previous = last_done
+        when = "la semaine dernière" if weeks_ago == 1 else f"il y a {weeks_ago} semaines"
+        lines.append(f"Dernière fois : {when}, par {previous.get('by', '?')}.")
+    lines.append("Personne n'est de corvée, clique si tu t'en occupes.")
+    return "\n".join(lines)
 
 
 def _build_commands_text() -> str:
@@ -1041,6 +1074,65 @@ class Drahmbot:
             completed = chores.get_week_status()
             keyboard = _build_done_keyboard(role, week_num, owner, completed, new_state)
             text = _build_done_text(role, owner, completed, new_state)
+            await self.bot.edit_message_text(
+                text,
+                call.message.chat.id,
+                call.message.message_id,
+                reply_markup=keyboard,
+            )
+            await self.bot.answer_callback_query(call.id, toast)
+
+        @self.bot.message_handler(commands=['chiffons'])
+        async def send_chiffons(message):
+            logger.info("Command /chiffons received from %s", message.chat.id)
+            week_num = datetime.date.today().isocalendar()[1]
+            state = chiffons.get_week_state()
+            last_done = None if state else chiffons.get_last_done()
+            text = _build_chiffons_text(state, last_done)
+            keyboard = _build_chiffons_keyboard(week_num, bool(state))
+            await self.bot.send_message(message.chat.id, text, reply_markup=keyboard)
+
+        @self.bot.callback_query_handler(func=lambda call: call.data.startswith("chiffons:"))
+        async def handle_chiffons_callback(call):
+            parts = call.data.split(":")
+            if len(parts) != 2:
+                await self.bot.answer_callback_query(call.id, "Données invalides.")
+                return
+            try:
+                week_num = int(parts[1])
+            except ValueError:
+                await self.bot.answer_callback_query(call.id, "Données invalides.")
+                return
+
+            current_week = datetime.date.today().isocalendar()[1]
+            if week_num != current_week:
+                await self.bot.answer_callback_query(
+                    call.id, "Trop tard, c'est une autre semaine.", show_alert=True,
+                )
+                return
+
+            person = TELEGRAM_USER_MAP.get(call.from_user.id)
+            if not person:
+                await self.bot.answer_callback_query(
+                    call.id, "Tu n'es pas reconnu.", show_alert=True,
+                )
+                return
+
+            existing = chiffons.get_week_state()
+            # Only the doer may untoggle. Open click to mark; restricted undo,
+            # same model as every other shared button.
+            if existing and existing.get("by") != person:
+                await self.bot.answer_callback_query(
+                    call.id, f"Seul·e {existing['by']} peut annuler.", show_alert=True,
+                )
+                return
+
+            new_state = chiffons.toggle_week_state(person)
+            toast = "Merci pour les chiffons !" if new_state else "Annulé."
+
+            last_done = None if new_state else chiffons.get_last_done()
+            text = _build_chiffons_text(new_state, last_done)
+            keyboard = _build_chiffons_keyboard(week_num, bool(new_state))
             await self.bot.edit_message_text(
                 text,
                 call.message.chat.id,
