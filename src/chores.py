@@ -4,6 +4,7 @@ import datetime
 import boto3
 from botocore.exceptions import ClientError
 
+from src import activity
 from src import menage
 from src import phrases
 from src import plants
@@ -148,14 +149,19 @@ def increment_subtask_counter(role: str, subtask: str, person: str) -> dict:
     )
     # Separate call from the one above: DynamoDB rejects an expression whose
     # SET targets overlap (`...#subtask` is an ancestor of `...#subtask.#counts`),
-    # and `ADD ...#counts.#person` below needs the map to already exist.
+    # and `ADD ...#counts.#person` below needs the map to already exist. `counts`
+    # and `days` are siblings, so those two do fit in one expression.
     table.update_item(
         Key={"week_key": week_key},
         UpdateExpression=(
             "SET completed.#role.subtasks.#subtask.#counts = "
-            "if_not_exists(completed.#role.subtasks.#subtask.#counts, :empty_map)"
+            "if_not_exists(completed.#role.subtasks.#subtask.#counts, :empty_map), "
+            "completed.#role.subtasks.#subtask.#days = "
+            "if_not_exists(completed.#role.subtasks.#subtask.#days, :empty_map)"
         ),
-        ExpressionAttributeNames={"#role": role, "#subtask": subtask, "#counts": "counts"},
+        ExpressionAttributeNames={
+            "#role": role, "#subtask": subtask, "#counts": "counts", "#days": "days",
+        },
         ExpressionAttributeValues={":empty_map": {}},
     )
     # ADD (not "SET count = count + :one") so this is robust even if #subtask
@@ -163,6 +169,9 @@ def increment_subtask_counter(role: str, subtask: str, person: str) -> dict:
     # ADD auto-initializes a missing numeric attribute instead of erroring.
     # "by"/"at" must be aliased — both are DynamoDB reserved words when used
     # as a raw path segment (only safe as plain dict keys inside a value).
+    # `days` collects the distinct days this person pressed (a string set, so
+    # a second press the same day is a no-op): `at` alone only remembers the
+    # last presser, which would hide everyone else from the streak stats.
     response = table.update_item(
         Key={"week_key": week_key},
         UpdateExpression=(
@@ -170,14 +179,17 @@ def increment_subtask_counter(role: str, subtask: str, person: str) -> dict:
             "completed.#role.subtasks.#subtask.#at = :now "
             "ADD completed.#role.subtasks.#subtask.#count :one, "
             "completed.#role.subtasks.#subtask.#counts.#person :one, "
+            "completed.#role.subtasks.#subtask.#days.#person :today_set, "
             "completed.#role.subtasks.#subtask.#doers :person_set"
         ),
         ExpressionAttributeNames={
             "#role": role, "#subtask": subtask, "#count": "count", "#by": "by",
-            "#at": "at", "#doers": "doers", "#counts": "counts", "#person": person,
+            "#at": "at", "#doers": "doers", "#counts": "counts", "#days": "days",
+            "#person": person,
         },
         ExpressionAttributeValues={
             ":one": 1, ":person": person, ":now": now, ":person_set": {person},
+            ":today_set": {datetime.date.today().isoformat()},
         },
         ReturnValues="ALL_NEW",
     )
@@ -243,7 +255,8 @@ def reset_subtask_counter(role: str, subtask: str, person: str) -> tuple:
                         "#role": role, "#subtask": subtask, "#count": "count",
                     },
                     ExpressionAttributeValues={
-                        ":empty_counter": {"count": 0, "counts": {}}, ":total": total,
+                        ":empty_counter": {"count": 0, "counts": {}, "days": {}},
+                        ":total": total,
                     },
                 )
                 logger.info(
@@ -258,7 +271,8 @@ def reset_subtask_counter(role: str, subtask: str, person: str) -> tuple:
             response = table.update_item(
                 Key={"week_key": week_key},
                 UpdateExpression=(
-                    "REMOVE completed.#role.subtasks.#subtask.#counts.#person "
+                    "REMOVE completed.#role.subtasks.#subtask.#counts.#person, "
+                    "completed.#role.subtasks.#subtask.#days.#person "
                     "ADD completed.#role.subtasks.#subtask.#count :negative "
                     "DELETE completed.#role.subtasks.#subtask.#doers :person_set"
                 ),
@@ -267,7 +281,8 @@ def reset_subtask_counter(role: str, subtask: str, person: str) -> tuple:
                 ),
                 ExpressionAttributeNames={
                     "#role": role, "#subtask": subtask, "#count": "count",
-                    "#counts": "counts", "#doers": "doers", "#person": person,
+                    "#counts": "counts", "#days": "days", "#doers": "doers",
+                    "#person": person,
                 },
                 ExpressionAttributeValues={
                     ":negative": -removed, ":person_set": {person}, ":removed": removed,
@@ -448,6 +463,38 @@ def _bump(counts: dict, key) -> None:
     counts[key] = counts.get(key, 0) + 1
 
 
+def _completion_days(entry: dict) -> list:
+    """(person, day) pairs for one completion entry: one per person per day
+    they worked on it.
+
+    Counter subtasks keep a `days` string set per person, so every doer shows
+    up on every day they pressed. Everything else (toggle subtasks, old
+    role-level entries, cendrier) carries a single `by`/`at`, which for a
+    pre-`days` counter entry means only the last presser is datable.
+    """
+    days_map = entry.get("days")
+    if days_map:
+        return [
+            (person, activity.day_of(stamp))
+            for person, stamps in days_map.items()
+            for stamp in stamps
+        ]
+    person = entry.get("by")
+    return [(person, activity.day_of(entry.get("at")))] if person else []
+
+
+def _record_days(calendar: dict, week_totals: dict, events) -> None:
+    """Fold (person, day) pairs into the per-person calendar and the weekly
+    totals. Pairs whose day couldn't be parsed are counted nowhere."""
+    for person, day in events:
+        if not person or day is None:
+            continue
+        day_counts = calendar.setdefault(person, {})
+        day_counts[day] = day_counts.get(day, 0) + 1
+        week = activity.week_key_of(day)
+        week_totals[week] = week_totals.get(week, 0) + 1
+
+
 def _grouped_by_score(totals: dict) -> list:
     """Group people by score, descending, ties combined into one entry so a
     medal/rank never implies a false ordering between people who are tied.
@@ -479,12 +526,20 @@ def _aggregate_completions() -> dict:
     person_totals: dict[str, int] = {}
     role_totals: dict[str, dict[str, int]] = {}
     subtask_totals: dict[tuple, dict[str, int]] = {}
+    calendar: dict[str, dict] = {}
+    week_totals: dict[str, int] = {}
     weeks_tracked = 0
     cendrier_weeks = 0
 
     for item in items:
         if "cendrier" in item:
             cendrier_weeks += 1
+            _record_days(calendar, week_totals, _completion_days(item["cendrier"]))
+            continue
+        if str(item.get("week_key", "")).startswith(plants.PLANT_KEY_PREFIX):
+            watering = item.get("watering", {})
+            if plants.is_watered(watering):
+                _record_days(calendar, week_totals, _completion_days(watering))
             continue
         completed = item.get("completed")
         if completed is None:
@@ -495,6 +550,7 @@ def _aggregate_completions() -> dict:
                 person = role_data["by"]
                 _bump(person_totals, person)
                 _bump(role_totals.setdefault(role, {}), person)
+                _record_days(calendar, week_totals, _completion_days(role_data))
             elif "subtasks" in role_data:
                 for subtask, sub_data in role_data["subtasks"].items():
                     optional = menage.is_optional_subtask(role, subtask)
@@ -503,17 +559,136 @@ def _aggregate_completions() -> dict:
                         if not optional:
                             _bump(role_totals.setdefault(role, {}), person)
                         _bump(subtask_totals.setdefault((role, subtask), {}), person)
+                    _record_days(calendar, week_totals, _completion_days(sub_data))
 
     return {
         "person_totals": person_totals,
         "role_totals": role_totals,
         "subtask_totals": subtask_totals,
+        # {person: {day: tasks}} plus {iso week: tasks}, the raw material for
+        # every streak/gap/busiest-day highlight (see src/activity.py).
+        "calendar": calendar,
+        "week_totals": week_totals,
         "weeks_tracked": weeks_tracked,
         "cendrier_weeks": cendrier_weeks,
         # Folded into this same scan so get_stats/get_leaderboard don't pay
         # for a second full table.scan() via plants.get_watering_totals().
         "plant_totals": plants.compute_watering_totals(items),
     }
+
+
+def _rhythm_lines(agg: dict) -> list:
+    """Exhaustive per-person streak/gap/busiest-day block for /stats, plus the
+    two global ones (busiest weekday, record week)."""
+    calendar = agg["calendar"]
+    if not calendar:
+        return []
+
+    today = datetime.date.today()
+    lines = ["", "⏱️ Séries et rythme"]
+    for person in sorted(calendar, key=lambda p: (-len(calendar[p]), p)):
+        day_counts = calendar[person]
+        streak, streak_end = activity.longest_streak(day_counts)
+        running = activity.current_streak(day_counts, today)
+        top_day, top_count = activity.best_day(day_counts)
+        gap, gap_start, gap_end = activity.longest_gap(day_counts)
+
+        parts = [activity.plural(len(day_counts), "jour actif", "jours actifs")]
+        parts.append(
+            f"série record {activity.plural(streak, 'jour')} "
+            f"(jusqu'au {activity.format_day(streak_end)})"
+        )
+        if running:
+            parts.append(f"en cours {activity.plural(running, 'jour')}")
+        parts.append(
+            f"top journée {activity.plural(top_count, 'tâche')} "
+            f"le {activity.format_day(top_day)}"
+        )
+        if gap:
+            parts.append(
+                f"pause max {activity.plural(gap, 'jour')} "
+                f"({activity.format_day(gap_start)} → {activity.format_day(gap_end)})"
+            )
+        lines.append(f"  {person} : {' · '.join(parts)}")
+
+    weekdays = activity.weekday_totals(activity.merge_day_counts(calendar))
+    if weekdays:
+        busiest = min(weekdays, key=lambda index: (-weekdays[index], index))
+        lines.append("")
+        lines.append(
+            f"🗓️ Jour le plus productif : {activity.WEEKDAYS_FR[busiest]} "
+            f"({activity.plural(weekdays[busiest], 'tâche')})"
+        )
+    week_totals = agg["week_totals"]
+    if week_totals:
+        record = min(week_totals, key=lambda week: (-week_totals[week], week))
+        lines.append(
+            f"🚀 Semaine record : {record} ({activity.plural(week_totals[record], 'tâche')})"
+        )
+    return lines
+
+
+def _highlight_lines(agg: dict) -> list:
+    """Positive-only rhythm highlights for /leaderboard: nothing about who
+    slacked, so no gaps and no "least active" here (see _rhythm_lines)."""
+    calendar = agg["calendar"]
+    if not calendar:
+        return []
+
+    today = datetime.date.today()
+    lines = []
+
+    streaks = {person: activity.longest_streak(days)[0] for person, days in calendar.items()}
+    best_streak, champions = _grouped_by_score(streaks)[0]
+    # A one-day "streak" is just having done a chore once, not a highlight.
+    if best_streak >= 2:
+        lines.append(
+            f"🔥 Plus longue série : {', '.join(champions)} "
+            f"({activity.plural(best_streak, 'jour')} d'affilée)"
+        )
+
+    running = {
+        person: activity.current_streak(days, today) for person, days in calendar.items()
+    }
+    best_running, keepers = _grouped_by_score(running)[0]
+    if best_running >= 2:
+        lines.append(
+            f"⚡ Série en cours : {', '.join(keepers)} ({activity.plural(best_running, 'jour')})"
+        )
+
+    best_days = {person: activity.best_day(days) for person, days in calendar.items()}
+    day_scores = {person: count for person, (_day, count) in best_days.items()}
+    best_count, achievers = _grouped_by_score(day_scores)[0]
+    if best_count >= 2:
+        who = ", ".join(
+            f"{person} ({activity.format_day(best_days[person][0])})" for person in achievers
+        )
+        lines.append(
+            f"📅 Meilleure journée : {activity.plural(best_count, 'tâche')} en un jour, {who}"
+        )
+
+    pairs = activity.shared_days(calendar)
+    if pairs:
+        best_pair_count = max(pairs.values())
+        if best_pair_count >= 2:
+            duos = " / ".join(
+                f"{first} & {second}"
+                for (first, second), count in sorted(pairs.items())
+                if count == best_pair_count
+            )
+            lines.append(
+                f"🤝 Meilleur duo : {duos} "
+                f"({activity.plural(best_pair_count, 'jour')} à bosser ensemble)"
+            )
+
+    weekdays = activity.weekday_totals(activity.merge_day_counts(calendar))
+    if weekdays:
+        busiest = min(weekdays, key=lambda index: (-weekdays[index], index))
+        lines.append(
+            f"🗓️ On carbure surtout le {activity.WEEKDAYS_FR[busiest]} "
+            f"({activity.plural(weekdays[busiest], 'tâche')})"
+        )
+    return lines
 
 
 def get_stats() -> str:
@@ -585,6 +760,8 @@ def get_stats() -> str:
         for person, count in sorted(plant_totals.items(), key=lambda x: x[1], reverse=True):
             lines.append(f"  {person} : {count}")
 
+    lines.extend(_rhythm_lines(agg))
+
     if agg["cendrier_weeks"]:
         lines.append("")
         lines.append(f"🚬 Cendrier sorti {agg['cendrier_weeks']} fois (toujours par Maël)")
@@ -630,6 +807,11 @@ def get_leaderboard() -> str:
         top_count, friends = _grouped_by_score(plant_totals)[0]
         lines.append("")
         lines.append(f"🌱 Best Plant Friend : {', '.join(friends)} ({top_count} arrosages)")
+
+    highlights = _highlight_lines(agg)
+    if highlights:
+        lines.append("")
+        lines.extend(highlights)
 
     return "\n".join(lines)
 

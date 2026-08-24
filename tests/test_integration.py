@@ -232,6 +232,10 @@ async def test_plandetravail_per_person_reset_round_trip(bot):
     sub_data = chores.get_week_status()["CUISINE"]["subtasks"]["plan de travail"]
     assert sub_data["count"] == 3
     assert chores.person_counts(sub_data) == {"Timon": 2, "Léa": 1}
+    # Per-person day sets: a nested map of string sets, only a real expression
+    # parser can confirm DynamoDB accepts ADDing into one.
+    today = datetime.date.today().isoformat()
+    assert sub_data["days"] == {"Timon": {today}, "Léa": {today}}
 
     # Léa resets: only her single press goes.
     await main.handler(_callback_event(f"resetcounter:{week_num}:plandetravail", lea_id), {})
@@ -239,6 +243,7 @@ async def test_plandetravail_per_person_reset_round_trip(bot):
     assert sub_data["count"] == 2
     assert chores.person_counts(sub_data) == {"Timon": 2}
     assert sub_data["doers"] == {"Timon"}  # Léa no longer credited
+    assert set(sub_data["days"]) == {"Timon"}  # and gone from the streak calendar
     edited = bot.bot.edit_message_text.call_args[0][0]
     assert "2x" in edited
     assert "Timon 2x" in edited
