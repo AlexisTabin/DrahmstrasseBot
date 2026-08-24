@@ -1528,3 +1528,85 @@ def test_get_stats_without_any_timestamp_has_no_rhythm_section(mock_get_table):
     result = chores.get_stats()
     assert "Léa : 1 tâches" in result
     assert "Séries et rythme" not in result
+
+
+# --- /chiffons rows: unassigned, so unlike cendrier they earn a real point ---
+
+
+CHIFFONS_ITEMS = [
+    {"week_key": "chiffons:2026-W19", "chiffons": {"by": "Léa", "at": _stamp("2026-05-06")}},
+    {"week_key": "chiffons:2026-W21", "chiffons": {"by": "Léa", "at": _stamp("2026-05-20")}},
+    {"week_key": "chiffons:2026-W23", "chiffons": {"by": "Timon", "at": _stamp("2026-06-03")}},
+]
+
+
+@patch("src.chores._get_table")
+def test_aggregate_completions_counts_chiffons_per_person(mock_get_table):
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {"Items": CHIFFONS_ITEMS}
+    mock_get_table.return_value = mock_table
+
+    agg = chores._aggregate_completions()
+
+    assert agg["chiffons_totals"] == {"Léa": 2, "Timon": 1}
+    # A real chore anyone can pick up, so it counts as a task too (unlike
+    # cendrier, which is always the same person and stays trivia).
+    assert agg["person_totals"] == {"Léa": 2, "Timon": 1}
+    # No role and no subtask to attribute it to.
+    assert agg["role_totals"] == {}
+    assert agg["subtask_totals"] == {}
+    # And it lands on the streak calendar like any other dated completion.
+    assert agg["calendar"]["Timon"] == {datetime.date(2026, 6, 3): 1}
+
+
+@patch("src.chores._get_table")
+def test_aggregate_completions_ignores_a_chiffons_row_with_no_doer(mock_get_table):
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {"Items": [
+        {"week_key": "chiffons:2026-W19", "chiffons": {}},
+    ]}
+    mock_get_table.return_value = mock_table
+
+    agg = chores._aggregate_completions()
+    assert agg["chiffons_totals"] == {}
+    assert agg["person_totals"] == {}
+
+
+@patch("src.chores._get_table")
+def test_get_stats_breaks_chiffons_down_per_person(mock_get_table):
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {"Items": CHIFFONS_ITEMS}
+    mock_get_table.return_value = mock_table
+
+    result = chores.get_stats()
+    assert "🧺 Chiffons lavés 3 fois" in result
+    assert "  Léa : 2" in result
+    assert "  Timon : 1" in result
+
+
+@patch("src.chores._get_table")
+def test_get_leaderboard_crowns_the_chiffons_champion(mock_get_table):
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {"Items": CHIFFONS_ITEMS}
+    mock_get_table.return_value = mock_table
+
+    assert "🧺 Roi·ne des chiffons : Léa (2 lessives)" in chores.get_leaderboard()
+
+
+@patch("src.chores._get_table")
+def test_get_leaderboard_chiffons_ties_share_the_crown(mock_get_table):
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {"Items": CHIFFONS_ITEMS[1:]}  # Léa 1, Timon 1
+    mock_get_table.return_value = mock_table
+
+    assert "🧺 Roi·ne des chiffons : Léa, Timon (1 lessive)" in chores.get_leaderboard()
+
+
+@patch("src.chores._get_table")
+def test_stats_and_leaderboard_without_chiffons_have_no_chiffons_line(mock_get_table):
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {"Items": CALENDAR_ITEMS}
+    mock_get_table.return_value = mock_table
+
+    assert "chiffons" not in chores.get_stats().lower()
+    assert "chiffons" not in chores.get_leaderboard().lower()

@@ -9,6 +9,7 @@ from src.drahmbot import (
     _build_dechets_keyboard, _build_dechets_text,
     _build_subtask_keyboard, _build_subtask_text,
     _build_cendrier_keyboard, _build_cendrier_text,
+    _build_chiffons_keyboard, _build_chiffons_text,
     _build_counter_keyboard, _build_counter_text,
     _build_commands_text,
 )
@@ -2938,3 +2939,224 @@ async def test_done_callback_optional_toggle_can_be_ticked_by_anyone(
     finally:
         drahmbot_module.TELEGRAM_USER_MAP.clear()
         drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
+
+
+# --- /chiffons: unassigned, optional, done/undone ---
+
+
+def test_build_chiffons_keyboard_unchecked():
+    kb = _build_chiffons_keyboard(15, False)
+    assert len(kb.keyboard) == 1
+    assert "⬜" in kb.keyboard[0][0].text
+    assert kb.keyboard[0][0].callback_data == "chiffons:15"
+
+
+def test_build_chiffons_keyboard_checked():
+    kb = _build_chiffons_keyboard(15, True)
+    assert "✅" in kb.keyboard[0][0].text
+
+
+def test_build_chiffons_text_done_this_week():
+    text = _build_chiffons_text({"by": "Léa", "at": "..."})
+    assert "Léa" in text
+    assert "✅" in text
+    assert "corvée" not in text  # nothing to nag about, it's done
+
+
+def test_build_chiffons_text_not_done_names_nobody_as_responsible():
+    text = _build_chiffons_text({}, last_done=None)
+    assert "Personne n'est de corvée" in text
+    assert "au moins 8 semaines" in text
+
+
+def test_build_chiffons_text_reports_the_previous_wash():
+    text = _build_chiffons_text({}, last_done=(3, {"by": "Timon", "at": "..."}))
+    assert "il y a 3 semaines, par Timon" in text
+
+
+def test_build_chiffons_text_last_week_reads_naturally():
+    text = _build_chiffons_text({}, last_done=(1, {"by": "Timon", "at": "..."}))
+    assert "la semaine dernière, par Timon" in text
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chiffons.get_last_done", return_value=(2, {"by": "Timon", "at": "..."}))
+@patch("src.drahmbot.chiffons.get_week_state", return_value={})
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_chiffons_command_sends_keyboard(
+    mock_group, mock_token, mock_dt, mock_state, mock_last,
+):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    bot = Drahmbot()
+    bot.bot.send_message = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    message = MagicMock()
+    message.chat.id = 999
+
+    await handlers["chiffons"](message)
+    call_args = bot.bot.send_message.call_args
+    assert "il y a 2 semaines, par Timon" in call_args[0][1]
+    assert call_args[1]["reply_markup"].keyboard[0][0].callback_data == "chiffons:15"
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chiffons.get_last_done")
+@patch("src.drahmbot.chiffons.get_week_state", return_value={"by": "Léa", "at": "..."})
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_chiffons_command_skips_the_lookback_when_already_done(
+    mock_group, mock_token, mock_dt, mock_state, mock_last,
+):
+    """get_last_done costs one get_item per week looked back, so don't pay
+    for it when this week already answers the question."""
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    bot = Drahmbot()
+    bot.bot.send_message = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    message = MagicMock()
+    message.chat.id = 999
+
+    await handlers["chiffons"](message)
+    mock_last.assert_not_called()
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chiffons.get_last_done", return_value=None)
+@patch("src.drahmbot.chiffons.toggle_week_state", return_value={"by": "Léa", "at": "..."})
+@patch("src.drahmbot.chiffons.get_week_state", return_value={})
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_chiffons_callback_anyone_can_mark(
+    mock_group, mock_token, mock_dt, mock_state, mock_toggle, mock_last,
+):
+    """Nobody is assigned, so any colocataire can claim it."""
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    import src.drahmbot as drahmbot_module
+    original_map = drahmbot_module.TELEGRAM_USER_MAP.copy()
+    drahmbot_module.TELEGRAM_USER_MAP[42] = "Léa"
+
+    try:
+        bot = Drahmbot()
+        bot.bot.edit_message_text = AsyncMock()
+        bot.bot.answer_callback_query = AsyncMock()
+        handlers = _capture_handlers(bot)
+
+        call = MagicMock()
+        call.data = "chiffons:15"
+        call.from_user.id = 42
+        call.id = "cbch1"
+        call.message.chat.id = 999
+        call.message.message_id = 100
+
+        await handlers["_callback_query"](call)
+        mock_toggle.assert_called_once_with("Léa")
+        assert "Léa" in bot.bot.edit_message_text.call_args[0][0]
+        assert "chiffons" in bot.bot.answer_callback_query.call_args[0][1].lower()
+    finally:
+        drahmbot_module.TELEGRAM_USER_MAP.clear()
+        drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chiffons.toggle_week_state")
+@patch("src.drahmbot.chiffons.get_week_state", return_value={"by": "Timon", "at": "..."})
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_chiffons_callback_non_doer_cannot_undo(
+    mock_group, mock_token, mock_dt, mock_state, mock_toggle,
+):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    import src.drahmbot as drahmbot_module
+    original_map = drahmbot_module.TELEGRAM_USER_MAP.copy()
+    drahmbot_module.TELEGRAM_USER_MAP[42] = "Léa"
+
+    try:
+        bot = Drahmbot()
+        bot.bot.edit_message_text = AsyncMock()
+        bot.bot.answer_callback_query = AsyncMock()
+        handlers = _capture_handlers(bot)
+
+        call = MagicMock()
+        call.data = "chiffons:15"
+        call.from_user.id = 42
+        call.id = "cbch2"
+
+        await handlers["_callback_query"](call)
+        mock_toggle.assert_not_called()
+        assert "Seul·e Timon peut annuler." == bot.bot.answer_callback_query.call_args[0][1]
+    finally:
+        drahmbot_module.TELEGRAM_USER_MAP.clear()
+        drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chiffons.toggle_week_state")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_chiffons_callback_stale_week(mock_group, mock_token, mock_dt, mock_toggle):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 16, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "chiffons:15"
+    call.from_user.id = 891406979
+    call.id = "cbch3"
+
+    await handlers["_callback_query"](call)
+    mock_toggle.assert_not_called()
+    assert "semaine" in bot.bot.answer_callback_query.call_args[0][1].lower()
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chiffons.toggle_week_state")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_chiffons_callback_unknown_user(mock_group, mock_token, mock_dt, mock_toggle):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    call = MagicMock()
+    call.data = "chiffons:15"
+    call.from_user.id = 99999  # not in TELEGRAM_USER_MAP
+    call.id = "cbch4"
+
+    await handlers["_callback_query"](call)
+    mock_toggle.assert_not_called()
+    assert "reconnu" in bot.bot.answer_callback_query.call_args[0][1]
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chiffons.toggle_week_state")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_chiffons_callback_malformed_data(mock_group, mock_token, mock_dt, mock_toggle):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+
+    bot = Drahmbot()
+    bot.bot.answer_callback_query = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    for data in ("chiffons:", "chiffons:pasunnombre", "chiffons:15:extra"):
+        call = MagicMock()
+        call.data = data
+        call.from_user.id = 891406979
+        call.id = "cbch5"
+        await handlers["_callback_query"](call)
+        assert "invalides" in bot.bot.answer_callback_query.call_args[0][1]
+    mock_toggle.assert_not_called()

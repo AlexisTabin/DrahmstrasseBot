@@ -19,6 +19,7 @@ from unittest.mock import AsyncMock, patch
 
 import src.chores as chores
 import src.cendrier as cendrier
+import src.chiffons as chiffons
 import src.menage as menage
 import src.plants as plants
 from src import main
@@ -106,10 +107,12 @@ def dynamodb_table(monkeypatch):
         chores._table = None
         plants._table = None
         cendrier._table = None
+        chiffons._table = None
         yield
         chores._table = None
         plants._table = None
         cendrier._table = None
+        chiffons._table = None
 
 
 @pytest.fixture
@@ -263,3 +266,53 @@ async def test_plandetravail_per_person_reset_round_trip(bot):
     assert "doers" not in sub_data
     assert "by" not in sub_data
     assert chores.is_subtask_satisfied(sub_data) is False
+
+
+@pytest.mark.asyncio
+async def test_chiffons_write_path_round_trip(bot):
+    """/chiffons hangs off no role and belongs to nobody: anyone can claim it,
+    only the claimer can undo it, and it shows up in the stats as a task."""
+    week_num = datetime.date.today().isocalendar()[1]
+    lea_id = next(uid for uid, name in TELEGRAM_USER_MAP.items() if name == "Léa")
+    timon_id = next(uid for uid, name in TELEGRAM_USER_MAP.items() if name == "Timon")
+
+    await main.handler(_webhook_event("/chiffons", lea_id), {})
+    sent = bot.bot.send_message.call_args[0][1]
+    assert "Personne n'est de corvée" in sent
+
+    # Léa claims it.
+    await main.handler(_callback_event(f"chiffons:{week_num}", lea_id), {})
+    assert chiffons.get_week_state()["by"] == "Léa"
+    assert "Léa" in bot.bot.edit_message_text.call_args[0][0]
+
+    # Timon can't undo someone else's wash.
+    await main.handler(_callback_event(f"chiffons:{week_num}", timon_id), {})
+    assert chiffons.get_week_state()["by"] == "Léa"
+    assert "Seul·e Léa peut annuler." == bot.bot.answer_callback_query.call_args[0][1]
+
+    # It counts as a task for her, and never as a chore role.
+    stats = chores.get_stats()
+    assert "🧺 Chiffons lavés 1 fois" in stats
+    assert "Léa : 1 tâches" in stats
+
+    # Léa undoes her own mark.
+    await main.handler(_callback_event(f"chiffons:{week_num}", lea_id), {})
+    assert chiffons.get_week_state() == {}
+
+
+@pytest.mark.asyncio
+async def test_chiffons_reports_the_previous_wash(bot):
+    """The "de temps en temps" hint: a wash from an earlier week is found by
+    the bounded lookback, and this week still reads as not done."""
+    lea_id = next(uid for uid, name in TELEGRAM_USER_MAP.items() if name == "Léa")
+    two_weeks_ago = datetime.date.today() - datetime.timedelta(weeks=2)
+    iso = two_weeks_ago.isocalendar()
+    chiffons._get_table().put_item(Item={
+        "week_key": f"chiffons:{iso[0]}-W{iso[1]:02d}",
+        "chiffons": {"by": "Maël", "at": "2026-01-01T10:00:00+00:00"},
+    })
+
+    await main.handler(_webhook_event("/chiffons", lea_id), {})
+
+    sent = bot.bot.send_message.call_args[0][1]
+    assert "il y a 2 semaines, par Maël" in sent
