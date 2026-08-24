@@ -127,8 +127,9 @@ def bot():
 
 @pytest.mark.asyncio
 @patch("src.drahmbot.weather.get_zurich_max_temp_today", return_value=30.0)
+@patch("src.drahmbot.utils.is_even_week", return_value=True)
 @pytest.mark.parametrize("command", EVENTBRIDGE_COMMANDS)
-async def test_eventbridge_command_runs_without_error(mock_temp, bot, command):
+async def test_eventbridge_command_runs_without_error(mock_even, mock_temp, bot, command):
     """Mirrors the deploy.yml smoke test: fire every scheduled command through
     the real handler (real DynamoDB via moto, real bot wiring) and assert it
     completes without a Lambda-level error and actually talks to Telegram."""
@@ -212,3 +213,48 @@ async def test_plandetravail_counter_write_path_round_trip(bot):
         assert "plan de travail fait par Timon" in recap_text
     else:
         assert "plan de travail fait par Léa, Timon" in recap_text
+
+
+@pytest.mark.asyncio
+async def test_plandetravail_per_person_reset_round_trip(bot):
+    """The reset expression (REMOVE one counts entry + ADD a negative total +
+    DELETE one doer, read back with ALL_NEW) can only be validated against a
+    real DynamoDB expression parser, like increment's above. Timon and Léa
+    both press "+1"; Léa's reset must leave Timon's presses untouched."""
+    week_num = datetime.date.today().isocalendar()[1]
+    timon_id = next(uid for uid, name in TELEGRAM_USER_MAP.items() if name == "Timon")
+    lea_id = next(uid for uid, name in TELEGRAM_USER_MAP.items() if name == "Léa")
+
+    await main.handler(_webhook_event("/plandetravail", timon_id), {})
+    for presser in (timon_id, timon_id, lea_id):
+        await main.handler(_callback_event(f"counter:{week_num}:plandetravail", presser), {})
+
+    sub_data = chores.get_week_status()["CUISINE"]["subtasks"]["plan de travail"]
+    assert sub_data["count"] == 3
+    assert chores.person_counts(sub_data) == {"Timon": 2, "Léa": 1}
+
+    # Léa resets: only her single press goes.
+    await main.handler(_callback_event(f"resetcounter:{week_num}:plandetravail", lea_id), {})
+    sub_data = chores.get_week_status()["CUISINE"]["subtasks"]["plan de travail"]
+    assert sub_data["count"] == 2
+    assert chores.person_counts(sub_data) == {"Timon": 2}
+    assert sub_data["doers"] == {"Timon"}  # Léa no longer credited
+    edited = bot.bot.edit_message_text.call_args[0][0]
+    assert "2x" in edited
+    assert "Timon 2x" in edited
+
+    # Tapping it again with nothing of her own leaves the data alone.
+    await main.handler(_callback_event(f"resetcounter:{week_num}:plandetravail", lea_id), {})
+    sub_data = chores.get_week_status()["CUISINE"]["subtasks"]["plan de travail"]
+    assert sub_data["count"] == 2
+    assert chores.person_counts(sub_data) == {"Timon": 2}
+
+    # Timon resets his own: nobody is left, so the entry goes back to a clean
+    # zero with no stale by/doers credit.
+    await main.handler(_callback_event(f"resetcounter:{week_num}:plandetravail", timon_id), {})
+    sub_data = chores.get_week_status()["CUISINE"]["subtasks"]["plan de travail"]
+    assert sub_data["count"] == 0
+    assert chores.person_counts(sub_data) == {}
+    assert "doers" not in sub_data
+    assert "by" not in sub_data
+    assert chores.is_subtask_satisfied(sub_data) is False

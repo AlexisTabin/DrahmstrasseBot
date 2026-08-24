@@ -20,12 +20,22 @@ ROLE_EMOJIS = {
 CHAOS_KEEP_ROLES_PROBABILITY = 0.05
 
 ROLE_SUBTASKS = {
-    "CUISINE": ["frigo", "plan de travail", "rangement", "balcon"],
+    "CUISINE": ["frigo", "plan de travail", "rangement", "balcon", "lave-vaisselle"],
     "SDBs": ["petit WC", "grand WC", "lavabo", "baignoire", "Vider les petites poubelles"],
     "SOLs": ["aspirateur", "panosse"],
     "DÉCHETS": ["poubelle", "carton", "compost", "verre", "plastique"],
 }
-DECHETS_OPTIONAL_SUBTASK = "papier"
+# Only part of DÉCHETS on even weeks, but required like any other subtask then
+# (unlike OPTIONAL_SUBTASKS below, which never count towards completion).
+DECHETS_EVEN_WEEK_SUBTASK = "papier"
+
+# Sub-tasks attached to a role for visibility, but which nobody is ever on the
+# hook for: they show up on the role's /done card and earn stats credit, yet
+# /recap and /reminder never hold the role's assignee to them (see
+# get_required_subtasks_for_role). Anyone can tick them, whatever their role.
+OPTIONAL_SUBTASKS = {
+    ("CUISINE", "lave-vaisselle"),
+}
 
 # Sub-tasks that can legitimately be done more than once in the same week
 # (e.g. wiping the counter after every use) get a per-week counter instead of
@@ -33,6 +43,7 @@ DECHETS_OPTIONAL_SUBTASK = "papier"
 # still satisfied as soon as the counter is >= 1, same as any other subtask.
 COUNTER_SUBTASKS = {
     ("CUISINE", "plan de travail"),
+    ("CUISINE", "lave-vaisselle"),
 }
 
 # Maps a Telegram command name to the (role, subtask) it marks as done, so
@@ -51,6 +62,7 @@ SUBTASK_COMMANDS = {
     "poubelles": ("SDBs", "Vider les petites poubelles"),
     "aspirateur": ("SOLs", "aspirateur"),
     "panosse": ("SOLs", "panosse"),
+    "lavevaisselle": ("CUISINE", "lave-vaisselle"),
     "poubelle": ("DÉCHETS", "poubelle"),
     "compost": ("DÉCHETS", "compost"),
     "verre": ("DÉCHETS", "verre"),
@@ -63,15 +75,42 @@ def is_counter_subtask(role, subtask) -> bool:
     return (role, subtask) in COUNTER_SUBTASKS
 
 
+def is_optional_subtask(role, subtask) -> bool:
+    """Whether a (role, subtask) pair is a bonus that never blocks the role."""
+    return (role, subtask) in OPTIONAL_SUBTASKS
+
+
 def get_subtasks_for_role(role):
-    """Return the list of active sub-tasks for a role, or None for unknown roles."""
+    """Return the list of active sub-tasks for a role, or None for unknown roles.
+
+    Includes the optional ones (OPTIONAL_SUBTASKS): this is the display and
+    "is this subtask real?" list. Completion checks want
+    get_required_subtasks_for_role instead.
+    """
     subtasks = ROLE_SUBTASKS.get(role)
     if subtasks is None:
         return None
     result = list(subtasks)
     if role == "DÉCHETS" and is_even_week():
-        result.append(DECHETS_OPTIONAL_SUBTASK)
+        result.append(DECHETS_EVEN_WEEK_SUBTASK)
     return result
+
+
+def get_optional_subtasks_for_role(role):
+    """Return this role's optional sub-tasks, in ROLE_SUBTASKS order."""
+    subtasks = get_subtasks_for_role(role)
+    if subtasks is None:
+        return []
+    return [s for s in subtasks if is_optional_subtask(role, s)]
+
+
+def get_required_subtasks_for_role(role):
+    """Return the sub-tasks a role must all have done to count as complete,
+    i.e. its active list minus the optional extras. None for unknown roles."""
+    subtasks = get_subtasks_for_role(role)
+    if subtasks is None:
+        return None
+    return [s for s in subtasks if not is_optional_subtask(role, s)]
 
 '''
 Role computation
