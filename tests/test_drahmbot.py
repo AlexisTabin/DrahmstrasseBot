@@ -170,11 +170,14 @@ def test_build_commands_text_lists_every_documented_command_and_subtask():
     lines = result.split("\n")
     for cmd, _description in COMMANDS:
         assert any(line.startswith(f"/{cmd} :") for line in lines)
-    # Exact-line membership, not `in result`: a couple of subtask names are
+    # Whole-token match, not `in result`: a couple of subtask names are
     # prefixes of each other (e.g. "poubelle" of "poubelles"), so a plain
     # substring check wouldn't notice one going missing while the other stays.
+    # A line may carry an "(optionnel, compteur)" annotation after the command.
     for cmd in menage.SUBTASK_COMMANDS:
-        assert f"/{cmd}" in lines
+        assert any(
+            line == f"/{cmd}" or line.startswith(f"/{cmd} (") for line in lines
+        ), f"/{cmd} missing from the subtask list"
 
 
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
@@ -759,7 +762,8 @@ async def test_callback_toggle_cuisine_subtask(
     "CUISINE": {"subtasks": {"plan de travail": {"count": 2, "by": "Timon", "at": "..."}}},
 })
 @patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "plan de travail"])
-@patch("src.drahmbot.chores.increment_subtask_counter", return_value=3)
+@patch("src.drahmbot.chores.increment_subtask_counter",
+       return_value={"count": 3, "counts": {"Timon": 3}})
 @patch("src.drahmbot.chores.toggle_subtask")
 @patch("src.drahmbot.menage.get_role_for_person", return_value="CUISINE")
 @patch("src.drahmbot.datetime")
@@ -1976,7 +1980,8 @@ async def test_plandetravail_command_sends_counter_keyboard(
 @patch("src.drahmbot.chores.get_week_status", return_value={})
 @patch("src.drahmbot.menage.get_subtasks_for_role",
        return_value=["frigo", "plan de travail", "rangement"])
-@patch("src.drahmbot.chores.increment_subtask_counter", return_value=1)
+@patch("src.drahmbot.chores.increment_subtask_counter",
+       return_value={"count": 1, "counts": {"Léa": 1}})
 @patch("src.drahmbot.menage.get_role_assignments", return_value={"CUISINE": "Timon"})
 @patch("src.drahmbot.datetime")
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
@@ -2159,15 +2164,17 @@ async def test_counter_callback_invalid_subtask_for_role(
 
 
 @pytest.mark.asyncio
-@patch("src.drahmbot.chores.reset_subtask_counter")
+@patch("src.drahmbot.chores.reset_subtask_counter",
+       return_value=(2, {"count": 3, "counts": {"Timon": 3}}))
 @patch("src.drahmbot.menage.get_role_assignments", return_value={"CUISINE": "Timon"})
 @patch("src.drahmbot.datetime")
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
 @patch("src.drahmbot.utils.get_group_id", return_value=123)
-async def test_reset_counter_callback_anyone_can_reset(
+async def test_reset_counter_callback_only_drops_the_callers_presses(
     mock_group, mock_token, mock_dt, mock_assignments, mock_reset,
 ):
-    """Léa can reset /plandetravail's count even though it's shared by everyone."""
+    """Léa resets her own 2 presses on /plandetravail; Timon's 3 stay, and the
+    re-rendered message shows the remaining total and breakdown."""
     mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
     import src.drahmbot as drahmbot_module
     original_map = drahmbot_module.TELEGRAM_USER_MAP.copy()
@@ -2187,10 +2194,49 @@ async def test_reset_counter_callback_anyone_can_reset(
         call.message.message_id = 100
 
         await handlers["_callback_query"](call)
-        mock_reset.assert_called_once_with("CUISINE", "plan de travail")
-        bot.bot.edit_message_text.assert_called_once()
+        mock_reset.assert_called_once_with("CUISINE", "plan de travail", "Léa")
+        text = bot.bot.edit_message_text.call_args[0][0]
+        assert "3x" in text
+        assert "Timon 3x" in text
+        assert "Léa" not in text
         toast = bot.bot.answer_callback_query.call_args[0][1]
-        assert "remis à 0" in toast
+        assert "2x retiré(s) de ton compteur." == toast
+    finally:
+        drahmbot_module.TELEGRAM_USER_MAP.clear()
+        drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.reset_subtask_counter",
+       return_value=(0, {"count": 3, "counts": {"Timon": 3}}))
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_reset_counter_callback_says_so_when_you_have_nothing_to_reset(
+    mock_group, mock_token, mock_dt, mock_reset,
+):
+    """The button is shared by everyone who sees the message, so it can be
+    tapped by someone who never pressed +1: leave the message untouched."""
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    import src.drahmbot as drahmbot_module
+    original_map = drahmbot_module.TELEGRAM_USER_MAP.copy()
+    drahmbot_module.TELEGRAM_USER_MAP[42] = "Léa"
+
+    try:
+        bot = Drahmbot()
+        bot.bot.edit_message_text = AsyncMock()
+        bot.bot.answer_callback_query = AsyncMock()
+        handlers = _capture_handlers(bot)
+
+        call = MagicMock()
+        call.data = "resetcounter:15:plandetravail"
+        call.from_user.id = 42
+        call.id = "cbr1b"
+
+        await handlers["_callback_query"](call)
+        bot.bot.edit_message_text.assert_not_called()
+        toast = bot.bot.answer_callback_query.call_args[0][1]
+        assert "rien à remettre à 0" in toast
     finally:
         drahmbot_module.TELEGRAM_USER_MAP.clear()
         drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
@@ -2247,7 +2293,8 @@ async def test_reset_counter_callback_rejects_subtask_no_longer_a_counter(
 
 
 @pytest.mark.asyncio
-@patch("src.drahmbot.chores.increment_subtask_counter", return_value=1)
+@patch("src.drahmbot.chores.increment_subtask_counter",
+       return_value={"count": 1, "counts": {"Léa": 1}})
 @patch("src.drahmbot.chores.toggle_subtask")
 @patch("src.drahmbot.datetime")
 @patch("src.drahmbot.utils.get_token", return_value="12345:12345")
@@ -2626,6 +2673,268 @@ async def test_done_cendrier_callback_non_doer_cannot_undo(
         mock_toggle.assert_not_called()
         toast = bot.bot.answer_callback_query.call_args[0][1]
         assert "Maël" in toast
+    finally:
+        drahmbot_module.TELEGRAM_USER_MAP.clear()
+        drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
+
+
+# --- /lavevaisselle: optional counter subtask attached to CUISINE ---
+
+
+@patch("src.drahmbot.chores.get_week_status", return_value={})
+def test_build_done_keyboard_labels_the_optional_row(mock_status):
+    """Real CUISINE list (not patched): lave-vaisselle rides along, labelled."""
+    keyboard = _build_done_keyboard("CUISINE", 15, "Timon")
+    last = keyboard.keyboard[-1][0]
+    assert last.callback_data == "done:15:CUISINE:lave-vaisselle"
+    assert "(0x, optionnel)" in last.text
+
+
+@patch("src.drahmbot.chores.get_week_status", return_value={
+    "CUISINE": {"subtasks": {
+        "frigo": {"by": "Timon", "at": "..."},
+        "plan de travail": {"count": 1, "by": "Timon", "at": "..."},
+        "rangement": {"by": "Timon", "at": "..."},
+        "balcon": {"by": "Timon", "at": "..."},
+    }},
+})
+def test_build_done_text_score_ignores_the_optional_subtask(mock_status):
+    """4/4 and a ✅ even with lave-vaisselle untouched: it never drags the score."""
+    text = _build_done_text("CUISINE", "Timon")
+    assert "4/4" in text
+    assert "✅" in text
+    assert "(optionnel) lave-vaisselle : 0x" in text
+
+
+@patch("src.drahmbot.chores.get_week_status", return_value={
+    "CUISINE": {"subtasks": {
+        "lave-vaisselle": {"count": 3, "by": "Léa", "at": "...", "doers": {"Léa"}},
+    }},
+})
+def test_build_done_text_shows_the_optional_count(mock_status):
+    text = _build_done_text("CUISINE", "Timon")
+    assert "0/4" in text
+    assert "(optionnel) lave-vaisselle : 3x" in text
+
+
+def test_build_counter_text_optional_names_no_assignee():
+    text = _build_counter_text("CUISINE", "lave-vaisselle", "Timon", 0)
+    assert "optionnel" in text
+    assert "Timon" not in text
+
+
+def test_build_counter_text_optional_positive():
+    text = _build_counter_text("CUISINE", "lave-vaisselle", "Timon", 5)
+    assert "5x" in text
+    assert "optionnel" in text
+    assert "✅" in text
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_week_status", return_value={
+    "CUISINE": {"subtasks": {
+        "lave-vaisselle": {"count": 2, "by": "Léa", "at": "...", "doers": {"Léa"}},
+    }},
+})
+@patch("src.drahmbot.menage.get_role_assignments", return_value={"CUISINE": "Timon"})
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_lavevaisselle_command_sends_counter_keyboard(
+    mock_group, mock_token, mock_dt, mock_assignments, mock_status,
+):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    bot = Drahmbot()
+    bot.bot.send_message = AsyncMock()
+    handlers = _capture_handlers(bot)
+
+    message = MagicMock()
+    message.chat.id = 999
+
+    await handlers["lavevaisselle"](message)
+    call_args = bot.bot.send_message.call_args
+    text = call_args[0][1]
+    assert "2x" in text
+    assert "optionnel" in text
+    keyboard = call_args[1]["reply_markup"]
+    assert keyboard.keyboard[0][0].callback_data == "counter:15:lavevaisselle"
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_week_status", return_value={})
+@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "lave-vaisselle"])
+@patch("src.drahmbot.chores.increment_subtask_counter",
+       return_value={"count": 1, "counts": {"Léa": 1}})
+@patch("src.drahmbot.menage.get_role_assignments", return_value={"CUISINE": "Timon"})
+@patch("src.drahmbot.menage.get_role_for_person", return_value="SOLs")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_done_callback_optional_row_accepts_anyone_and_rerenders_for_the_owner(
+    mock_group, mock_token, mock_dt, mock_role, mock_assignments, mock_increment,
+    mock_subtasks, mock_status,
+):
+    """Léa has SOLs, yet she can tick lave-vaisselle from Timon's /done card;
+    the card must still come back rendered for Timon."""
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    import src.drahmbot as drahmbot_module
+    original_map = drahmbot_module.TELEGRAM_USER_MAP.copy()
+    drahmbot_module.TELEGRAM_USER_MAP[42] = "Léa"
+
+    try:
+        bot = Drahmbot()
+        bot.bot.edit_message_text = AsyncMock()
+        bot.bot.answer_callback_query = AsyncMock()
+        handlers = _capture_handlers(bot)
+
+        call = MagicMock()
+        call.data = "done:15:CUISINE:lave-vaisselle"
+        call.from_user.id = 42
+        call.id = "cb-lv-1"
+        call.message.chat.id = 999
+        call.message.message_id = 100
+
+        await handlers["_callback_query"](call)
+        mock_increment.assert_called_once_with("CUISINE", "lave-vaisselle", "Léa")
+        text = bot.bot.edit_message_text.call_args[0][0]
+        assert "Timon" in text
+        assert "Léa" not in text
+        toast = bot.bot.answer_callback_query.call_args[0][1]
+        assert "1x" in toast
+    finally:
+        drahmbot_module.TELEGRAM_USER_MAP.clear()
+        drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_week_status", return_value={})
+@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo", "lave-vaisselle"])
+@patch("src.drahmbot.chores.toggle_subtask")
+@patch("src.drahmbot.menage.get_role_for_person", return_value="SOLs")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_done_callback_still_rejects_a_required_subtask_of_someone_elses_role(
+    mock_group, mock_token, mock_dt, mock_role, mock_toggle, mock_subtasks, mock_status,
+):
+    """The optional exemption is per-subtask: frigo is still Timon's alone."""
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    import src.drahmbot as drahmbot_module
+    original_map = drahmbot_module.TELEGRAM_USER_MAP.copy()
+    drahmbot_module.TELEGRAM_USER_MAP[42] = "Léa"
+
+    try:
+        bot = Drahmbot()
+        bot.bot.edit_message_text = AsyncMock()
+        bot.bot.answer_callback_query = AsyncMock()
+        handlers = _capture_handlers(bot)
+
+        call = MagicMock()
+        call.data = "done:15:CUISINE:frigo"
+        call.from_user.id = 42
+        call.id = "cb-lv-2"
+
+        await handlers["_callback_query"](call)
+        mock_toggle.assert_not_called()
+        toast = bot.bot.answer_callback_query.call_args[0][1]
+        assert "pas ta tâche" in toast
+    finally:
+        drahmbot_module.TELEGRAM_USER_MAP.clear()
+        drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
+
+
+def test_build_commands_text_annotates_optional_and_counter_subtasks():
+    lines = _build_commands_text().split("\n")
+    assert "/lavevaisselle (optionnel, compteur)" in lines
+    assert "/plandetravail (compteur)" in lines
+    assert "/frigo" in lines
+
+
+# --- optional toggle subtask: open to tick, doer-only to untick ---
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_week_status", return_value={
+    "CUISINE": {"subtasks": {"frigo": {"by": "Timon", "at": "..."}}},
+})
+@patch("src.drahmbot.menage.is_optional_subtask", return_value=True)
+@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo"])
+@patch("src.drahmbot.chores.toggle_subtask")
+@patch("src.drahmbot.menage.get_role_assignments", return_value={"CUISINE": "Timon"})
+@patch("src.drahmbot.menage.get_role_for_person", return_value="SOLs")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_done_callback_optional_toggle_cannot_be_undone_by_a_non_doer(
+    mock_group, mock_token, mock_dt, mock_role, mock_assignments, mock_toggle,
+    mock_subtasks, mock_optional, mock_status,
+):
+    """The optional bypass lets anyone tick, but must not let them un-tick
+    someone else's work (same rule as the /frigo-style buttons). Uses a
+    patched optional *toggle* subtask: OPTIONAL_SUBTASKS and COUNTER_SUBTASKS
+    are independent registries, so this combination is one config line away."""
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    import src.drahmbot as drahmbot_module
+    original_map = drahmbot_module.TELEGRAM_USER_MAP.copy()
+    drahmbot_module.TELEGRAM_USER_MAP[42] = "Léa"
+
+    try:
+        bot = Drahmbot()
+        bot.bot.edit_message_text = AsyncMock()
+        bot.bot.answer_callback_query = AsyncMock()
+        handlers = _capture_handlers(bot)
+
+        call = MagicMock()
+        call.data = "done:15:CUISINE:frigo"
+        call.from_user.id = 42
+        call.id = "cb-opt-toggle-1"
+
+        await handlers["_callback_query"](call)
+        mock_toggle.assert_not_called()
+        bot.bot.edit_message_text.assert_not_called()
+        toast = bot.bot.answer_callback_query.call_args[0][1]
+        assert "Seul·e Timon peut annuler." == toast
+    finally:
+        drahmbot_module.TELEGRAM_USER_MAP.clear()
+        drahmbot_module.TELEGRAM_USER_MAP.update(original_map)
+
+
+@pytest.mark.asyncio
+@patch("src.drahmbot.chores.get_week_status", return_value={})
+@patch("src.drahmbot.menage.is_optional_subtask", return_value=True)
+@patch("src.drahmbot.menage.get_subtasks_for_role", return_value=["frigo"])
+@patch("src.drahmbot.chores.toggle_subtask", return_value=True)
+@patch("src.drahmbot.menage.get_role_assignments", return_value={"CUISINE": "Timon"})
+@patch("src.drahmbot.menage.get_role_for_person", return_value="SOLs")
+@patch("src.drahmbot.datetime")
+@patch("src.drahmbot.utils.get_token", return_value="12345:12345")
+@patch("src.drahmbot.utils.get_group_id", return_value=123)
+async def test_done_callback_optional_toggle_can_be_ticked_by_anyone(
+    mock_group, mock_token, mock_dt, mock_role, mock_assignments, mock_toggle,
+    mock_subtasks, mock_optional, mock_status,
+):
+    mock_dt.date.today.return_value.isocalendar.return_value = (2026, 15, 1)
+    import src.drahmbot as drahmbot_module
+    original_map = drahmbot_module.TELEGRAM_USER_MAP.copy()
+    drahmbot_module.TELEGRAM_USER_MAP[42] = "Léa"
+
+    try:
+        bot = Drahmbot()
+        bot.bot.edit_message_text = AsyncMock()
+        bot.bot.answer_callback_query = AsyncMock()
+        handlers = _capture_handlers(bot)
+
+        call = MagicMock()
+        call.data = "done:15:CUISINE:frigo"
+        call.from_user.id = 42
+        call.id = "cb-opt-toggle-2"
+        call.message.chat.id = 999
+        call.message.message_id = 100
+
+        await handlers["_callback_query"](call)
+        mock_toggle.assert_called_once_with("CUISINE", "frigo", "Léa")
+        text = bot.bot.edit_message_text.call_args[0][0]
+        assert "Timon" in text  # still the card owner's view
     finally:
         drahmbot_module.TELEGRAM_USER_MAP.clear()
         drahmbot_module.TELEGRAM_USER_MAP.update(original_map)

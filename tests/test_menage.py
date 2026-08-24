@@ -134,7 +134,9 @@ def test_role_subtasks_keys_match_roles():
 
 def test_cuisine_subtasks():
     from src.menage import ROLE_SUBTASKS
-    assert ROLE_SUBTASKS["CUISINE"] == ["frigo", "plan de travail", "rangement", "balcon"]
+    assert ROLE_SUBTASKS["CUISINE"] == [
+        "frigo", "plan de travail", "rangement", "balcon", "lave-vaisselle",
+    ]
 
 
 def test_sdbs_subtasks():
@@ -176,7 +178,7 @@ def test_get_subtasks_dechets_odd_week_excludes_papier(mock_even):
 def test_get_subtasks_cuisine():
     from src.menage import get_subtasks_for_role
     result = get_subtasks_for_role("CUISINE")
-    assert result == ["frigo", "plan de travail", "rangement", "balcon"]
+    assert result == ["frigo", "plan de travail", "rangement", "balcon", "lave-vaisselle"]
 
 
 def test_get_subtasks_sdbs():
@@ -261,3 +263,62 @@ def test_counter_subtasks_map_to_known_roles_and_subtasks():
     for role, subtask in COUNTER_SUBTASKS:
         assert role in ROLE_SUBTASKS, f"counter subtask maps to unknown role {role}"
         assert subtask in ROLE_SUBTASKS[role], f"counter subtask maps to unknown subtask {subtask}"
+
+
+def test_lave_vaisselle_is_a_counter_subtask():
+    assert menage.is_counter_subtask("CUISINE", "lave-vaisselle") is True
+
+
+# --- OPTIONAL_SUBTASKS / lave-vaisselle tests ---
+
+
+def test_optional_subtasks_map_to_known_roles_and_subtasks():
+    from src.menage import OPTIONAL_SUBTASKS, ROLE_SUBTASKS
+    for role, subtask in OPTIONAL_SUBTASKS:
+        assert role in ROLE_SUBTASKS, f"optional subtask maps to unknown role {role}"
+        assert subtask in ROLE_SUBTASKS[role], f"optional subtask maps to unknown subtask {subtask}"
+
+
+def test_lave_vaisselle_is_optional():
+    assert menage.is_optional_subtask("CUISINE", "lave-vaisselle") is True
+
+
+def test_frigo_is_not_optional():
+    assert menage.is_optional_subtask("CUISINE", "frigo") is False
+
+
+def test_is_optional_subtask_unknown_role_or_subtask():
+    assert menage.is_optional_subtask("UNKNOWN", "lave-vaisselle") is False
+    assert menage.is_optional_subtask("CUISINE", "nope") is False
+
+
+def test_required_subtasks_exclude_lave_vaisselle():
+    result = menage.get_required_subtasks_for_role("CUISINE")
+    assert result == ["frigo", "plan de travail", "rangement", "balcon"]
+
+
+@patch("src.menage.is_even_week", return_value=True)
+def test_required_subtasks_keep_the_even_week_papier(mock_even):
+    """papier is only active on even weeks, but required like any other subtask then."""
+    assert "papier" in menage.get_required_subtasks_for_role("DÉCHETS")
+
+
+def test_required_subtasks_unknown_role_returns_none():
+    assert menage.get_required_subtasks_for_role("UNKNOWN") is None
+
+
+def test_optional_subtasks_for_cuisine():
+    assert menage.get_optional_subtasks_for_role("CUISINE") == ["lave-vaisselle"]
+
+
+def test_optional_subtasks_for_role_without_any():
+    assert menage.get_optional_subtasks_for_role("SOLs") == []
+
+
+def test_optional_subtasks_unknown_role_is_empty():
+    assert menage.get_optional_subtasks_for_role("UNKNOWN") == []
+
+
+def test_lave_vaisselle_has_its_own_command():
+    from src.menage import SUBTASK_COMMANDS
+    assert SUBTASK_COMMANDS["lavevaisselle"] == ("CUISINE", "lave-vaisselle")

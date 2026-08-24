@@ -2,6 +2,7 @@ import os
 import logging
 import datetime
 import boto3
+from botocore.exceptions import ClientError
 
 from src import menage
 from src import phrases
@@ -104,8 +105,23 @@ def toggle_subtask(role: str, subtask: str, person: str) -> bool:
         return True
 
 
-def increment_subtask_counter(role: str, subtask: str, person: str) -> int:
-    """Increment a counter-style sub-task's per-week count. Returns the new count."""
+def person_counts(sub_data: dict) -> dict:
+    """Per-person press counts of a counter sub-task, as plain ints.
+
+    Empty for an entry written before per-person counts existed (its total is
+    then unattributable, see reset_subtask_counter).
+    """
+    counts = sub_data.get("counts") or {}
+    return {person: int(n) for person, n in counts.items()}
+
+
+def increment_subtask_counter(role: str, subtask: str, person: str) -> dict:
+    """Increment a counter-style sub-task's per-week count.
+
+    Returns the entry's new state, `{"count": <total>, "counts": {person: n}}`,
+    read back from the write itself rather than a follow-up (eventually
+    consistent) get_item.
+    """
     table = _get_table()
     week_key = _current_week_key()
     now = datetime.datetime.now(datetime.timezone.utc).isoformat()
@@ -130,6 +146,18 @@ def increment_subtask_counter(role: str, subtask: str, person: str) -> int:
         ExpressionAttributeNames={"#role": role, "#subtask": subtask},
         ExpressionAttributeValues={":empty_counter": {"count": 0}},
     )
+    # Separate call from the one above: DynamoDB rejects an expression whose
+    # SET targets overlap (`...#subtask` is an ancestor of `...#subtask.#counts`),
+    # and `ADD ...#counts.#person` below needs the map to already exist.
+    table.update_item(
+        Key={"week_key": week_key},
+        UpdateExpression=(
+            "SET completed.#role.subtasks.#subtask.#counts = "
+            "if_not_exists(completed.#role.subtasks.#subtask.#counts, :empty_map)"
+        ),
+        ExpressionAttributeNames={"#role": role, "#subtask": subtask, "#counts": "counts"},
+        ExpressionAttributeValues={":empty_map": {}},
+    )
     # ADD (not "SET count = count + :one") so this is robust even if #subtask
     # was left in the pre-counter {by, at} shape by a stale toggle click:
     # ADD auto-initializes a missing numeric attribute instead of erroring.
@@ -141,37 +169,132 @@ def increment_subtask_counter(role: str, subtask: str, person: str) -> int:
             "SET completed.#role.subtasks.#subtask.#by = :person, "
             "completed.#role.subtasks.#subtask.#at = :now "
             "ADD completed.#role.subtasks.#subtask.#count :one, "
+            "completed.#role.subtasks.#subtask.#counts.#person :one, "
             "completed.#role.subtasks.#subtask.#doers :person_set"
         ),
         ExpressionAttributeNames={
-            "#role": role, "#subtask": subtask,
-            "#count": "count", "#by": "by", "#at": "at", "#doers": "doers",
+            "#role": role, "#subtask": subtask, "#count": "count", "#by": "by",
+            "#at": "at", "#doers": "doers", "#counts": "counts", "#person": person,
         },
         ExpressionAttributeValues={
             ":one": 1, ":person": person, ":now": now, ":person_set": {person},
         },
-        ReturnValues="UPDATED_NEW",
+        ReturnValues="ALL_NEW",
     )
 
-    new_count = int(response["Attributes"]["completed"][role]["subtasks"][subtask]["count"])
-    logger.info("Incremented %s.%s to %d by %s for %s", role, subtask, new_count, person, week_key)
-    return new_count
+    new_entry = response["Attributes"]["completed"][role]["subtasks"][subtask]
+    state = {"count": int(new_entry["count"]), "counts": person_counts(new_entry)}
+    logger.info(
+        "Incremented %s.%s to %d by %s (%dx) for %s",
+        role, subtask, state["count"], person, state["counts"].get(person, 0), week_key,
+    )
+    return state
 
 
-def reset_subtask_counter(role: str, subtask: str) -> None:
-    """Reset a counter-style sub-task's count back to 0 for everyone this
-    week. No confirmation needed: an accidental reset is trivially undone by
-    re-pressing +1 the same number of times."""
+def reset_subtask_counter(role: str, subtask: str, person: str) -> tuple:
+    """Take `person`'s own presses off a counter sub-task, leaving everyone
+    else's alone. Returns (removed, new_state) where removed is how many
+    presses were dropped (0 if they had none, in which case nothing is
+    written) and new_state is `{"count": <total>, "counts": {...}}`.
+
+    Presses recorded before per-person counts existed have no `counts` entry,
+    so they can't be attributed and can't be reset by anyone; they only linger
+    until the counter resets on Monday. When removing `person` leaves nobody
+    with presses, the whole entry is rewritten as a clean `{"count": 0}` so no
+    stale `by`/`doers` credit survives.
+
+    How much to subtract can only be known by reading first, so both writes
+    are guarded by a ConditionExpression on what was read and retried once:
+    without it a double-tapped reset would subtract the same presses twice
+    (driving the total negative, which reads as "-2x" and quietly un-completes
+    the role), and the rewrite branch would clobber a "+1" that landed in the
+    meantime.
+    """
     table = _get_table()
     week_key = _current_week_key()
+    stored, total, removed = {}, 0, 0
 
-    table.update_item(
-        Key={"week_key": week_key},
-        UpdateExpression="SET completed.#role.subtasks.#subtask = :empty_counter",
-        ExpressionAttributeNames={"#role": role, "#subtask": subtask},
-        ExpressionAttributeValues={":empty_counter": {"count": 0}},
+    for attempt in range(2):
+        # Strongly consistent: an eventually consistent read here could miss
+        # the caller's own press and answer "nothing to reset".
+        sub_data = (
+            get_week_status(week_key, consistent=True)
+            .get(role, {}).get("subtasks", {}).get(subtask, {})
+        )
+        stored = person_counts(sub_data)
+        total = int(sub_data.get("count", 0) or 0)
+        removed = stored.get(person, 0)
+        if removed <= 0:
+            logger.info("Nothing to reset for %s on %s.%s (%s)", person, role, subtask, week_key)
+            return 0, {"count": total, "counts": stored}
+
+        remaining = {p: n for p, n in stored.items() if p != person}
+        unattributed = max(0, total - sum(stored.values()))
+        try:
+            if not any(n >= 1 for n in remaining.values()) and unattributed == 0:
+                table.update_item(
+                    Key={"week_key": week_key},
+                    UpdateExpression="SET completed.#role.subtasks.#subtask = :empty_counter",
+                    # Nothing may have changed since the read: this branch
+                    # overwrites the whole entry, so a concurrent +1 would
+                    # otherwise vanish.
+                    ConditionExpression="completed.#role.subtasks.#subtask.#count = :total",
+                    ExpressionAttributeNames={
+                        "#role": role, "#subtask": subtask, "#count": "count",
+                    },
+                    ExpressionAttributeValues={
+                        ":empty_counter": {"count": 0, "counts": {}}, ":total": total,
+                    },
+                )
+                logger.info(
+                    "Reset %s.%s to 0 (%s was the only doer) for %s",
+                    role, subtask, person, week_key,
+                )
+                return removed, {"count": 0, "counts": {}}
+
+            # ADD with a negative value rather than SET, so a concurrent +1
+            # press by someone else isn't clobbered; the condition covers the
+            # caller's own tally, the only part this subtraction depends on.
+            response = table.update_item(
+                Key={"week_key": week_key},
+                UpdateExpression=(
+                    "REMOVE completed.#role.subtasks.#subtask.#counts.#person "
+                    "ADD completed.#role.subtasks.#subtask.#count :negative "
+                    "DELETE completed.#role.subtasks.#subtask.#doers :person_set"
+                ),
+                ConditionExpression=(
+                    "completed.#role.subtasks.#subtask.#counts.#person = :removed"
+                ),
+                ExpressionAttributeNames={
+                    "#role": role, "#subtask": subtask, "#count": "count",
+                    "#counts": "counts", "#doers": "doers", "#person": person,
+                },
+                ExpressionAttributeValues={
+                    ":negative": -removed, ":person_set": {person}, ":removed": removed,
+                },
+                ReturnValues="ALL_NEW",
+            )
+        except ClientError as error:
+            if error.response["Error"]["Code"] != "ConditionalCheckFailedException":
+                raise
+            logger.info(
+                "Reset of %s.%s by %s raced another update (attempt %d), re-reading",
+                role, subtask, person, attempt + 1,
+            )
+            continue
+
+        new_entry = response["Attributes"]["completed"][role]["subtasks"][subtask]
+        state = {"count": int(new_entry.get("count", 0)), "counts": person_counts(new_entry)}
+        logger.info(
+            "Removed %s's %d press(es) from %s.%s, %d left for %s",
+            person, removed, role, subtask, state["count"], week_key,
+        )
+        return removed, state
+
+    logger.warning(
+        "Gave up resetting %s.%s for %s after concurrent updates", role, subtask, person,
     )
-    logger.info("Reset %s.%s counter to 0 for %s", role, subtask, week_key)
+    return 0, {"count": total, "counts": stored}
 
 
 def is_subtask_satisfied(sub_data: dict) -> bool:
@@ -195,7 +318,7 @@ def is_role_complete(role: str, completed_map: dict) -> bool:
 
     # New format: {subtasks: {name: {by, at}, ...}}
     if "subtasks" in role_data:
-        expected = menage.get_subtasks_for_role(role)
+        expected = menage.get_required_subtasks_for_role(role)
         if expected is None:
             return False
         completed_subtasks = role_data["subtasks"]
@@ -209,7 +332,7 @@ def is_role_complete(role: str, completed_map: dict) -> bool:
 
 def _pending_detail(role: str, completed: dict) -> str:
     """Return detail string for sub-task roles with missing items."""
-    expected = menage.get_subtasks_for_role(role)
+    expected = menage.get_required_subtasks_for_role(role)
     if expected is None:
         return ""
 
@@ -229,30 +352,65 @@ def _pending_detail(role: str, completed: dict) -> str:
     return ""
 
 
-def _who_did_it(role_data: dict) -> str:
-    """Extract person name(s) from either format."""
+def _doers_of(sub_data: dict) -> set:
+    """Everyone credited for a subtask entry: the per-person `counts` map
+    unioned with the `doers` set, falling back to a plain toggle's `by`.
+
+    The union (rather than a preference) matters both ways round. Every
+    increment writes both `counts` and `doers` and reset_subtask_counter
+    removes the person from both, so the two never disagree about a press
+    recorded by current code, and a reset still drops that person's credit.
+    But an entry from before `counts` existed has doers with no counts, and
+    one press after that leaves it holding both — preferring `counts` there
+    would silently strip the earlier doers of their credit.
+    """
+    doers = {person for person, n in person_counts(sub_data).items() if n >= 1}
+    doers.update(sub_data.get("doers") or set())
+    if doers:
+        return doers
+    if "counts" in sub_data:
+        # Counter entry with nothing left in counts/doers (everyone reset their
+        # own presses): "by" is only ever the last presser, so falling back to
+        # it here would credit someone who has taken all their presses back.
+        # Keyed on "counts" existing, so the oldest counter entries (a bare
+        # {count, by, at}, before either map) keep their historical credit.
+        return set()
+    return {sub_data["by"]} if sub_data.get("by") else set()
+
+
+def _who_did_it(role_data: dict, role: str = None) -> str:
+    """Extract person name(s) from either format.
+
+    Pass `role` to leave out whoever only did an optional subtask: they get
+    their own credit line via _helper_lines, and they didn't contribute to the
+    role being complete.
+    """
     if "by" in role_data:
         return role_data["by"]
     if "subtasks" in role_data:
         names = set()
-        for sub_data in role_data["subtasks"].values():
-            # Counter subtasks (menage.COUNTER_SUBTASKS) track every distinct
-            # incrementer in "doers"; "by" alone would only be the last one.
-            if "doers" in sub_data:
-                names.update(sub_data["doers"])
-            elif "by" in sub_data:
-                names.add(sub_data["by"])
+        for subtask, sub_data in role_data["subtasks"].items():
+            if role is not None and menage.is_optional_subtask(role, subtask):
+                continue
+            # Counter subtasks (menage.COUNTER_SUBTASKS) credit every distinct
+            # incrementer; "by" alone would only be the last one.
+            names.update(_doers_of(sub_data))
         return ", ".join(sorted(names)) if names else "?"
     return "?"
 
 
-def get_week_status(week_key: str = None) -> dict:
-    """Get the completion status for a week. Returns the completed map (may be empty)."""
+def get_week_status(week_key: str = None, consistent: bool = False) -> dict:
+    """Get the completion status for a week. Returns the completed map (may be empty).
+
+    `consistent` forces a strongly consistent read, for the one caller that
+    computes a write from what it reads (reset_subtask_counter); the default
+    eventually consistent read is fine for rendering.
+    """
     table = _get_table()
     if week_key is None:
         week_key = _current_week_key()
 
-    response = table.get_item(Key={"week_key": week_key})
+    response = table.get_item(Key={"week_key": week_key}, ConsistentRead=consistent)
     item = response.get("Item", {})
     return item.get("completed", {})
 
@@ -308,6 +466,12 @@ def _aggregate_completions() -> dict:
 
     Old-format {by, at} role entries only contribute to the person/role
     totals: there's no subtask breakdown to attribute for them.
+
+    Optional subtasks (menage.OPTIONAL_SUBTASKS) are left out of role_totals
+    on purpose: those totals decide /leaderboard's per-role champion, and
+    emptying the dishwasher every week shouldn't crown someone CUISINE
+    champion over the people who actually did CUISINE. They still count
+    towards person_totals and subtask_totals, i.e. participation.
     """
     table = _get_table()
     items = table.scan().get("Items", [])
@@ -333,12 +497,11 @@ def _aggregate_completions() -> dict:
                 _bump(role_totals.setdefault(role, {}), person)
             elif "subtasks" in role_data:
                 for subtask, sub_data in role_data["subtasks"].items():
-                    doers = sub_data.get("doers")
-                    if doers is None:
-                        doers = {sub_data["by"]} if sub_data.get("by") else set()
-                    for person in doers:
+                    optional = menage.is_optional_subtask(role, subtask)
+                    for person in _doers_of(sub_data):
                         _bump(person_totals, person)
-                        _bump(role_totals.setdefault(role, {}), person)
+                        if not optional:
+                            _bump(role_totals.setdefault(role, {}), person)
                         _bump(subtask_totals.setdefault((role, subtask), {}), person)
 
     return {
@@ -406,8 +569,10 @@ def get_stats() -> str:
         )
         for (role, subtask), counts in sorted_subtasks:
             label = subtask
+            if menage.is_optional_subtask(role, subtask):
+                label = f"{subtask} (optionnel)"
             if menage.is_counter_subtask(role, subtask):
-                label = f"{subtask} (participations, pas le nombre de fois)"
+                label = f"{label} (participations, pas le nombre de fois)"
             parts = ", ".join(
                 f"{person} {count}"
                 for person, count in sorted(counts.items(), key=lambda x: x[1], reverse=True)
@@ -469,17 +634,26 @@ def get_leaderboard() -> str:
     return "\n".join(lines)
 
 
-def _helper_lines(person: str, role_data: dict) -> list:
+def _helper_lines(person: str, role_data: dict, role: str = None) -> list:
     """Return recap sub-lines for subtasks completed by someone other than the
-    assigned person, so help from another roommate is visible in the recap."""
+    assigned person, so help from another roommate is visible in the recap.
+
+    Pass `role` to also get a bonus line for each optional subtask that got
+    done: nobody was assigned those, so every doer is credited (including the
+    role's own assignee) and there's no "pas X" to report.
+    """
     subtasks = role_data.get("subtasks")
     if not subtasks:
         return []
     lines = []
     for subtask, sub_data in subtasks.items():
-        doers = sub_data.get("doers")
-        if doers is None:
-            doers = {sub_data["by"]} if sub_data.get("by") else set()
+        doers = _doers_of(sub_data)
+        if role is not None and menage.is_optional_subtask(role, subtask):
+            if doers:
+                lines.append(
+                    f"      \U0001f381 {subtask} (bonus) fait par {', '.join(sorted(doers))}"
+                )
+            continue
         others = sorted(doer for doer in doers if doer != person)
         if others:
             lines.append(f"      \U0001f91d {subtask} fait par {', '.join(others)} (pas {person})")
@@ -497,9 +671,9 @@ def get_sunday_recap(role_assignments: dict) -> str:
     for role, person in role_assignments.items():
         role_data = completed.get(role, {})
         if is_role_complete(role, completed):
-            who = _who_did_it(role_data)
+            who = _who_did_it(role_data, role)
             lines.append(f"  \u2705 {role} ({person}) — fait par {who}")
         else:
             lines.append(f"  \u274c {role} ({person}) — pas fait")
-        lines.extend(_helper_lines(person, role_data))
+        lines.extend(_helper_lines(person, role_data, role))
     return "\n".join(lines)

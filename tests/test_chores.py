@@ -492,11 +492,14 @@ def test_get_stats_with_subtask_format(mock_get_table, mock_even):
 # --- increment_subtask_counter tests ---
 
 
-def _update_item_response(count):
-    """Shape of the real DynamoDB ReturnValues='UPDATED_NEW' response our code reads."""
+def _update_item_response(count, counts=None):
+    """Shape of the real DynamoDB ReturnValues='ALL_NEW' response our code reads."""
+    entry = {"count": count}
+    if counts is not None:
+        entry["counts"] = counts
     return {
         "Attributes": {
-            "completed": {"CUISINE": {"subtasks": {"plan de travail": {"count": count}}}},
+            "completed": {"CUISINE": {"subtasks": {"plan de travail": entry}}},
         }
     }
 
@@ -505,17 +508,18 @@ def _update_item_response(count):
 @patch("src.chores._get_table")
 def test_increment_subtask_counter_first_press(mock_get_table, mock_week):
     mock_table = MagicMock()
-    mock_table.update_item.return_value = _update_item_response(1)
+    mock_table.update_item.return_value = _update_item_response(1, {"Timon": 1})
     mock_get_table.return_value = mock_table
 
     result = chores.increment_subtask_counter("CUISINE", "plan de travail", "Timon")
-    assert result == 1
-    # 1 ensure map + 1 ensure role subtasks + 1 ensure counter + 1 increment
-    assert mock_table.update_item.call_count == 4
-    last_call = mock_table.update_item.call_args_list[3][1]
+    assert result == {"count": 1, "counts": {"Timon": 1}}
+    # 1 ensure map + 1 ensure role subtasks + 1 ensure counter + 1 ensure
+    # per-person counts map + 1 increment
+    assert mock_table.update_item.call_count == 5
+    last_call = mock_table.update_item.call_args_list[4][1]
     assert "ADD" in last_call["UpdateExpression"]
     assert last_call["ExpressionAttributeValues"][":person"] == "Timon"
-    assert last_call["ReturnValues"] == "UPDATED_NEW"
+    assert last_call["ReturnValues"] == "ALL_NEW"
     # "by"/"at" are DynamoDB reserved words and must be aliased, not used raw.
     assert last_call["ExpressionAttributeNames"]["#by"] == "by"
     assert last_call["ExpressionAttributeNames"]["#at"] == "at"
@@ -525,34 +529,396 @@ def test_increment_subtask_counter_first_press(mock_get_table, mock_week):
 @patch("src.chores._get_table")
 def test_increment_subtask_counter_reads_back_new_count(mock_get_table, mock_week):
     mock_table = MagicMock()
-    mock_table.update_item.return_value = _update_item_response(3)
+    mock_table.update_item.return_value = _update_item_response(3, {"Timon": 2, "Léa": 1})
     mock_get_table.return_value = mock_table
 
     result = chores.increment_subtask_counter("CUISINE", "plan de travail", "Léa")
-    assert result == 3  # reflects the update_item response, not a separate read
+    # Reflects the update_item response, not a separate (eventually
+    # consistent) read.
+    assert result == {"count": 3, "counts": {"Timon": 2, "Léa": 1}}
 
-    # Every increment tracks the doer in a "doers" set, not just the last "by".
-    last_call = mock_table.update_item.call_args_list[3][1]
+    # Every increment tracks the doer in a "doers" set, not just the last
+    # "by", and bumps that person's own tally.
+    last_call = mock_table.update_item.call_args_list[4][1]
     assert last_call["ExpressionAttributeValues"][":person_set"] == {"Léa"}
-
-
-# --- reset_subtask_counter tests ---
+    assert last_call["ExpressionAttributeNames"]["#person"] == "Léa"
+    assert "#counts.#person :one" in last_call["UpdateExpression"]
 
 
 @patch("src.chores._current_week_key", return_value="2026-W14")
 @patch("src.chores._get_table")
-def test_reset_subtask_counter_writes_empty_counter(mock_get_table, mock_week):
+def test_increment_subtask_counter_ensures_the_counts_map_separately(mock_get_table, mock_week):
+    """`ADD ...#counts.#person` needs `counts` to exist, and DynamoDB rejects
+    ensuring it in the same expression as its own parent (overlapping paths)."""
+    mock_table = MagicMock()
+    mock_table.update_item.return_value = _update_item_response(1, {"Timon": 1})
+    mock_get_table.return_value = mock_table
+
+    chores.increment_subtask_counter("CUISINE", "plan de travail", "Timon")
+
+    ensure_counts = mock_table.update_item.call_args_list[3][1]
+    assert "#counts = if_not_exists" in ensure_counts["UpdateExpression"]
+    assert ensure_counts["ExpressionAttributeNames"]["#counts"] == "counts"
+    assert ensure_counts["ExpressionAttributeValues"][":empty_map"] == {}
+
+
+# --- reset_subtask_counter tests: only the caller's own presses ---
+
+
+@patch("src.chores.get_week_status", return_value={
+    "CUISINE": {"subtasks": {"plan de travail": {
+        "count": 5, "counts": {"Timon": 3, "Léa": 2}, "doers": {"Timon", "Léa"},
+    }}},
+})
+@patch("src.chores._current_week_key", return_value="2026-W14")
+@patch("src.chores._get_table")
+def test_reset_subtask_counter_removes_only_the_callers_presses(
+    mock_get_table, mock_week, mock_status,
+):
+    mock_table = MagicMock()
+    mock_table.update_item.return_value = _update_item_response(3, {"Timon": 3})
+    mock_get_table.return_value = mock_table
+
+    removed, state = chores.reset_subtask_counter("CUISINE", "plan de travail", "Léa")
+
+    assert removed == 2
+    assert state == {"count": 3, "counts": {"Timon": 3}}  # Timon's 3 survive
+    call = mock_table.update_item.call_args[1]
+    assert call["ExpressionAttributeNames"]["#person"] == "Léa"
+    # Decrement by exactly the caller's own tally, via ADD so a concurrent +1
+    # isn't clobbered.
+    assert call["ExpressionAttributeValues"][":negative"] == -2
+    assert call["ExpressionAttributeValues"][":person_set"] == {"Léa"}
+    assert "REMOVE" in call["UpdateExpression"]
+    assert "DELETE" in call["UpdateExpression"]
+    assert call["ReturnValues"] == "ALL_NEW"
+
+
+@patch("src.chores.get_week_status", return_value={
+    "CUISINE": {"subtasks": {"plan de travail": {
+        "count": 3, "counts": {"Timon": 3}, "doers": {"Timon"},
+    }}},
+})
+@patch("src.chores._current_week_key", return_value="2026-W14")
+@patch("src.chores._get_table")
+def test_reset_subtask_counter_clears_the_entry_when_nobody_is_left(
+    mock_get_table, mock_week, mock_status,
+):
+    """A stale `by`/`doers` would still get credit in /recap, so the whole
+    entry is rewritten rather than decremented to zero."""
     mock_table = MagicMock()
     mock_get_table.return_value = mock_table
 
-    chores.reset_subtask_counter("CUISINE", "plan de travail")
+    removed, state = chores.reset_subtask_counter("CUISINE", "plan de travail", "Timon")
 
-    mock_table.update_item.assert_called_once()
+    assert removed == 3
+    assert state == {"count": 0, "counts": {}}
     call = mock_table.update_item.call_args[1]
-    assert call["Key"] == {"week_key": "2026-W14"}
-    assert call["ExpressionAttributeValues"][":empty_counter"] == {"count": 0}
+    assert call["ExpressionAttributeValues"][":empty_counter"] == {"count": 0, "counts": {}}
     assert call["ExpressionAttributeNames"]["#role"] == "CUISINE"
     assert call["ExpressionAttributeNames"]["#subtask"] == "plan de travail"
+
+
+@patch("src.chores.get_week_status", return_value={
+    "CUISINE": {"subtasks": {"plan de travail": {
+        "count": 3, "counts": {"Timon": 3}, "doers": {"Timon"},
+    }}},
+})
+@patch("src.chores._current_week_key", return_value="2026-W14")
+@patch("src.chores._get_table")
+def test_reset_subtask_counter_writes_nothing_when_the_caller_has_no_presses(
+    mock_get_table, mock_week, mock_status,
+):
+    mock_table = MagicMock()
+    mock_get_table.return_value = mock_table
+
+    removed, state = chores.reset_subtask_counter("CUISINE", "plan de travail", "Léa")
+
+    assert removed == 0
+    assert state == {"count": 3, "counts": {"Timon": 3}}
+    mock_table.update_item.assert_not_called()
+
+
+@patch("src.chores.get_week_status", return_value={
+    "CUISINE": {"subtasks": {"plan de travail": {
+        "count": 4, "counts": {"Léa": 1}, "doers": {"Timon", "Léa"},
+    }}},
+})
+@patch("src.chores._current_week_key", return_value="2026-W14")
+@patch("src.chores._get_table")
+def test_reset_subtask_counter_keeps_unattributed_presses(
+    mock_get_table, mock_week, mock_status,
+):
+    """3 of the 4 presses predate per-person counts: they can't be attributed
+    to anyone, so they must survive a reset rather than be wiped."""
+    mock_table = MagicMock()
+    mock_table.update_item.return_value = _update_item_response(3, {})
+    mock_get_table.return_value = mock_table
+
+    removed, state = chores.reset_subtask_counter("CUISINE", "plan de travail", "Léa")
+
+    assert removed == 1
+    assert state["count"] == 3
+    call = mock_table.update_item.call_args[1]
+    assert call["ExpressionAttributeValues"][":negative"] == -1
+
+
+@patch("src.chores.get_week_status", return_value={
+    "CUISINE": {"subtasks": {"plan de travail": {
+        "count": 4, "by": "Timon", "at": "...", "doers": {"Timon"},
+    }}},
+})
+@patch("src.chores._current_week_key", return_value="2026-W14")
+@patch("src.chores._get_table")
+def test_reset_subtask_counter_cannot_reset_a_pre_counts_entry(
+    mock_get_table, mock_week, mock_status,
+):
+    """Nothing in a pre-`counts` entry is attributable, so there's nothing to
+    remove — better than wiping presses that may not be the caller's."""
+    mock_table = MagicMock()
+    mock_get_table.return_value = mock_table
+
+    removed, state = chores.reset_subtask_counter("CUISINE", "plan de travail", "Timon")
+
+    assert removed == 0
+    assert state == {"count": 4, "counts": {}}
+    mock_table.update_item.assert_not_called()
+
+
+# --- person_counts / credit after a reset ---
+
+
+def test_person_counts_normalises_to_ints():
+    from decimal import Decimal
+    sub_data = {"count": Decimal(3), "counts": {"Timon": Decimal(2), "Léa": Decimal(1)}}
+    assert chores.person_counts(sub_data) == {"Timon": 2, "Léa": 1}
+
+
+def test_person_counts_empty_for_a_pre_counts_entry():
+    assert chores.person_counts({"count": 3, "doers": {"Timon"}}) == {}
+
+
+def test_doers_of_unions_counts_with_a_pre_counts_doers_set():
+    """Léa's press predates the `counts` map, Timon's doesn't: preferring
+    `counts` here would silently strip Léa of her credit."""
+    sub_data = {"count": 3, "counts": {"Timon": 1}, "doers": {"Timon", "Léa"}}
+    assert chores._doers_of(sub_data) == {"Timon", "Léa"}
+
+
+def test_doers_of_drops_someone_who_reset_their_own_presses():
+    """A reset removes the person from both `counts` and `doers`, so the union
+    still stops crediting them."""
+    sub_data = {"count": 3, "counts": {"Timon": 3}, "doers": {"Timon"}}
+    assert chores._doers_of(sub_data) == {"Timon"}
+
+
+def test_doers_of_falls_back_to_doers_then_by():
+    assert chores._doers_of({"count": 2, "doers": {"Timon"}}) == {"Timon"}
+    assert chores._doers_of({"by": "Léa", "at": "..."}) == {"Léa"}
+    assert chores._doers_of({"count": 0, "counts": {}}) == set()
+
+
+def test_doers_of_keeps_by_on_the_oldest_counter_shape():
+    """A bare {count, by, at} predates both maps: dropping its credit would
+    rewrite history, not just this week."""
+    assert chores._doers_of({"count": 5, "by": "Timon", "at": "..."}) == {"Timon"}
+
+
+def test_doers_of_ignores_by_on_an_emptied_counter_entry():
+    """Two people resetting their own presses concurrently can leave a
+    counter at 0 with a leftover `by`; crediting it would name someone who
+    took all their presses back."""
+    sub_data = {"count": 0, "counts": {}, "by": "Timon", "at": "..."}
+    assert chores._doers_of(sub_data) == set()
+
+
+# --- reset_subtask_counter: concurrency guards ---
+
+
+def _conditional_check_failed():
+    from botocore.exceptions import ClientError
+    return ClientError(
+        {"Error": {"Code": "ConditionalCheckFailedException", "Message": "no"}}, "UpdateItem",
+    )
+
+
+@patch("src.chores.get_week_status", return_value={
+    "CUISINE": {"subtasks": {"plan de travail": {
+        "count": 5, "counts": {"Timon": 3, "Léa": 2},
+    }}},
+})
+@patch("src.chores._current_week_key", return_value="2026-W14")
+@patch("src.chores._get_table")
+def test_reset_subtask_counter_guards_both_writes_with_a_condition(
+    mock_get_table, mock_week, mock_status,
+):
+    """Without a condition, a double-tapped reset subtracts the same presses
+    twice and drives the total negative."""
+    mock_table = MagicMock()
+    mock_table.update_item.return_value = _update_item_response(3, {"Timon": 3})
+    mock_get_table.return_value = mock_table
+
+    chores.reset_subtask_counter("CUISINE", "plan de travail", "Léa")
+
+    call = mock_table.update_item.call_args[1]
+    assert "#counts.#person = :removed" in call["ConditionExpression"]
+    assert call["ExpressionAttributeValues"][":removed"] == 2
+
+
+@patch("src.chores.get_week_status", return_value={
+    "CUISINE": {"subtasks": {"plan de travail": {"count": 3, "counts": {"Timon": 3}}}},
+})
+@patch("src.chores._current_week_key", return_value="2026-W14")
+@patch("src.chores._get_table")
+def test_reset_subtask_counter_clear_branch_is_conditional_on_the_total(
+    mock_get_table, mock_week, mock_status,
+):
+    """The clear branch overwrites the whole entry, so a "+1" that landed
+    since the read must make it fail rather than vanish."""
+    mock_table = MagicMock()
+    mock_get_table.return_value = mock_table
+
+    chores.reset_subtask_counter("CUISINE", "plan de travail", "Timon")
+
+    call = mock_table.update_item.call_args[1]
+    assert call["ConditionExpression"] == "completed.#role.subtasks.#subtask.#count = :total"
+    assert call["ExpressionAttributeValues"][":total"] == 3
+
+
+@patch("src.chores.get_week_status")
+@patch("src.chores._current_week_key", return_value="2026-W14")
+@patch("src.chores._get_table")
+def test_reset_subtask_counter_retries_once_after_a_lost_race(
+    mock_get_table, mock_week, mock_status,
+):
+    """First attempt loses to a concurrent press; the retry re-reads and
+    subtracts what the caller actually has now."""
+    mock_status.side_effect = [
+        {"CUISINE": {"subtasks": {"plan de travail": {"count": 3, "counts": {"Léa": 2}}}}},
+        {"CUISINE": {"subtasks": {"plan de travail": {"count": 4, "counts": {"Léa": 3}}}}},
+    ]
+    mock_table = MagicMock()
+    mock_table.update_item.side_effect = [
+        _conditional_check_failed(),
+        _update_item_response(1, {}),
+    ]
+    mock_get_table.return_value = mock_table
+
+    removed, state = chores.reset_subtask_counter("CUISINE", "plan de travail", "Léa")
+
+    assert removed == 3  # the re-read value, not the stale 2
+    assert state["count"] == 1
+    assert mock_table.update_item.call_count == 2
+
+
+@patch("src.chores.get_week_status", return_value={
+    "CUISINE": {"subtasks": {"plan de travail": {"count": 3, "counts": {"Léa": 2}}}},
+})
+@patch("src.chores._current_week_key", return_value="2026-W14")
+@patch("src.chores._get_table")
+def test_reset_subtask_counter_gives_up_after_two_lost_races(
+    mock_get_table, mock_week, mock_status,
+):
+    mock_table = MagicMock()
+    mock_table.update_item.side_effect = [
+        _conditional_check_failed(), _conditional_check_failed(),
+    ]
+    mock_get_table.return_value = mock_table
+
+    removed, state = chores.reset_subtask_counter("CUISINE", "plan de travail", "Léa")
+
+    assert removed == 0
+    assert state == {"count": 3, "counts": {"Léa": 2}}
+    assert mock_table.update_item.call_count == 2
+
+
+@patch("src.chores.get_week_status", return_value={
+    "CUISINE": {"subtasks": {"plan de travail": {"count": 3, "counts": {"Léa": 2}}}},
+})
+@patch("src.chores._current_week_key", return_value="2026-W14")
+@patch("src.chores._get_table")
+def test_reset_subtask_counter_reraises_other_client_errors(
+    mock_get_table, mock_week, mock_status,
+):
+    from botocore.exceptions import ClientError
+    mock_table = MagicMock()
+    mock_table.update_item.side_effect = ClientError(
+        {"Error": {"Code": "ProvisionedThroughputExceededException", "Message": "slow down"}},
+        "UpdateItem",
+    )
+    mock_get_table.return_value = mock_table
+
+    with pytest.raises(ClientError):
+        chores.reset_subtask_counter("CUISINE", "plan de travail", "Léa")
+
+
+@patch("src.chores.get_week_status", return_value={})
+@patch("src.chores._current_week_key", return_value="2026-W14")
+@patch("src.chores._get_table")
+def test_reset_subtask_counter_reads_consistently(mock_get_table, mock_week, mock_status):
+    """An eventually consistent read could miss the caller's own press and
+    answer "nothing to reset"."""
+    mock_get_table.return_value = MagicMock()
+
+    chores.reset_subtask_counter("CUISINE", "plan de travail", "Léa")
+
+    assert mock_status.call_args[1]["consistent"] is True
+
+
+# --- optional subtasks stay out of the per-role champion count ---
+
+
+@patch("src.chores._get_table")
+def test_aggregate_completions_keeps_optional_subtasks_out_of_role_totals(mock_get_table):
+    """Léa only ever empties the dishwasher: she must not be able to become
+    /leaderboard's CUISINE champion over Timon, who did the actual role."""
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {
+        "Items": [
+            {
+                "week_key": "2026-W14",
+                "completed": {
+                    "CUISINE": {"subtasks": {
+                        "frigo": {"by": "Timon", "at": "..."},
+                        "lave-vaisselle": {
+                            "count": 9, "counts": {"Léa": 9}, "doers": {"Léa"},
+                        },
+                    }},
+                },
+            },
+        ]
+    }
+    mock_get_table.return_value = mock_table
+
+    agg = chores._aggregate_completions()
+    assert agg["role_totals"]["CUISINE"] == {"Timon": 1}
+    # Still credited for participation and in the per-subtask breakdown.
+    assert agg["person_totals"] == {"Timon": 1, "Léa": 1}
+    assert agg["subtask_totals"][("CUISINE", "lave-vaisselle")] == {"Léa": 1}
+
+
+@patch("src.chores._get_table")
+def test_get_leaderboard_role_champion_ignores_optional_subtasks(mock_get_table):
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {
+        "Items": [
+            {
+                "week_key": "2026-W14",
+                "completed": {
+                    "CUISINE": {"subtasks": {
+                        "frigo": {"by": "Timon", "at": "..."},
+                        "lave-vaisselle": {
+                            "count": 9, "counts": {"Léa": 9}, "doers": {"Léa"},
+                        },
+                    }},
+                },
+            },
+        ]
+    }
+    mock_get_table.return_value = mock_table
+
+    result = chores.get_leaderboard()
+    assert "CUISINE : Timon (1 fois)" in result
 
 
 # --- is_role_complete / _pending_detail with counter subtasks ---
@@ -875,3 +1241,105 @@ def test_get_leaderboard_includes_best_plant_friend(mock_get_table):
 
     result = chores.get_leaderboard()
     assert "🌱 Best Plant Friend : Alexis (2 arrosages)" in result
+
+
+# --- optional subtasks (menage.OPTIONAL_SUBTASKS, e.g. CUISINE/lave-vaisselle) ---
+
+
+def test_is_role_complete_ignores_an_undone_optional_subtask():
+    """lave-vaisselle is a bonus: CUISINE is complete without it."""
+    completed = {
+        "CUISINE": {
+            "subtasks": {
+                "frigo": {"by": "Timon", "at": "..."},
+                "plan de travail": {"count": 2, "by": "Timon", "at": "..."},
+                "rangement": {"by": "Timon", "at": "..."},
+                "balcon": {"by": "Timon", "at": "..."},
+            }
+        }
+    }
+    assert chores.is_role_complete("CUISINE", completed) is True
+
+
+def test_is_role_complete_optional_subtask_alone_is_not_enough():
+    completed = {
+        "CUISINE": {
+            "subtasks": {"lave-vaisselle": {"count": 3, "by": "Léa", "at": "..."}},
+        }
+    }
+    assert chores.is_role_complete("CUISINE", completed) is False
+
+
+def test_pending_detail_never_lists_an_optional_subtask():
+    result = chores._pending_detail("CUISINE", {})
+    assert "frigo" in result
+    assert "lave-vaisselle" not in result
+
+
+def test_who_did_it_excludes_an_optional_only_doer():
+    """Léa ran the dishwasher, Timon did the actual CUISINE subtasks."""
+    role_data = {
+        "subtasks": {
+            "frigo": {"by": "Timon", "at": "..."},
+            "lave-vaisselle": {"count": 2, "by": "Léa", "at": "...", "doers": {"Léa"}},
+        }
+    }
+    assert chores._who_did_it(role_data, "CUISINE") == "Timon"
+
+
+def test_helper_lines_credits_optional_subtask_as_a_bonus():
+    """Nobody is assigned lave-vaisselle, so every doer is credited and there
+    is no "pas Timon" reproach, even for Timon's own presses."""
+    role_data = {
+        "subtasks": {
+            "lave-vaisselle": {
+                "count": 3, "by": "Léa", "at": "...", "doers": {"Léa", "Timon"},
+            },
+        }
+    }
+    lines = chores._helper_lines("Timon", role_data, "CUISINE")
+    assert len(lines) == 1
+    assert "bonus" in lines[0]
+    assert "Léa, Timon" in lines[0]
+    assert "pas Timon" not in lines[0]
+
+
+@patch("src.chores.get_week_status", return_value={
+    "CUISINE": {"subtasks": {
+        "frigo": {"by": "Timon", "at": "..."},
+        "plan de travail": {"count": 1, "by": "Timon", "at": "..."},
+        "rangement": {"by": "Timon", "at": "..."},
+        "balcon": {"by": "Timon", "at": "..."},
+        "lave-vaisselle": {"count": 4, "by": "Léa", "at": "...", "doers": {"Léa"}},
+    }},
+})
+def test_get_sunday_recap_shows_optional_subtask_as_bonus(mock_status):
+    result = chores.get_sunday_recap(SAMPLE_ASSIGNMENTS)
+    assert "✅ CUISINE (Timon) — fait par Timon" in result
+    assert "lave-vaisselle (bonus) fait par Léa" in result
+
+
+@patch("src.chores._get_table")
+def test_get_stats_labels_an_optional_subtask(mock_get_table):
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {
+        "Items": [
+            {
+                "week_key": "2026-W14",
+                "completed": {
+                    "CUISINE": {"subtasks": {
+                        "lave-vaisselle": {
+                            "count": 6, "by": "Léa", "at": "...", "doers": {"Léa"},
+                        },
+                    }},
+                },
+            },
+        ]
+    }
+    mock_get_table.return_value = mock_table
+
+    result = chores.get_stats()
+    assert (
+        "lave-vaisselle (optionnel) (participations, pas le nombre de fois) : Léa 1"
+        in result
+    )
