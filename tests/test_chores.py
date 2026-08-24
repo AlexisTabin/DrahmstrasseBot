@@ -1,3 +1,5 @@
+import datetime
+
 import pytest
 from unittest.mock import patch, MagicMock
 
@@ -614,7 +616,9 @@ def test_reset_subtask_counter_clears_the_entry_when_nobody_is_left(
     assert removed == 3
     assert state == {"count": 0, "counts": {}}
     call = mock_table.update_item.call_args[1]
-    assert call["ExpressionAttributeValues"][":empty_counter"] == {"count": 0, "counts": {}}
+    assert call["ExpressionAttributeValues"][":empty_counter"] == {
+        "count": 0, "counts": {}, "days": {},
+    }
     assert call["ExpressionAttributeNames"]["#role"] == "CUISINE"
     assert call["ExpressionAttributeNames"]["#subtask"] == "plan de travail"
 
@@ -1343,3 +1347,184 @@ def test_get_stats_labels_an_optional_subtask(mock_get_table):
         "lave-vaisselle (optionnel) (participations, pas le nombre de fois) : Léa 1"
         in result
     )
+
+
+# --- streaks / rhythm: the per-person calendar behind the new stats ---
+
+
+def _stamp(date_iso, hour=19):
+    return f"{date_iso}T{hour:02d}:00:00+00:00"
+
+
+CALENDAR_ITEMS = [
+    {
+        "week_key": "2026-W19",
+        "completed": {
+            "CUISINE": {"subtasks": {
+                "frigo": {"by": "Timon", "at": _stamp("2026-05-04")},
+                "balcon": {"by": "Timon", "at": _stamp("2026-05-04", hour=21)},
+                "rangement": {"by": "Timon", "at": _stamp("2026-05-05")},
+                # Counter: every doer's own days, not just the last presser's.
+                "plan de travail": {
+                    "count": 3, "counts": {"Timon": 1, "Léa": 2},
+                    "days": {"Timon": {"2026-05-06"}, "Léa": {"2026-05-04", "2026-05-11"}},
+                    "doers": {"Timon", "Léa"}, "by": "Léa", "at": _stamp("2026-05-11"),
+                },
+            }},
+            "SDBs": {"by": "Maël", "at": _stamp("2026-05-04")},
+        },
+    },
+    {"week_key": "plant:2026-05-07", "watering": {
+        "state": "watered", "by": "Léa", "at": _stamp("2026-05-07"),
+    }},
+    {"week_key": "cendrier:2026-W19", "cendrier": {"by": "Maël", "at": _stamp("2026-05-05")}},
+]
+
+
+@patch("src.chores._get_table")
+def test_aggregate_completions_builds_a_per_person_calendar(mock_get_table):
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {"Items": CALENDAR_ITEMS}
+    mock_get_table.return_value = mock_table
+
+    calendar = chores._aggregate_completions()["calendar"]
+
+    assert calendar["Timon"] == {
+        datetime.date(2026, 5, 4): 2,  # two tasks the same day
+        datetime.date(2026, 5, 5): 1,
+        datetime.date(2026, 5, 6): 1,
+    }
+    # Léa's two counter days plus her plant watering, though `by`/`at` only
+    # ever recorded her last press.
+    assert calendar["Léa"] == {
+        datetime.date(2026, 5, 4): 1,
+        datetime.date(2026, 5, 11): 1,
+        datetime.date(2026, 5, 7): 1,
+    }
+    # Old-format role entry plus the cendrier row.
+    assert calendar["Maël"] == {
+        datetime.date(2026, 5, 4): 1,
+        datetime.date(2026, 5, 5): 1,
+    }
+
+
+@patch("src.chores._get_table")
+def test_aggregate_completions_week_totals_come_from_the_day_of_the_work(mock_get_table):
+    """Derived from when it was done, not which row it sits in, so plant and
+    cendrier days land in the right week too."""
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {"Items": CALENDAR_ITEMS}
+    mock_get_table.return_value = mock_table
+
+    week_totals = chores._aggregate_completions()["week_totals"]
+
+    assert week_totals == {"2026-W19": 8, "2026-W20": 1}  # 2026-05-11 is a Monday
+
+
+@patch("src.chores._get_table")
+def test_aggregate_completions_ignores_an_unparseable_timestamp(mock_get_table):
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {"Items": [
+        {"week_key": "2026-W19", "completed": {
+            "SOLs": {"subtasks": {"panosse": {"by": "Léa", "at": "n'importe quoi"}}},
+        }},
+    ]}
+    mock_get_table.return_value = mock_table
+
+    agg = chores._aggregate_completions()
+    assert agg["person_totals"] == {"Léa": 1}  # still counted as a task
+    assert agg["calendar"] == {}  # but placed on no day
+
+
+@patch("src.chores._get_table")
+def test_aggregate_completions_skips_an_unwatered_plant_row(mock_get_table):
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {"Items": [
+        {"week_key": "plant:2026-05-07", "watering": {"by": "Léa", "at": _stamp("2026-05-07")}},
+    ]}
+    mock_get_table.return_value = mock_table
+
+    assert chores._aggregate_completions()["calendar"] == {}
+
+
+@patch("src.chores.datetime")
+@patch("src.chores._get_table")
+def test_get_stats_shows_streaks_gaps_and_the_busiest_weekday(mock_get_table, mock_dt):
+    mock_dt.date.today.return_value = datetime.date(2026, 5, 12)
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {"Items": CALENDAR_ITEMS}
+    mock_get_table.return_value = mock_table
+
+    result = chores.get_stats()
+
+    assert "⏱️ Séries et rythme" in result
+    assert "Timon : 3 jours actifs · série record 3 jours (jusqu'au 06/05)" in result
+    assert "pause max 3 jours (07/05 → 11/05)" in result  # Léa's break
+    assert "🗓️ Jour le plus productif : lundi (5 tâches)" in result
+    assert "🚀 Semaine record : 2026-W19 (8 tâches)" in result
+
+
+@patch("src.chores.datetime")
+@patch("src.chores._get_table")
+def test_get_leaderboard_shows_positive_rhythm_highlights_only(mock_get_table, mock_dt):
+    mock_dt.date.today.return_value = datetime.date(2026, 5, 12)
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {"Items": CALENDAR_ITEMS}
+    mock_get_table.return_value = mock_table
+
+    result = chores.get_leaderboard()
+
+    assert "🔥 Plus longue série : Timon (3 jours d'affilée)" in result
+    assert "📅 Meilleure journée : 2 tâches en un jour, Timon (04/05)" in result
+    assert "🤝 Meilleur duo : Maël & Timon (2 jours à bosser ensemble)" in result
+    assert "🗓️ On carbure surtout le lundi (5 tâches)" in result
+    # Nothing about who slacked: that stays in the dev-only /stats.
+    assert "pause" not in result
+
+
+@patch("src.chores.datetime")
+@patch("src.chores._get_table")
+def test_get_leaderboard_shows_a_running_streak(mock_get_table, mock_dt):
+    mock_dt.date.today.return_value = datetime.date(2026, 5, 6)
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {"Items": CALENDAR_ITEMS}
+    mock_get_table.return_value = mock_table
+
+    assert "⚡ Série en cours : Timon (3 jours)" in chores.get_leaderboard()
+
+
+@patch("src.chores.datetime")
+@patch("src.chores._get_table")
+def test_get_leaderboard_hides_one_day_streaks_and_solo_days(mock_get_table, mock_dt):
+    """A single task by a single person isn't a "streak", a "best day" or a
+    "duo" worth announcing."""
+    mock_dt.date.today.return_value = datetime.date(2026, 5, 12)
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {"Items": [
+        {"week_key": "2026-W19", "completed": {
+            "SOLs": {"subtasks": {"panosse": {"by": "Léa", "at": _stamp("2026-05-04")}}},
+        }},
+    ]}
+    mock_get_table.return_value = mock_table
+
+    result = chores.get_leaderboard()
+    assert "Plus longue série" not in result
+    assert "Série en cours" not in result
+    assert "Meilleure journée" not in result
+    assert "Meilleur duo" not in result
+    # The global weekday line still works with a single data point.
+    assert "🗓️ On carbure surtout le lundi (1 tâche)" in result
+
+
+@patch("src.chores._get_table")
+def test_get_stats_without_any_timestamp_has_no_rhythm_section(mock_get_table):
+    """Pre-timestamp rows still render the rest of /stats."""
+    mock_table = MagicMock()
+    mock_table.scan.return_value = {"Items": [
+        {"week_key": "2026-W19", "completed": {"SOLs": {"by": "Léa"}}},
+    ]}
+    mock_get_table.return_value = mock_table
+
+    result = chores.get_stats()
+    assert "Léa : 1 tâches" in result
+    assert "Séries et rythme" not in result
